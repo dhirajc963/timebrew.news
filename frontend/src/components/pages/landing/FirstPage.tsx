@@ -11,13 +11,13 @@ import {
 	Users,
 	TrendingUp,
 	Clock,
+	Eye,
 } from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { Meteors } from "@/components/magicui/meteors";
 import { ShinyButton } from "@/components/magicui/shiny-button";
-import { NumberTicker } from "@/components/magicui/number-ticker";
 import { WordRotate } from "@/components/magicui/word-rotate";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 import { DotPattern } from "@/components/magicui/dot-pattern";
@@ -62,7 +62,7 @@ const FirstPage = () => {
 		},
 		{
 			title: "Your Brew is Ready!",
-			content: "5 tech stories, 2-min read ☕",
+			content: "5 tech stories, 8-min read  ☕",
 			type: "ready",
 		},
 	];
@@ -88,12 +88,6 @@ const FirstPage = () => {
 		},
 	];
 
-	const stats = [
-		{ label: "Beta Users", value: 2847, suffix: "+" },
-		{ label: "Articles Curated", value: 156000, suffix: "+" },
-		{ label: "Time Saved", value: 340, suffix: "hrs" },
-	];
-
 	return (
 		<>
 			{/* Hero Section */}
@@ -113,7 +107,7 @@ const FirstPage = () => {
 							transition={{ delay: 0.2, duration: 0.5 }}
 							className="inline-flex"
 						>
-							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/10 backdrop-blur-sm">
+							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
 								<Sparkles className="w-4 h-4" />
 								<span className="text-sm font-medium">Early Access Beta</span>
 							</AnimatedGradientText>
@@ -164,9 +158,9 @@ const FirstPage = () => {
 							transition={{ delay: 0.7, duration: 0.6 }}
 							className="flex flex-col sm:flex-row gap-6"
 						>
-							<ShinyButton className="group text-lg px-8 py-4 flex items-center space-x-3">
-								<Coffee className="w-6 h-6" />
-								<span>Brew My First Digest</span>
+							<ShinyButton className="group text-lg px-4 py-4 flex items-center space-x-3 min-w-fit w-auto [&>span]:!flex [&>span]:!items-center [&>span]:!gap-3 [&>span]:!w-auto">
+								<Coffee className="w-5 h-5" />
+								<span className="whitespace-nowrap">Brew My First Digest</span>
 							</ShinyButton>
 
 							<motion.button
@@ -174,49 +168,29 @@ const FirstPage = () => {
 								whileTap={{ scale: 0.95 }}
 								className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-3"
 							>
-								<Play className="w-5 h-5" />
-								<span>Watch Demo</span>
+								<Eye className="w-5 h-5" />
+								<span>View Sample</span>
 							</motion.button>
-						</motion.div>
-
-						{/* Social Proof Stats */}
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.9, duration: 0.6 }}
-							className="grid grid-cols-3 gap-8 pt-8"
-						>
-							{stats.map((stat, i) => (
-								<div key={i} className="text-center">
-									<div className="text-2xl lg:text-3xl font-bold text-foreground">
-										<NumberTicker value={stat.value} />
-										{stat.suffix}
-									</div>
-									<div className="text-sm text-muted-foreground">
-										{stat.label}
-									</div>
-								</div>
-							))}
 						</motion.div>
 
 						{/* Trust Badges */}
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 1.1, duration: 0.6 }}
+							transition={{ delay: 0.9, duration: 0.6 }}
 							className="flex flex-wrap items-center gap-6 pt-4"
 						>
 							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-								<Shield className="w-4 h-4 text-green-500" />
-								<span>Private by Design</span>
-							</div>
-							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 								<Zap className="w-4 h-4 text-primary" />
-								<span>Powered by Perplexity AI</span>
+								<span>Powered by AI</span>
 							</div>
 							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-								<TrendingUp className="w-4 h-4 text-blue-500" />
-								<span>500+ Premium Sources</span>
+								<Users className="w-4 h-4 text-blue-500" />
+								<span>Zero Spam</span>
+							</div>
+							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+								<Sparkles className="w-4 h-4 text-purple-500" />
+								<span>Smart Curation</span>
 							</div>
 						</motion.div>
 					</motion.div>
@@ -277,35 +251,34 @@ const FirstPage = () => {
 												initial={{ opacity: 0, y: 20 }}
 												animate={{ opacity: 1, y: 0 }}
 												transition={{ delay: 0.3 }}
-												className="space-y-3"
+												className="space-y-2"
 											>
-												{[1, 2, 3, 4, 5].map((i) => (
+												{[1, 2].map((i) => (
 													<motion.div
 														key={i}
 														initial={{ opacity: 0, x: -20 }}
 														animate={{ opacity: 1, x: 0 }}
 														transition={{ delay: i * 0.1 }}
-														className="bg-muted/50 p-4 rounded-lg border border-border hover:bg-muted/70 transition-colors cursor-pointer group"
+														className="bg-muted/50 p-3 rounded-lg border border-border hover:bg-muted/70 transition-colors cursor-pointer group"
 													>
-														<div className="flex items-start space-x-3">
-															<div className="w-12 h-12 bg-primary/20 rounded-lg flex-shrink-0" />
-															<div className="flex-1 space-y-2">
-																<div className="h-3 bg-foreground/20 rounded w-full" />
-																<div className="h-3 bg-foreground/10 rounded w-3/4" />
-																<div className="flex items-center space-x-4 text-xs text-muted-foreground">
-																	<span className="flex items-center space-x-1">
-																		<Clock className="w-3 h-3" />
-																		<span>2 min read</span>
-																	</span>
-																	<span className="flex items-center space-x-1">
-																		<TrendingUp className="w-3 h-3" />
-																		<span>Trending</span>
-																	</span>
-																</div>
+														<div className="flex items-center space-x-3">
+															<div className="w-8 h-8 bg-primary/20 rounded flex-shrink-0" />
+															<div className="flex-1 space-y-1">
+																<div className="h-2.5 bg-foreground/20 rounded w-full" />
+																<div className="h-2 bg-foreground/10 rounded w-2/3" />
+															</div>
+															<div className="flex items-center space-x-2 text-xs text-muted-foreground">
+																<Clock className="w-3 h-3" />
+																<span>2m</span>
 															</div>
 														</div>
 													</motion.div>
 												))}
+												<div className="text-center pt-2">
+													<span className="text-xs text-muted-foreground">
+														+ 3 more stories
+													</span>
+												</div>
 											</motion.div>
 										)}
 									</div>
@@ -395,11 +368,6 @@ const FirstPage = () => {
 										className="opacity-0 group-hover:opacity-100"
 									/>
 
-									{/* Step number */}
-									<div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-										{idx + 1}
-									</div>
-
 									{/* Icon */}
 									<div
 										className={`w-16 h-16 bg-gradient-to-r ${step.color} rounded-2xl mb-6 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}
@@ -423,22 +391,6 @@ const FirstPage = () => {
 							</motion.div>
 						))}
 					</div>
-
-					{/* Bottom CTA */}
-					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						animate={controls}
-						variants={{
-							visible: { opacity: 1, y: 0 },
-						}}
-						transition={{ duration: 0.6, delay: 0.8 }}
-						className="text-center mt-16"
-					>
-						<ShinyButton className="text-lg px-10 py-4">
-							<Coffee className="w-5 h-5 mr-2" />
-							Start Your First Brew
-						</ShinyButton>
-					</motion.div>
 				</div>
 			</section>
 		</>
