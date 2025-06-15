@@ -107,9 +107,9 @@ const TimeBrew = () => {
 	];
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 text-slate-900">
+		<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
 			{/* Floating Pill-Shaped Navbar */}
-			<header className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 w-full max-w-4xl">
+			<header className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 w-full max-w-7xl">
 				<div
 					className={`relative transition-all duration-500 ${
 						scrolled ? "scale-95" : "scale-100"
@@ -128,10 +128,10 @@ const TimeBrew = () => {
 							<div className="flex items-center space-x-2 group cursor-pointer">
 								<div className="relative">
 									<span className="text-xl font-bold text-white">Time</span>
-									<span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">
+									<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
 										Brew
 									</span>
-									<div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
+									<div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></div>
 								</div>
 							</div>
 
@@ -142,14 +142,14 @@ const TimeBrew = () => {
 									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
 								>
 									<span>Features</span>
-									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
 								</a>
 								<a
 									href="#how-it-works"
 									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
 								>
 									<span>How It Works</span>
-									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
 								</a>
 
 								{/* Vertical divider */}
@@ -161,8 +161,8 @@ const TimeBrew = () => {
 
 								{/* CTA Button */}
 								<button className="relative group">
-									<div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full blur opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
-									<div className="relative bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2 rounded-full font-medium text-sm hover:shadow-lg transition-all duration-300">
+									<div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-full blur opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
+									<div className="relative bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 rounded-full font-medium text-sm hover:shadow-lg transition-all duration-300">
 										Get Started
 									</div>
 								</button>
@@ -210,7 +210,7 @@ const TimeBrew = () => {
 								>
 									Login
 								</a>
-								<button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-lg font-medium">
+								<button className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
 									Get Started
 								</button>
 							</div>
@@ -221,11 +221,11 @@ const TimeBrew = () => {
 
 			{/* Hero Section */}
 			<section className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-				<div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-orange-50/30"></div>
-				<div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse"></div>
-				<div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-orange-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+				<div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
+				<div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-primary/10 to-accent/10 rounded-full blur-3xl animate-pulse"></div>
+				<div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-accent/10 to-primary/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
-				<div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
+				<div className="max-w-5xl mx-auto px-8 grid lg:grid-cols-2 gap-12 items-center relative z-10">
 					<div
 						className={`space-y-8 transition-all duration-1000 ${
 							isVisible
@@ -234,10 +234,10 @@ const TimeBrew = () => {
 						}`}
 					>
 						<div className="space-y-6">
-							<h1 className="text-5xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+							<h1 className="text-4xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-foreground via-foreground/80 to-foreground bg-clip-text text-transparent">
 								Your Personalized News Brew, on Your Clock.
 							</h1>
-							<p className="text-xl text-slate-600 leading-relaxed">
+							<p className="text-xl text-muted-foreground leading-relaxed">
 								Choose up to 3 daily brews, set the time, pick 3-8 stories each.
 								We'll pour the perfect digest—no info-overload, just what you'll
 								actually read.
@@ -245,11 +245,11 @@ const TimeBrew = () => {
 						</div>
 
 						<div className="flex flex-col sm:flex-row gap-4">
-							<button className="group bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2">
+							<button className="group bg-gradient-to-r from-primary to-accent text-primary-foreground px-8 py-4 rounded-full font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2">
 								<Coffee className="w-5 h-5" />
 								<span>Brew My First Digest</span>
 							</button>
-							<button className="group border-2 border-slate-300 text-slate-700 px-8 py-4 rounded-full font-semibold text-lg hover:border-orange-300 hover:bg-orange-50 transition-all duration-300 flex items-center justify-center space-x-2">
+							<button className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-2">
 								<Play className="w-5 h-5" />
 								<span>See Sample Digest</span>
 							</button>
@@ -257,16 +257,16 @@ const TimeBrew = () => {
 
 						{/* Trust Badges */}
 						<div className="flex flex-wrap items-center gap-6 pt-4">
-							<div className="flex items-center space-x-2 text-sm text-slate-500">
+							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 								<Shield className="w-4 h-4 text-green-500" />
 								<span>Private by Design</span>
 							</div>
-							<div className="flex items-center space-x-2 text-sm text-slate-500">
-								<Sparkles className="w-4 h-4 text-orange-500" />
+							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+								<Sparkles className="w-4 h-4 text-accent" />
 								<span>Early-access Beta</span>
 							</div>
-							<div className="flex items-center space-x-2 text-sm text-slate-500">
-								<Zap className="w-4 h-4 text-blue-500" />
+							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+								<Zap className="w-4 h-4 text-primary" />
 								<span>Powered by Perplexity AI</span>
 							</div>
 						</div>
@@ -281,7 +281,7 @@ const TimeBrew = () => {
 						}`}
 					>
 						<div className="relative">
-							<div className="bg-white/70 backdrop-blur-xl border border-slate-200/50 rounded-3xl p-8 shadow-2xl shadow-slate-900/10">
+							<div className="bg-card/70 backdrop-blur-xl border border-border rounded-3xl p-8 shadow-2xl shadow-foreground/5">
 								<div className="space-y-6">
 									<div className="flex items-center space-x-3">
 										<div className="flex space-x-2">
@@ -289,15 +289,17 @@ const TimeBrew = () => {
 											<div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
 											<div className="w-3 h-3 bg-green-400 rounded-full"></div>
 										</div>
-										<div className="text-sm text-slate-500">TimeBrew.news</div>
+										<div className="text-sm text-muted-foreground">
+											TimeBrew.news
+										</div>
 									</div>
 
 									<div className="space-y-4">
-										<h3 className="text-lg font-semibold text-slate-800">
+										<h3 className="text-lg font-semibold text-card-foreground">
 											{mockupStates[currentMockup].title}
 										</h3>
-										<div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
-											<p className="text-slate-700">
+										<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-4 rounded-xl border border-accent/20">
+											<p className="text-card-foreground">
 												{mockupStates[currentMockup].content}
 											</p>
 										</div>
@@ -307,10 +309,10 @@ const TimeBrew = () => {
 												{[1, 2, 3, 4, 5].map((i) => (
 													<div
 														key={i}
-														className="bg-slate-50 p-3 rounded-lg border border-slate-200 animate-fade-in"
+														className="bg-muted p-3 rounded-lg border border-border animate-fade-in"
 													>
-														<div className="h-2 bg-slate-300 rounded w-full mb-2"></div>
-														<div className="h-2 bg-slate-200 rounded w-3/4"></div>
+														<div className="h-2 bg-primary/30 rounded w-full mb-2"></div>
+														<div className="h-2 bg-muted-foreground/30 rounded w-3/4"></div>
 													</div>
 												))}
 											</div>
@@ -324,18 +326,18 @@ const TimeBrew = () => {
 
 				{/* Scroll Indicator */}
 				<div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-					<ChevronDown className="w-6 h-6 text-slate-400" />
+					<ChevronDown className="w-6 h-6 text-muted-foreground" />
 				</div>
 			</section>
 
 			{/* How It Works */}
-			<section id="how-it-works" className="py-24 bg-white">
-				<div className="max-w-7xl mx-auto px-6">
+			<section id="how-it-works" className="py-24 bg-card">
+				<div className="max-w-5xl mx-auto px-6">
 					<div className="text-center mb-16">
-						<h2 className="text-4xl font-bold text-slate-900 mb-4">
+						<h2 className="text-4xl font-bold text-card-foreground mb-4">
 							How It Works
 						</h2>
-						<p className="text-xl text-slate-600">
+						<p className="text-xl text-muted-foreground">
 							Three simple steps to your perfect news experience
 						</p>
 					</div>
@@ -344,17 +346,17 @@ const TimeBrew = () => {
 						{steps.map((step, i) => (
 							<div key={i} className="group text-center">
 								<div className="relative mb-6">
-									<div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl mx-auto flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+									<div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-3xl mx-auto flex items-center justify-center text-primary-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
 										<step.icon className="w-8 h-8" />
 									</div>
 									<div className="absolute -top-2 -right-2 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center text-sm font-bold">
 										{i + 1}
 									</div>
 								</div>
-								<h3 className="text-xl font-semibold text-slate-900 mb-3">
+								<h3 className="text-xl font-semibold text-card-foreground mb-3">
 									{step.title}
 								</h3>
-								<p className="text-slate-600">{step.desc}</p>
+								<p className="text-muted-foreground">{step.desc}</p>
 							</div>
 						))}
 					</div>
@@ -364,14 +366,14 @@ const TimeBrew = () => {
 			{/* Feature Highlights */}
 			<section
 				id="features"
-				className="py-24 bg-gradient-to-br from-slate-50 to-orange-50"
+				className="py-24 bg-gradient-to-br from-background to-muted"
 			>
-				<div className="max-w-7xl mx-auto px-6">
+				<div className="max-w-5xl mx-auto px-6">
 					<div className="text-center mb-16">
-						<h2 className="text-4xl font-bold text-slate-900 mb-4">
+						<h2 className="text-4xl font-bold text-foreground mb-4">
 							Why Choose TimeBrew?
 						</h2>
-						<p className="text-xl text-slate-600">
+						<p className="text-xl text-muted-foreground">
 							Features designed for the modern news consumer
 						</p>
 					</div>
@@ -380,15 +382,15 @@ const TimeBrew = () => {
 						{features.map((feature, i) => (
 							<div
 								key={i}
-								className="group bg-white/70 backdrop-blur-sm p-8 rounded-2xl border border-slate-200/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2"
+								className="group bg-card/70 backdrop-blur-sm p-8 rounded-2xl border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-2"
 							>
-								<div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl mb-4 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
+								<div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl mb-4 flex items-center justify-center text-primary-foreground group-hover:scale-110 transition-transform duration-300">
 									<feature.icon className="w-6 h-6" />
 								</div>
-								<h3 className="text-lg font-semibold text-slate-900 mb-2">
+								<h3 className="text-lg font-semibold text-card-foreground mb-2">
 									{feature.title}
 								</h3>
-								<p className="text-slate-600">{feature.desc}</p>
+								<p className="text-muted-foreground">{feature.desc}</p>
 							</div>
 						))}
 					</div>
@@ -396,15 +398,15 @@ const TimeBrew = () => {
 			</section>
 
 			{/* Benefits Banner */}
-			<section className="py-24 bg-white">
-				<div className="max-w-7xl mx-auto px-6">
+			<section className="py-24 bg-card">
+				<div className="max-w-5xl mx-auto px-6">
 					<div className="grid lg:grid-cols-2 gap-12 items-center">
 						<div className="space-y-8">
 							<div className="space-y-6">
-								<h2 className="text-4xl font-bold text-slate-900">
+								<h2 className="text-4xl font-bold text-card-foreground">
 									Stay Informed, Not Overwhelmed.
 								</h2>
-								<div className="space-y-4 text-lg text-slate-600">
+								<div className="space-y-4 text-lg text-muted-foreground">
 									<div className="flex items-start space-x-3">
 										<Check className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
 										<span>
@@ -421,13 +423,13 @@ const TimeBrew = () => {
 									</div>
 								</div>
 							</div>
-							<button className="border-2 border-orange-500 text-orange-600 px-8 py-3 rounded-full font-semibold hover:bg-orange-500 hover:text-white transition-all duration-300">
+							<button className="border-2 border-primary text-primary px-8 py-3 rounded-full font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300">
 								See Sample Digest
 							</button>
 						</div>
 						<div className="relative">
-							<div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl h-96 flex items-center justify-center">
-								<Users className="w-24 h-24 text-slate-400" />
+							<div className="bg-gradient-to-br from-muted to-secondary rounded-3xl h-96 flex items-center justify-center">
+								<Users className="w-24 h-24 text-muted-foreground" />
 							</div>
 						</div>
 					</div>
@@ -435,12 +437,12 @@ const TimeBrew = () => {
 			</section>
 
 			{/* Early Adopter CTA */}
-			<section className="py-24 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+			<section className="py-24 bg-gradient-to-r from-primary to-accent text-primary-foreground">
 				<div className="max-w-4xl mx-auto px-6 text-center">
 					<h2 className="text-4xl font-bold mb-4">
 						Help Shape the Future of News.
 					</h2>
-					<p className="text-xl mb-8 text-orange-100">
+					<p className="text-xl mb-8 text-primary-foreground/80">
 						Join the beta today, get priority feature requests & lifetime 50%
 						discount when we launch Pro.
 					</p>
@@ -449,24 +451,24 @@ const TimeBrew = () => {
 						<input
 							type="email"
 							placeholder="you@example.com"
-							className="flex-1 px-6 py-4 rounded-full text-slate-900 border-none focus:outline-none focus:ring-4 focus:ring-orange-300"
+							className="flex-1 px-6 py-4 rounded-full text-foreground bg-background border-none focus:outline-none focus:ring-4 focus:ring-primary-foreground/30"
 						/>
 						<button className="bg-slate-900 text-white px-8 py-4 rounded-full font-semibold hover:bg-slate-800 transition-colors">
 							Claim Your Beta Spot
 						</button>
 					</div>
 
-					<p className="text-sm text-orange-200 mt-4">
+					<p className="text-sm text-primary-foreground/60 mt-4">
 						We'll never share your email. Unsubscribe anytime.
 					</p>
 				</div>
 			</section>
 
 			{/* FAQ */}
-			<section className="py-24 bg-white">
+			<section className="py-24 bg-card">
 				<div className="max-w-4xl mx-auto px-6">
 					<div className="text-center mb-16">
-						<h2 className="text-4xl font-bold text-slate-900 mb-4">
+						<h2 className="text-4xl font-bold text-card-foreground mb-4">
 							Frequently Asked Questions
 						</h2>
 					</div>
@@ -475,13 +477,15 @@ const TimeBrew = () => {
 						{faqs.map((faq, i) => (
 							<div
 								key={i}
-								className="border border-slate-200 rounded-xl overflow-hidden"
+								className="border border-border rounded-xl overflow-hidden"
 							>
 								<button
-									className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
+									className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-muted/50 transition-colors"
 									onClick={() => setOpenFaq(openFaq === i ? null : i)}
 								>
-									<span className="font-semibold text-slate-900">{faq.q}</span>
+									<span className="font-semibold text-card-foreground">
+										{faq.q}
+									</span>
 									{openFaq === i ? (
 										<Minus className="w-5 h-5" />
 									) : (
@@ -489,7 +493,7 @@ const TimeBrew = () => {
 									)}
 								</button>
 								{openFaq === i && (
-									<div className="px-6 pb-4 text-slate-600 border-t border-slate-100">
+									<div className="px-6 pb-4 text-muted-foreground border-t border-border">
 										<p className="pt-4">{faq.a}</p>
 									</div>
 								)}
@@ -501,12 +505,12 @@ const TimeBrew = () => {
 
 			{/* Footer */}
 			<footer className="bg-slate-900 text-white py-16">
-				<div className="max-w-7xl mx-auto px-6">
+				<div className="max-w-5xl mx-auto px-6">
 					<div className="grid md:grid-cols-4 gap-8">
 						<div className="space-y-4">
 							<div className="flex items-center space-x-2">
 								<span className="text-xl font-bold">TimeBrew</span>
-								<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+								<div className="w-2 h-2 bg-accent rounded-full"></div>
 							</div>
 							<p className="text-slate-400">Crafted in New Jersey ☕</p>
 						</div>
