@@ -41,7 +41,7 @@ const Navbar = () => {
 								<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
 									Brew
 								</span>
-								<div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></div>
+								{/* <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></div> */}
 							</div>
 						</div>
 

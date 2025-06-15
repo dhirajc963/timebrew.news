@@ -1,13 +1,94 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+
+		<!-- TimeBrew Favicon -->
+		<link rel="icon" type="image/svg+xml" href="/coffee-icon.svg" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+		<!-- Viewport and Theme -->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="theme-color" content="#a3e635" />
+
+		<!-- TimeBrew Branding -->
+		<title>TimeBrew - Your Personalized News Brew, on Your Clock</title>
+		<meta
+			name="description"
+			content="Choose up to 3 daily news brews, set the time, pick 3-8 stories each. AI-curated digests with zero info-overload, just what you'll actually read."
+		/>
+		<meta
+			name="keywords"
+			content="news digest, personalized news, AI news, daily briefing, custom news, TimeBrew"
+		/>
+		<meta name="author" content="TimeBrew" />
+
+		<!-- Open Graph / Social Media -->
+		<meta property="og:type" content="website" />
+		<meta
+			property="og:title"
+			content="TimeBrew - Your Personalized News Brew"
+		/>
+		<meta
+			property="og:description"
+			content="AI-powered news digests tailored to your schedule. Up to 3 daily brews, custom article count, zero overload."
+		/>
+		<meta property="og:image" content="/timebrew-og-image.png" />
+		<meta property="og:url" content="https://timebrew.news" />
+		<meta property="og:site_name" content="TimeBrew" />
+
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta
+			name="twitter:title"
+			content="TimeBrew - Your Personalized News Brew"
+		/>
+		<meta
+			name="twitter:description"
+			content="AI-powered news digests tailored to your schedule. Up to 3 daily brews, custom article count, zero overload."
+		/>
+		<meta name="twitter:image" content="/timebrew-twitter-image.png" />
+
+		<!-- Font Preconnect for Performance -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+		<!-- Custom Font -->
+		<link
+			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+			rel="stylesheet"
+		/>
+
+		<!-- Additional Performance & SEO -->
+		<link rel="canonical" href="https://timebrew.news" />
+		<meta name="robots" content="index, follow" />
+		<meta name="googlebot" content="index, follow" />
+
+		<!-- PWA Support -->
+		<link rel="manifest" href="/manifest.json" />
+
+		<!-- Structured Data for Rich Snippets -->
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebApplication",
+				"name": "TimeBrew",
+				"description": "AI-powered personalized news digest service",
+				"url": "https://timebrew.news",
+				"applicationCategory": "NewsApplication",
+				"operatingSystem": "Web Browser",
+				"offers": {
+					"@type": "Offer",
+					"price": "0",
+					"priceCurrency": "USD"
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
 </html>

@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+* {
+	font-family: "Plus Jakarta Sans", sans-serif;
+}
+
 @theme inline {
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -42,107 +46,107 @@
 }
 
 :root {
-	--radius: 0.75rem;
+	--radius: 0.875rem;
 
-	/* Light theme - Modern blue/teal color scheme */
-	--background: oklch(0.99 0.005 240);
-	--foreground: oklch(0.15 0.01 240);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.15 0.01 240);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.15 0.01 240);
+	/* Light theme - Gnomie-inspired green/natural color scheme */
+	--background: oklch(0.98 0.015 120);
+	--foreground: oklch(0.12 0.02 120);
+	--card: oklch(0.995 0.008 120);
+	--card-foreground: oklch(0.12 0.02 120);
+	--popover: oklch(0.995 0.008 120);
+	--popover-foreground: oklch(0.12 0.02 120);
 
-	/* Primary: Modern blue */
-	--primary: oklch(0.55 0.15 250);
-	--primary-foreground: oklch(0.98 0 0);
+	/* Primary: Vibrant lime green like Gnomie */
+	--primary: oklch(0.68 0.2 130);
+	--primary-foreground: oklch(0.08 0.02 120);
 
-	/* Secondary: Soft slate */
-	--secondary: oklch(0.95 0.01 240);
-	--secondary-foreground: oklch(0.2 0.01 240);
+	/* Secondary: Soft sage green */
+	--secondary: oklch(0.94 0.02 120);
+	--secondary-foreground: oklch(0.2 0.02 120);
 
-	/* Muted colors */
-	--muted: oklch(0.96 0.005 240);
-	--muted-foreground: oklch(0.5 0.01 240);
+	/* Muted colors with green undertones */
+	--muted: oklch(0.95 0.015 120);
+	--muted-foreground: oklch(0.45 0.02 120);
 
-	/* Accent: Vibrant teal */
-	--accent: oklch(0.6 0.18 180);
-	--accent-foreground: oklch(0.98 0 0);
+	/* Accent: Bright lime for highlights */
+	--accent: oklch(0.75 0.25 125);
+	--accent-foreground: oklch(0.08 0.02 120);
 
-	/* Destructive remains red but more muted */
+	/* Destructive remains red but softened */
 	--destructive: oklch(0.65 0.15 25);
 
-	/* Border and input */
-	--border: oklch(0.9 0.005 240);
-	--input: oklch(0.95 0.005 240);
-	--ring: oklch(0.55 0.15 250 / 0.3);
+	/* Border and input with green tint */
+	--border: oklch(0.88 0.02 120);
+	--input: oklch(0.92 0.015 120);
+	--ring: oklch(0.68 0.2 130 / 0.3);
 
-	/* Charts - blue/teal spectrum */
-	--chart-1: oklch(0.55 0.15 250);
-	--chart-2: oklch(0.6 0.18 180);
-	--chart-3: oklch(0.65 0.12 200);
-	--chart-4: oklch(0.7 0.15 160);
-	--chart-5: oklch(0.5 0.12 220);
+	/* Charts - green spectrum */
+	--chart-1: oklch(0.68 0.2 130);
+	--chart-2: oklch(0.75 0.25 125);
+	--chart-3: oklch(0.6 0.18 135);
+	--chart-4: oklch(0.72 0.22 120);
+	--chart-5: oklch(0.65 0.15 140);
 
 	/* Sidebar */
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.15 0.01 240);
-	--sidebar-primary: oklch(0.55 0.15 250);
-	--sidebar-primary-foreground: oklch(0.98 0 0);
-	--sidebar-accent: oklch(0.95 0.01 240);
-	--sidebar-accent-foreground: oklch(0.2 0.01 240);
-	--sidebar-border: oklch(0.9 0.005 240);
-	--sidebar-ring: oklch(0.55 0.15 250 / 0.3);
+	--sidebar: oklch(0.985 0.01 120);
+	--sidebar-foreground: oklch(0.12 0.02 120);
+	--sidebar-primary: oklch(0.68 0.2 130);
+	--sidebar-primary-foreground: oklch(0.08 0.02 120);
+	--sidebar-accent: oklch(0.94 0.02 120);
+	--sidebar-accent-foreground: oklch(0.2 0.02 120);
+	--sidebar-border: oklch(0.88 0.02 120);
+	--sidebar-ring: oklch(0.68 0.2 130 / 0.3);
 }
 
 .dark {
-	/* Dark theme */
-	--background: oklch(0.12 0.01 240);
-	--foreground: oklch(0.95 0.005 240);
-	--card: oklch(0.18 0.01 240);
-	--card-foreground: oklch(0.95 0.005 240);
-	--popover: oklch(0.18 0.01 240);
-	--popover-foreground: oklch(0.95 0.005 240);
+	/* Dark theme with green undertones */
+	--background: oklch(0.08 0.02 120);
+	--foreground: oklch(0.96 0.01 120);
+	--card: oklch(0.12 0.02 120);
+	--card-foreground: oklch(0.96 0.01 120);
+	--popover: oklch(0.12 0.02 120);
+	--popover-foreground: oklch(0.96 0.01 120);
 
-	/* Primary: Brighter blue for dark mode */
-	--primary: oklch(0.65 0.15 250);
-	--primary-foreground: oklch(0.12 0.01 240);
+	/* Primary: Bright lime for dark mode */
+	--primary: oklch(0.75 0.25 125);
+	--primary-foreground: oklch(0.08 0.02 120);
 
-	/* Secondary: Dark slate */
-	--secondary: oklch(0.25 0.01 240);
-	--secondary-foreground: oklch(0.95 0.005 240);
+	/* Secondary: Dark sage */
+	--secondary: oklch(0.18 0.02 120);
+	--secondary-foreground: oklch(0.96 0.01 120);
 
-	/* Muted colors */
-	--muted: oklch(0.22 0.01 240);
-	--muted-foreground: oklch(0.65 0.01 240);
+	/* Muted colors for dark mode */
+	--muted: oklch(0.15 0.02 120);
+	--muted-foreground: oklch(0.65 0.02 120);
 
-	/* Accent: Bright teal for dark mode */
-	--accent: oklch(0.7 0.18 180);
-	--accent-foreground: oklch(0.12 0.01 240);
+	/* Accent: Vibrant lime for dark mode */
+	--accent: oklch(0.8 0.3 125);
+	--accent-foreground: oklch(0.08 0.02 120);
 
 	/* Destructive */
 	--destructive: oklch(0.75 0.15 25);
 
-	/* Border and input */
-	--border: oklch(0.3 0.01 240);
-	--input: oklch(0.25 0.01 240);
-	--ring: oklch(0.65 0.15 250 / 0.4);
+	/* Border and input for dark mode */
+	--border: oklch(0.25 0.02 120);
+	--input: oklch(0.2 0.02 120);
+	--ring: oklch(0.75 0.25 125 / 0.4);
 
 	/* Charts for dark mode */
-	--chart-1: oklch(0.65 0.15 250);
-	--chart-2: oklch(0.7 0.18 180);
-	--chart-3: oklch(0.75 0.12 200);
-	--chart-4: oklch(0.8 0.15 160);
-	--chart-5: oklch(0.6 0.12 220);
+	--chart-1: oklch(0.75 0.25 125);
+	--chart-2: oklch(0.8 0.3 125);
+	--chart-3: oklch(0.7 0.22 135);
+	--chart-4: oklch(0.78 0.28 120);
+	--chart-5: oklch(0.72 0.2 140);
 
 	/* Sidebar dark */
-	--sidebar: oklch(0.18 0.01 240);
-	--sidebar-foreground: oklch(0.95 0.005 240);
-	--sidebar-primary: oklch(0.65 0.15 250);
-	--sidebar-primary-foreground: oklch(0.12 0.01 240);
-	--sidebar-accent: oklch(0.25 0.01 240);
-	--sidebar-accent-foreground: oklch(0.95 0.005 240);
-	--sidebar-border: oklch(0.3 0.01 240);
-	--sidebar-ring: oklch(0.65 0.15 250 / 0.4);
+	--sidebar: oklch(0.12 0.02 120);
+	--sidebar-foreground: oklch(0.96 0.01 120);
+	--sidebar-primary: oklch(0.75 0.25 125);
+	--sidebar-primary-foreground: oklch(0.08 0.02 120);
+	--sidebar-accent: oklch(0.18 0.02 120);
+	--sidebar-accent-foreground: oklch(0.96 0.01 120);
+	--sidebar-border: oklch(0.25 0.02 120);
+	--sidebar-ring: oklch(0.75 0.25 125 / 0.4);
 }
 
 @layer base {
@@ -151,5 +155,104 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		/* Gnomie-inspired typography */
+		font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+		letter-spacing: -0.01em;
+	}
+
+	/* Enhanced typography for headings */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-weight: 600;
+		letter-spacing: -0.025em;
+		line-height: 1.2;
+	}
+
+	/* Smooth scrolling */
+	html {
+		scroll-behavior: smooth;
+	}
+
+	/* Custom focus styles matching the green theme */
+	*:focus-visible {
+		outline: 2px solid oklch(0.68 0.2 130);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
+	/* Enhanced button hover effects */
+	button {
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* Custom scrollbar styling */
+	::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: oklch(0.95 0.015 120);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: oklch(0.68 0.2 130);
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: oklch(0.6 0.22 130);
+	}
+
+	/* Selection styling */
+	::selection {
+		background: oklch(0.68 0.2 130 / 0.2);
+		color: oklch(0.12 0.02 120);
+	}
+}
+
+/* Additional utility classes for the green theme */
+@layer utilities {
+	.text-gradient-green {
+		@apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+	}
+
+	.bg-gradient-green {
+		@apply bg-gradient-to-r from-primary to-accent;
+	}
+
+	.border-gradient-green {
+		border-image: linear-gradient(
+				90deg,
+				oklch(0.68 0.2 130),
+				oklch(0.75 0.25 125)
+			)
+			1;
+	}
+
+	.animate-fade-in {
+		animation: fadeIn 0.6s ease-in-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.glass-effect {
+		@apply bg-card/40 backdrop-blur-xl border border-border/50;
+	}
+
+	.hover-lift {
+		@apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
 	}
 }
