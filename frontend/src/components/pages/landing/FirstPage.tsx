@@ -381,7 +381,7 @@ const FirstPage = () => {
 
 									{/* Connecting line to next step */}
 									{idx < steps.length - 1 && (
-										<div className="hidden lg:block absolute top-1/2 -right-6 w-12 h-0.5 bg-gradient-to-r from-primary to-accent opacity-30" />
+										<div className="hidden lg:block absolute top-1/2 -right-12 w-12 h-0.5 bg-gradient-to-r from-primary to-accent opacity-30" />
 									)}
 								</div>
 							</motion.div>
