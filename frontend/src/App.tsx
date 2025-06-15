@@ -1,7 +1,6 @@
-import React from "react";
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
-import LandingPage from "./components/pages/LandingPage";
+import LandingPage from "./components/pages/landing/LandingPage";
 
 const App = () => {
 	return (

@@ -11,7 +11,10 @@ import {
 	Check,
 	Plus,
 	Minus,
+	ArrowRight,
 } from "lucide-react";
+
+import { Progress } from "@/components/ui/progress";
 
 const LandingPage = () => {
 	const [isVisible, setIsVisible] = useState(false);
@@ -209,8 +212,9 @@ const LandingPage = () => {
 			{/* How It Works */}
 			<section id="how-it-works" className="py-24 bg-card">
 				<div className="max-w-5xl mx-auto px-6">
+					{/* Header */}
 					<div className="text-center mb-16">
-						<h2 className="text-4xl font-bold text-card-foreground mb-4">
+						<h2 className="text-5xl font-bold text-card-foreground mb-4">
 							How It Works
 						</h2>
 						<p className="text-xl text-muted-foreground">
@@ -218,21 +222,23 @@ const LandingPage = () => {
 						</p>
 					</div>
 
-					<div className="grid md:grid-cols-3 gap-8">
-						{steps.map((step, i) => (
-							<div key={i} className="group text-center">
-								<div className="relative mb-6">
-									<div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-3xl mx-auto flex items-center justify-center text-primary-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-										<step.icon className="w-8 h-8" />
-									</div>
-									<div className="absolute -top-2 -right-2 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center text-sm font-bold">
-										{i + 1}
-									</div>
+					{/* Steps + Arrows */}
+					<div className="flex items-center justify-center space-x-6">
+						{steps.map((step, idx) => (
+							<div key={idx} className="flex items-center">
+								{/* Step Card */}
+								<div className="flex flex-col items-center text-center space-y-2">
+									<step.icon className="w-8 h-8 text-primary" />
+									<h3 className="text-lg font-semibold text-card-foreground">
+										{step.title}
+									</h3>
+									<p className="text-sm text-muted-foreground">{step.desc}</p>
 								</div>
-								<h3 className="text-xl font-semibold text-card-foreground mb-3">
-									{step.title}
-								</h3>
-								<p className="text-muted-foreground">{step.desc}</p>
+
+								{/* Arrow (skip after last) */}
+								{idx < steps.length - 1 && (
+									<ArrowRight className="w-6 h-6 text-muted-foreground mx-4" />
+								)}
 							</div>
 						))}
 					</div>
