@@ -91,14 +91,14 @@ const FirstPage = () => {
 	return (
 		<>
 			{/* Hero Section */}
-			<section className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-				<div className="max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-16 items-center relative z-10">
-					{/* Left Content */}
+			<section className="min-h-screen flex items-start md:items-center justify-center relative overflow-hidden mt-10 md:mt-0 pt-20 md:pt-0">
+				<div className="max-w-7xl mx-auto px-10  grid grid-cols-1 lg:grid-cols-12 gap-16 items-center relative z-10">
+					{/* Left Content: span 8 of 12 on lg */}
 					<motion.div
 						initial={{ opacity: 0, y: 50 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.8, ease: "easeOut" }}
-						className="space-y-10"
+						className="space-y-10 lg:col-span-8"
 					>
 						{/* Beta Badge */}
 						<motion.div
@@ -109,7 +109,7 @@ const FirstPage = () => {
 						>
 							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
 								<Sparkles className="w-4 h-4" />
-								<span className="text-sm font-medium">Early Access Beta</span>
+								<span className="text-sm font-medium">Free Beta Access</span>
 							</AnimatedGradientText>
 						</motion.div>
 
@@ -127,7 +127,7 @@ const FirstPage = () => {
 									className="text-gradient-green"
 								/>{" "}
 								News Brew,{" "}
-								<span className="text-gradient-green">on Your Clock.</span>
+								<span className="text-gradient-green">on Your Time.</span>
 							</motion.h1>
 
 							<motion.div
@@ -185,22 +185,18 @@ const FirstPage = () => {
 								<span>Powered by AI</span>
 							</div>
 							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-								<Users className="w-4 h-4 text-blue-500" />
-								<span>Zero Spam</span>
-							</div>
-							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 								<Sparkles className="w-4 h-4 text-purple-500" />
 								<span>Smart Curation</span>
 							</div>
 						</motion.div>
 					</motion.div>
 
-					{/* Enhanced Animated Mockup */}
+					{/* Right animated mockup: span 4 of 12 on lg */}
 					<motion.div
 						initial={{ opacity: 0, x: 50, rotateY: -15 }}
 						animate={{ opacity: 1, x: 0, rotateY: 0 }}
 						transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
-						className="relative"
+						className="relative lg:col-span-4"
 					>
 						<div className="relative group">
 							{/* Glow effect */}

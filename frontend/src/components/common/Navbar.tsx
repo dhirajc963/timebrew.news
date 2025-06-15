@@ -19,10 +19,10 @@ const Navbar = () => {
 	}, []);
 
 	return (
-		<header className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 w-full max-w-7xl">
+		<header className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-3 w-full max-w-7xl">
 			<div
 				className={`relative transition-all duration-500 ${
-					scrolled ? "scale-95" : "scale-100"
+					scrolled ? "scale-97" : "scale-100"
 				}`}
 			>
 				{/* Glow effect behind navbar */}
