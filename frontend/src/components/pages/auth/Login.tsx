@@ -3,16 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import {
 	Coffee,
 	Mail,
-	Lock,
-	Eye,
-	EyeOff,
 	Loader2,
-	ArrowRight,
 	AlertCircle,
 	Sparkles,
 	Zap,
+	Send,
+	Shield,
+	ArrowLeft,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
@@ -21,10 +20,20 @@ import { TypingAnimation } from "@/components/magicui/typing-animation";
 // Types
 interface LoginFormData {
 	email: string;
-	password: string;
+	otpCode: string;
 }
 
 interface LoginResponse {
+	message?: string;
+	challengeName?: string;
+	session?: string;
+	email?: string;
+	nextStep?: string;
+	error?: string;
+}
+
+interface VerifyResponse {
+	message?: string;
 	accessToken?: string;
 	refreshToken?: string;
 	expiresIn?: number;
@@ -33,32 +42,36 @@ interface LoginResponse {
 		email: string;
 		firstName: string;
 		lastName: string;
+		country: string;
+		interests: string[];
 	};
 	error?: string;
-	message?: string;
 }
+
+type LoginStep = "email" | "otp";
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
 	const [formData, setFormData] = useState<LoginFormData>({
 		email: "",
-		password: "",
+		otpCode: "",
 	});
 
-	const [showPassword, setShowPassword] = useState(false);
+	const [currentStep, setCurrentStep] = useState<LoginStep>("email");
+	const [session, setSession] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 
 	// API Configuration
 	const API_BASE_URL =
-		"https://your-api-id.execute-api.us-east-1.amazonaws.com/dev";
+		"https://12rj6a2a04.execute-api.us-east-1.amazonaws.com/dev";
 
 	const handleInputChange = (field: keyof LoginFormData, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		if (error) setError("");
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleEmailSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
@@ -69,21 +82,18 @@ const Login: React.FC = () => {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(formData),
+				body: JSON.stringify({ email: formData.email }),
 			});
 
 			const data: LoginResponse = await response.json();
 
-			if (response.ok && data.accessToken) {
-				// Store tokens in localStorage (you might want to use a more secure method)
-				localStorage.setItem("accessToken", data.accessToken);
-				localStorage.setItem("refreshToken", data.refreshToken || "");
-				localStorage.setItem("user", JSON.stringify(data.user));
-
-				// Redirect to dashboard
-				navigate("/dashboard");
+			if (response.ok && data.challengeName === "EMAIL_OTP") {
+				setSession(data.session || "");
+				setCurrentStep("otp");
 			} else {
-				setError(data.error || "Login failed. Please check your credentials.");
+				setError(
+					data.error || "Failed to send verification code. Please try again."
+				);
 			}
 		} catch (err) {
 			setError("Network error. Please check your connection and try again.");
@@ -92,7 +102,79 @@ const Login: React.FC = () => {
 		}
 	};
 
-	const isFormValid = formData.email && formData.password;
+	const handleOTPSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setLoading(true);
+		setError("");
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					email: formData.email,
+					otpCode: formData.otpCode,
+					session: session,
+				}),
+			});
+
+			const data: VerifyResponse = await response.json();
+
+			if (response.ok && data.accessToken) {
+				// Store tokens and user data
+				localStorage.setItem("accessToken", data.accessToken);
+				localStorage.setItem("refreshToken", data.refreshToken || "");
+				localStorage.setItem("user", JSON.stringify(data.user));
+
+				// Redirect to dashboard
+				navigate("/dashboard");
+			} else {
+				setError(data.error || "Invalid verification code. Please try again.");
+			}
+		} catch (err) {
+			setError("Network error. Please check your connection and try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleResendCode = async () => {
+		setLoading(true);
+		setError("");
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/auth/login`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ email: formData.email }),
+			});
+
+			const data: LoginResponse = await response.json();
+
+			if (response.ok) {
+				setSession(data.session || "");
+				// Show success message briefly
+				setError("");
+			} else {
+				setError("Failed to resend code. Please try again.");
+			}
+		} catch (err) {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const resetFlow = () => {
+		setCurrentStep("email");
+		setFormData({ email: formData.email, otpCode: "" });
+		setSession("");
+		setError("");
+	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16">
@@ -128,7 +210,9 @@ const Login: React.FC = () => {
 							className="text-muted-foreground text-lg"
 							duration={50}
 						>
-							Access your personalized news brews and manage your preferences
+							{currentStep === "otp"
+								? "Enter the verification code we sent to your email"
+								: "Secure passwordless access with just your email"}
 						</TypingAnimation>
 					</div>
 
@@ -139,162 +223,170 @@ const Login: React.FC = () => {
 						<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-8 shadow-2xl">
 							<BorderBeam size={300} duration={15} delay={3} />
 
-							<form onSubmit={handleSubmit} className="space-y-6">
-								{/* Email Field */}
-								<div className="space-y-2">
-									<label className="text-sm font-medium">Email Address</label>
-									<div className="relative">
-										<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-										<input
-											type="email"
-											value={formData.email}
-											onChange={(e) =>
-												handleInputChange("email", e.target.value)
-											}
-											className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-											placeholder="Enter your email"
-											required
-										/>
-									</div>
-								</div>
-
-								{/* Password Field */}
-								<div className="space-y-2">
-									<div className="flex items-center justify-between">
-										<label className="text-sm font-medium">Password</label>
-										<button
-											type="button"
-											className="text-sm text-primary hover:text-primary/80 transition-colors"
-										>
-											Forgot password?
-										</button>
-									</div>
-									<div className="relative">
-										<Lock className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-										<input
-											type={showPassword ? "text" : "password"}
-											value={formData.password}
-											onChange={(e) =>
-												handleInputChange("password", e.target.value)
-											}
-											className="w-full pl-10 pr-12 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-											placeholder="Enter your password"
-											required
-										/>
-										<button
-											type="button"
-											onClick={() => setShowPassword(!showPassword)}
-											className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-										>
-											{showPassword ? (
-												<EyeOff className="w-4 h-4" />
-											) : (
-												<Eye className="w-4 h-4" />
-											)}
-										</button>
-									</div>
-								</div>
-
-								{/* Remember Me */}
-								<div className="flex items-center space-x-2">
-									<input
-										type="checkbox"
-										id="remember"
-										className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary/50"
-									/>
-									<label
-										htmlFor="remember"
-										className="text-sm text-muted-foreground"
-									>
-										Remember me for 30 days
-									</label>
-								</div>
-
-								{/* Error Message */}
-								{error && (
+							<AnimatePresence mode="wait">
+								{/* Step 1: Email Entry */}
+								{currentStep === "email" && (
 									<motion.div
-										initial={{ opacity: 0, y: 10 }}
-										animate={{ opacity: 1, y: 0 }}
-										className="flex items-center space-x-2 text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl p-3"
+										key="email-step"
+										initial={{ opacity: 0, x: 20 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: -20 }}
+										transition={{ duration: 0.3 }}
 									>
-										<AlertCircle className="w-4 h-4 flex-shrink-0" />
-										<span className="text-sm">{error}</span>
+										<form onSubmit={handleEmailSubmit} className="space-y-6">
+											{/* Passwordless Info */}
+											<div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-primary/20 rounded-xl p-4 mb-6">
+												<div className="flex items-start space-x-3">
+													<Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+													<div className="text-sm">
+														<div className="font-medium text-primary mb-1">
+															Passwordless Sign-In
+														</div>
+														<div className="text-muted-foreground">
+															We'll send a secure verification code to your
+															email
+														</div>
+													</div>
+												</div>
+											</div>
+
+											{/* Email Field */}
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													Email Address
+												</label>
+												<div className="relative">
+													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+													<input
+														type="email"
+														value={formData.email}
+														onChange={(e) =>
+															handleInputChange("email", e.target.value)
+														}
+														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+														placeholder="Enter your email"
+														required
+													/>
+												</div>
+											</div>
+
+											{/* Submit Button */}
+											<ShinyButton
+												type="submit"
+												disabled={loading || !formData.email}
+												className="w-full flex items-center justify-center gap-2"
+											>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Sending Code...
+													</>
+												) : (
+													<>
+														<Send className="w-4 h-4" />
+														Send Verification Code
+													</>
+												)}
+											</ShinyButton>
+										</form>
 									</motion.div>
 								)}
 
-								{/* Submit Button */}
-								<ShinyButton
-									// type="submit"
-									// disabled={loading || !isFormValid}
-									className="w-full [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+								{/* Step 2: OTP Entry */}
+								{currentStep === "otp" && (
+									<motion.div
+										key="otp-step"
+										initial={{ opacity: 0, x: 20 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: -20 }}
+										transition={{ duration: 0.3 }}
+									>
+										<form onSubmit={handleOTPSubmit} className="space-y-6">
+											{/* Back Button */}
+											<button
+												type="button"
+												onClick={resetFlow}
+												className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
+											>
+												<ArrowLeft className="w-4 h-4" />
+												<span className="text-sm">Use different email</span>
+											</button>
+
+											{/* OTP Info */}
+											<div className="text-center mb-6">
+												<p className="text-muted-foreground text-sm">
+													We sent a 8-digit code to{" "}
+													<strong>{formData.email}</strong>
+												</p>
+											</div>
+
+											{/* OTP Field */}
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													Verification Code
+												</label>
+												<input
+													type="text"
+													value={formData.otpCode}
+													onChange={(e) =>
+														handleInputChange(
+															"otpCode",
+															e.target.value.replace(/\D/g, "").slice(0, 8)
+														)
+													}
+													className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-center text-2xl font-mono tracking-widest"
+													placeholder="000000"
+													maxLength={8}
+													autoComplete="one-time-code"
+													required
+												/>
+											</div>
+
+											{/* Resend Code */}
+											<div className="text-center">
+												<button
+													type="button"
+													onClick={handleResendCode}
+													disabled={loading}
+													className="text-sm text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+												>
+													Didn't receive the code? Send again
+												</button>
+											</div>
+
+											{/* Submit Button */}
+											<ShinyButton
+												disabled={loading || formData.otpCode.length !== 8}
+												className="w-full flex items-center justify-center gap-2"
+											>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Verifying...
+													</>
+												) : (
+													<>
+														<Zap className="w-4 h-4" />
+														Sign In
+													</>
+												)}
+											</ShinyButton>
+										</form>
+									</motion.div>
+								)}
+							</AnimatePresence>
+
+							{/* Error Message */}
+							{error && (
+								<motion.div
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									className="flex items-center space-x-2 text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl p-3 mt-6"
 								>
-									{loading ? (
-										<>
-											<Loader2 className="w-4 h-4 animate-spin" />
-											<span>Signing In...</span>
-										</>
-									) : (
-										<>
-											<Zap className="w-4 h-4" />
-											<span>Sign In</span>
-										</>
-									)}
-								</ShinyButton>
-
-								{/* Divider */}
-								<div className="relative">
-									<div className="absolute inset-0 flex items-center">
-										<div className="w-full border-t border-border" />
-									</div>
-									<div className="relative flex justify-center text-sm">
-										<span className="px-2 bg-card text-muted-foreground">
-											Or continue with
-										</span>
-									</div>
-								</div>
-
-								{/* Social Login Buttons */}
-								<div className="grid grid-cols-2 gap-3">
-									<button
-										type="button"
-										className="flex items-center justify-center px-4 py-3 border border-border rounded-xl bg-background/50 hover:bg-background transition-all duration-200"
-									>
-										<svg className="w-5 h-5" viewBox="0 0 24 24">
-											<path
-												fill="currentColor"
-												d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-											/>
-											<path
-												fill="currentColor"
-												d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-											/>
-											<path
-												fill="currentColor"
-												d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-											/>
-											<path
-												fill="currentColor"
-												d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-											/>
-										</svg>
-										<span className="ml-2 text-sm font-medium">Google</span>
-									</button>
-
-									<button
-										type="button"
-										className="flex items-center justify-center px-4 py-3 border border-border rounded-xl bg-background/50 hover:bg-background transition-all duration-200"
-									>
-										<svg
-											className="w-5 h-5"
-											fill="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-										</svg>
-										<span className="ml-2 text-sm font-medium">Facebook</span>
-									</button>
-								</div>
-							</form>
+									<AlertCircle className="w-4 h-4 flex-shrink-0" />
+									<span className="text-sm">{error}</span>
+								</motion.div>
+							)}
 						</div>
 					</div>
 
@@ -312,8 +404,8 @@ const Login: React.FC = () => {
 					{/* Trust Badges */}
 					<div className="flex items-center justify-center gap-6 mt-6">
 						<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-							<Sparkles className="w-4 h-4 text-primary" />
-							<span>Secure Login</span>
+							<Shield className="w-4 h-4 text-primary" />
+							<span>Secure & Passwordless</span>
 						</div>
 						<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 							<Coffee className="w-4 h-4 text-accent" />

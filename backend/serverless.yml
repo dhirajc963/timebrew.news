@@ -35,7 +35,7 @@ custom:
     pythonBin: python3
 
 functions:
-  # Health check function (simple test)
+  # Health check function
   health:
     handler: handlers/utils/health.handler
     events:
@@ -44,7 +44,7 @@ functions:
           method: get
           cors: true
 
-  # Placeholder auth functions
+  # Auth functions
   register:
     handler: handlers/auth/register.handler
     events:
@@ -58,6 +58,23 @@ functions:
     events:
       - http:
           path: auth/login
+          method: post
+          cors: true
+
+  # ADD THESE TWO:
+  verifyOTP:
+    handler: handlers/auth/verify_otp.handler
+    events:
+      - http:
+          path: auth/verify-otp
+          method: post
+          cors: true
+
+  resendVerification:
+    handler: handlers/auth/resend_verification.handler
+    events:
+      - http:
+          path: auth/resend-verification
           method: post
           cors: true
 

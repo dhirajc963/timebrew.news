@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
 	Coffee,
 	Mail,
-	Lock,
 	User,
 	Globe,
-	Heart,
 	ArrowRight,
 	Check,
 	AlertCircle,
 	Sparkles,
 	Zap,
-	Eye,
-	EyeOff,
 	Loader2,
+	Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
@@ -24,7 +22,6 @@ import { TypingAnimation } from "@/components/magicui/typing-animation";
 // Types
 interface SignupFormData {
 	email: string;
-	password: string;
 	firstName: string;
 	lastName: string;
 	country: string;
@@ -41,7 +38,6 @@ interface ApiResponse {
 const Signup: React.FC = () => {
 	const [formData, setFormData] = useState<SignupFormData>({
 		email: "",
-		password: "",
 		firstName: "",
 		lastName: "",
 		country: "",
@@ -49,7 +45,6 @@ const Signup: React.FC = () => {
 		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	});
 
-	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState(false);
 	const [error, setError] = useState("");
@@ -110,10 +105,13 @@ const Signup: React.FC = () => {
 	const validateStep = (step: number): boolean => {
 		switch (step) {
 			case 1:
-				return !!(formData.firstName && formData.lastName && formData.email);
+				return !!(
+					formData.firstName &&
+					formData.lastName &&
+					formData.email &&
+					formData.country
+				);
 			case 2:
-				return !!(formData.password.length >= 8 && formData.country);
-			case 3:
 				return formData.interests.length > 0;
 			default:
 				return false;
@@ -150,7 +148,7 @@ const Signup: React.FC = () => {
 
 	const nextStep = () => {
 		if (validateStep(currentStep)) {
-			setCurrentStep((prev) => Math.min(prev + 1, 3));
+			setCurrentStep((prev) => Math.min(prev + 1, 2));
 		}
 	};
 
@@ -180,18 +178,40 @@ const Signup: React.FC = () => {
 								</div>
 
 								<h2 className="text-2xl font-bold text-gradient-green">
-									Welcome to TimeBrew!
+									Check Your Email!
 								</h2>
 
-								<p className="text-muted-foreground">
-									Your account has been created successfully. Check your email
-									for verification.
-								</p>
+								<div className="space-y-2">
+									<p className="text-muted-foreground">
+										We've sent a verification link to{" "}
+										<strong>{formData.email}</strong>
+									</p>
+									<p className="text-sm text-muted-foreground">
+										Click the link to verify your account, then you can sign in
+										using just your email!
+									</p>
+								</div>
 
-								<ShinyButton className="w-full [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
-									<Coffee className="w-4 h-4" />
-									<span>Start Brewing</span>
-								</ShinyButton>
+								<div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+									<div className="flex items-start space-x-3">
+										<Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+										<div className="text-sm">
+											<div className="font-medium text-primary mb-1">
+												Passwordless Authentication
+											</div>
+											<div className="text-muted-foreground">
+												No passwords to remember - just secure email codes!
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<Link to="/login">
+									<ShinyButton className="w-full flex items-center justify-center gap-2">
+										<Coffee className="w-4 h-4" />
+										Go to Sign In
+									</ShinyButton>
+								</Link>
 							</div>
 						</div>
 					</motion.div>
@@ -242,7 +262,7 @@ const Signup: React.FC = () => {
 
 					{/* Progress Indicator */}
 					<div className="flex items-center justify-center mb-8">
-						{[1, 2, 3].map((step) => (
+						{[1, 2].map((step) => (
 							<React.Fragment key={step}>
 								<div
 									className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
@@ -253,7 +273,7 @@ const Signup: React.FC = () => {
 								>
 									{step}
 								</div>
-								{step < 3 && (
+								{step < 2 && (
 									<div
 										className={`w-12 h-1 transition-all duration-300 ${
 											currentStep > step
@@ -292,6 +312,21 @@ const Signup: React.FC = () => {
 												<p className="text-muted-foreground text-sm">
 													We'll use this to personalize your experience
 												</p>
+											</div>
+
+											{/* Passwordless Info */}
+											<div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-primary/20 rounded-xl p-4 mb-6">
+												<div className="flex items-center space-x-3">
+													<Shield className="w-5 h-5 text-primary" />
+													<div>
+														<div className="font-medium">
+															Passwordless Sign-up
+														</div>
+														<div className="text-sm text-muted-foreground">
+															No password needed - just your email!
+														</div>
+													</div>
+												</div>
 											</div>
 
 											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,62 +387,6 @@ const Signup: React.FC = () => {
 													/>
 												</div>
 											</div>
-										</motion.div>
-									)}
-
-									{/* Step 2: Password & Location */}
-									{currentStep === 2 && (
-										<motion.div
-											key="step2"
-											initial={{ opacity: 0, x: 20 }}
-											animate={{ opacity: 1, x: 0 }}
-											exit={{ opacity: 0, x: -20 }}
-											transition={{ duration: 0.3 }}
-											className="space-y-6"
-										>
-											<div className="text-center mb-6">
-												<h3 className="text-xl font-semibold">
-													Secure your account
-												</h3>
-												<p className="text-muted-foreground text-sm">
-													Choose a strong password and tell us where you're from
-												</p>
-											</div>
-
-											<div className="space-y-2">
-												<label className="text-sm font-medium">Password</label>
-												<div className="relative">
-													<Lock className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-													<input
-														type={showPassword ? "text" : "password"}
-														value={formData.password}
-														onChange={(e) =>
-															handleInputChange("password", e.target.value)
-														}
-														className="w-full pl-10 pr-12 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														placeholder="Min. 8 characters"
-														minLength={8}
-														required
-													/>
-													<button
-														type="button"
-														onClick={() => setShowPassword(!showPassword)}
-														className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-													>
-														{showPassword ? (
-															<EyeOff className="w-4 h-4" />
-														) : (
-															<Eye className="w-4 h-4" />
-														)}
-													</button>
-												</div>
-												<p className="text-xs text-muted-foreground">
-													Password strength:{" "}
-													{formData.password.length >= 8
-														? "✅ Strong"
-														: "⚠️ Too short"}
-												</p>
-											</div>
 
 											<div className="space-y-2">
 												<label className="text-sm font-medium">Country</label>
@@ -433,10 +412,10 @@ const Signup: React.FC = () => {
 										</motion.div>
 									)}
 
-									{/* Step 3: Interests */}
-									{currentStep === 3 && (
+									{/* Step 2: Interests */}
+									{currentStep === 2 && (
 										<motion.div
-											key="step3"
+											key="step2"
 											initial={{ opacity: 0, x: 20 }}
 											animate={{ opacity: 1, x: 0 }}
 											exit={{ opacity: 0, x: -20 }}
@@ -504,7 +483,7 @@ const Signup: React.FC = () => {
 									)}
 
 									<div className="ml-auto">
-										{currentStep < 3 ? (
+										{currentStep < 2 ? (
 											<button
 												type="button"
 												onClick={nextStep}
@@ -519,25 +498,28 @@ const Signup: React.FC = () => {
 												<ArrowRight className="w-4 h-4" />
 											</button>
 										) : (
-											<button
-												type="submit"
-												disabled={loading || formData.interests.length === 0}
-												className="[&>span]:!flex [&>span]:!items-center [&>span]:!gap-2"
+											<ShinyButton
+												aria-disabled={
+													loading || formData.interests.length === 0
+												}
+												className={`flex items-center gap-2 ${
+													loading || formData.interests.length === 0
+														? "pointer-events-none opacity-60"
+														: ""
+												}`}
 											>
-												<ShinyButton>
-													{loading ? (
-														<>
-															<Loader2 className="w-4 h-4 animate-spin" />
-															<span>Creating Account...</span>
-														</>
-													) : (
-														<>
-															<Zap className="w-4 h-4" />
-															<span>Create Account</span>
-														</>
-													)}
-												</ShinyButton>
-											</button>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Creating Account...
+													</>
+												) : (
+													<>
+														<Zap className="w-4 h-4" />
+														Create Account
+													</>
+												)}
+											</ShinyButton>
 										)}
 									</div>
 								</div>
@@ -548,9 +530,12 @@ const Signup: React.FC = () => {
 					{/* Footer */}
 					<p className="text-center text-sm text-muted-foreground mt-8">
 						Already have an account?{" "}
-						<button className="text-primary hover:text-primary/80 transition-colors font-medium">
+						<Link
+							to="/login"
+							className="text-primary hover:text-primary/80 transition-colors font-medium"
+						>
 							Sign in
-						</button>
+						</Link>
 					</p>
 				</motion.div>
 			</div>
