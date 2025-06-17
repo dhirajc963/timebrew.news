@@ -1,14 +1,27 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
 import LandingPage from "./components/pages/landing/LandingPage";
+import Signup from "./components/pages/auth/Signup";
+import Login from "./components/pages/auth/Login";
 
 const App = () => {
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
-			<Navbar />
-			<LandingPage />
-			<Footer />
-		</div>
+		<Router>
+			<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
+				<Navbar />
+				<main className="flex-1">
+					<Routes>
+						<Route path="/" element={<LandingPage />} />
+						<Route path="/signup" element={<Signup />} />
+						<Route path="/login" element={<Login />} />
+						{/* Add more routes as needed */}
+						{/* <Route path="/dashboard" element={<Dashboard />} /> */}
+					</Routes>
+				</main>
+				<Footer />
+			</div>
+		</Router>
 	);
 };
 

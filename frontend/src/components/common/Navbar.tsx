@@ -19,17 +19,17 @@ const Navbar = () => {
 	}, []);
 
 	return (
-		<header className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-3 w-full max-w-7xl">
+		<header className="fixed top-3 md:top-6 left-1/2 transform -translate-x-1/2 z-50 px-2 md:px-3 w-full max-w-7xl">
 			<div
 				className={`relative transition-all duration-500 ${
 					scrolled ? "scale-97" : "scale-100"
 				}`}
 			>
-				{/* Glow effect behind navbar */}
-				<div className="absolute inset-0 bg-gradient-to-r from-slate-800/20 via-slate-700/20 to-slate-800/20 blur-2xl opacity-50"></div>
+				{/* Glow effect - reduced on mobile */}
+				<div className="absolute inset-0 bg-gradient-to-r from-slate-800/20 via-slate-700/20 to-slate-800/20 blur-xl md:blur-2xl opacity-30 md:opacity-50"></div>
 
-				{/* Main navbar container */}
-				<div className="relative bg-slate-900/90 backdrop-blur-2xl rounded-full border border-slate-700/50 shadow-2xl shadow-black/20 px-8 py-4">
+				{/* Main navbar container - more compact on mobile */}
+				<div className="relative bg-slate-900/90 backdrop-blur-2xl rounded-full border border-slate-700/50 shadow-xl md:shadow-2xl shadow-black/20 px-4 py-3 md:px-8 md:py-4">
 					{/* Subtle gradient overlay */}
 					<div className="absolute inset-0 bg-gradient-to-r from-slate-800/10 via-transparent to-slate-800/10 rounded-full"></div>
 

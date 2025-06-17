@@ -484,32 +484,6 @@ const ThirdPage: React.FC = () => {
 					</motion.div>
 				</div>
 			</section>
-
-			{/* Footer CTA */}
-			<section className="py-20 bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-				<div className="max-w-4xl mx-auto px-6 text-center">
-					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.8 }}
-						className="space-y-8"
-					>
-						<h3 className="text-3xl lg:text-4xl font-bold">
-							Ready to transform your news consumption?
-						</h3>
-						<p className="text-xl text-gray-300">
-							Join thousands of professionals who've already upgraded their news
-							experience.
-						</p>
-						<ShinyButton className="text-lg px-10 py-4">
-							<Coffee className="w-5 h-5 mr-2" />
-							Start Your First Brew
-							<ArrowRight className="w-5 h-5 ml-2" />
-						</ShinyButton>
-					</motion.div>
-				</div>
-			</section>
 		</>
 	);
 };

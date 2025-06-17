@@ -16,21 +16,26 @@ import {
 import { motion, useAnimation, useInView } from "framer-motion";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
-import { Meteors } from "@/components/magicui/meteors";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { WordRotate } from "@/components/magicui/word-rotate";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
-import { DotPattern } from "@/components/magicui/dot-pattern";
-import { Ripple } from "@/components/magicui/ripple";
 
 const FirstPage = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [currentMockup, setCurrentMockup] = useState(0);
+	const [isMobile, setIsMobile] = useState(false);
 	const controls = useAnimation();
 	const ref = useRef(null);
 	const inView = useInView(ref);
 
 	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768);
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
 		setIsVisible(true);
 
 		// Animated mockup rotation
@@ -40,6 +45,7 @@ const FirstPage = () => {
 
 		return () => {
 			clearInterval(interval);
+			window.removeEventListener("resize", checkMobile);
 		};
 	}, []);
 
@@ -90,22 +96,17 @@ const FirstPage = () => {
 
 	return (
 		<>
-			{/* Hero Section */}
-			<section className="min-h-screen flex items-start md:items-center justify-center relative overflow-hidden mt-10 md:mt-0 pt-20 md:pt-0">
-				<div className="max-w-7xl mx-auto px-10  grid grid-cols-1 lg:grid-cols-12 gap-16 items-center relative z-10">
-					{/* Left Content: span 8 of 12 on lg */}
-					<motion.div
-						initial={{ opacity: 0, y: 50 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.8, ease: "easeOut" }}
-						className="space-y-10 lg:col-span-8"
-					>
+			{/* Hero Section - Smart mobile layout */}
+			<section className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-0">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 w-full">
+					{/* Mobile Layout - Centered and properly sized */}
+					<div className="md:hidden flex flex-col items-center text-center max-w-md mx-auto">
 						{/* Beta Badge */}
 						<motion.div
 							initial={{ opacity: 0, scale: 0.8 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ delay: 0.2, duration: 0.5 }}
-							className="inline-flex"
+							className="mb-6"
 						>
 							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
 								<Sparkles className="w-4 h-4" />
@@ -113,14 +114,14 @@ const FirstPage = () => {
 							</AnimatedGradientText>
 						</motion.div>
 
-						{/* Main Headline */}
-						<div className="space-y-8">
-							<motion.h1
-								initial={{ opacity: 0, y: 30 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.3, duration: 0.8 }}
-								className="text-5xl lg:text-7xl font-bold leading-tight"
-							>
+						{/* Main Headline - Properly sized for mobile */}
+						<motion.div
+							initial={{ opacity: 0, y: 30 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.3, duration: 0.8 }}
+							className="mb-8"
+						>
+							<h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-4">
 								Your{" "}
 								<WordRotate
 									words={["Personalized", "Perfect", "Smart", "Curated"]}
@@ -128,47 +129,40 @@ const FirstPage = () => {
 								/>{" "}
 								News Brew,{" "}
 								<span className="text-gradient-green">on Your Time.</span>
-							</motion.h1>
+							</h1>
 
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.5, duration: 0.6 }}
-								className="text-xl lg:text-2xl text-muted-foreground leading-relaxed space-y-4"
+							<p className="text-lg text-muted-foreground leading-relaxed px-4 mb-3">
+								Choose up to 3 daily brews, set the perfect time, pick 3-8
+								stories each.
+							</p>
+							<TypingAnimation
+								className="text-base text-muted-foreground px-3"
+								duration={50}
 							>
-								<p>
-									Choose up to 3 daily brews, set the perfect time, pick 3-8
-									stories each.
-								</p>
-								<TypingAnimation
-									className="text-xl text-muted-foreground"
-									duration={50}
-								>
-									{
-										"We'll pour the perfect digest—no info-overload, just what you'll actually read."
-									}
-								</TypingAnimation>
-							</motion.div>
-						</div>
+								{
+									"We'll pour the perfect digest—no info-overload, just what you'll actually read."
+								}
+							</TypingAnimation>
+						</motion.div>
 
-						{/* CTA Buttons */}
+						{/* CTA Buttons - Proper sizing, not full width */}
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: 0.7, duration: 0.6 }}
-							className="flex flex-col sm:flex-row gap-6"
+							className="flex flex-col gap-3 w-full max-w-xs mb-6"
 						>
-							<ShinyButton className="group text-lg px-4 py-4 flex items-center space-x-3 min-w-fit w-auto [&>span]:!flex [&>span]:!items-center [&>span]:!gap-3 [&>span]:!w-auto">
-								<Coffee className="w-5 h-5" />
-								<span className="whitespace-nowrap">Brew My First Digest</span>
+							<ShinyButton className="text-base px-8 py-3 flex items-center justify-center gap-2 w-full [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+								<Coffee className="w-4 h-4" />
+								<span>Brew My First Digest</span>
 							</ShinyButton>
 
 							<motion.button
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-3"
+								className="border-2 border-primary text-primary px-8 py-3 rounded-full font-semibold text-base hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2 w-full"
 							>
-								<Eye className="w-5 h-5" />
+								<Eye className="w-4 h-4" />
 								<span>View Sample</span>
 							</motion.button>
 						</motion.div>
@@ -178,7 +172,7 @@ const FirstPage = () => {
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: 0.9, duration: 0.6 }}
-							className="flex flex-wrap items-center gap-6 pt-4"
+							className="flex items-center justify-center gap-6 mb-8"
 						>
 							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 								<Zap className="w-4 h-4 text-primary" />
@@ -189,107 +183,257 @@ const FirstPage = () => {
 								<span>Smart Curation</span>
 							</div>
 						</motion.div>
-					</motion.div>
 
-					{/* Right animated mockup: span 4 of 12 on lg */}
-					<motion.div
-						initial={{ opacity: 0, x: 50, rotateY: -15 }}
-						animate={{ opacity: 1, x: 0, rotateY: 0 }}
-						transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
-						className="relative lg:col-span-4"
-					>
-						<div className="relative group">
-							{/* Glow effect */}
-							<div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+						{/* Mobile mockup - Better sized */}
+						<motion.div
+							initial={{ opacity: 0, y: 30 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 1, duration: 0.8 }}
+							className="w-full max-w-sm mt-8"
+						>
+							<div className="relative group">
+								<div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
 
-							{/* Main mockup container */}
-							<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-8 shadow-2xl">
-								<BorderBeam size={250} duration={12} delay={9} />
-
-								<div className="space-y-6">
-									{/* Browser Header */}
-									<div className="flex items-center space-x-3">
-										<div className="flex space-x-2">
-											<div className="w-3 h-3 bg-red-400 rounded-full" />
-											<div className="w-3 h-3 bg-yellow-400 rounded-full" />
-											<div className="w-3 h-3 bg-green-400 rounded-full" />
+								<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-2xl p-4 shadow-xl">
+									<div className="space-y-4">
+										{/* Browser Header */}
+										<div className="flex items-center space-x-2">
+											<div className="flex space-x-1.5">
+												<div className="w-2 h-2 bg-red-400 rounded-full" />
+												<div className="w-2 h-2 bg-yellow-400 rounded-full" />
+												<div className="w-2 h-2 bg-green-400 rounded-full" />
+											</div>
+											<div className="text-xs text-muted-foreground font-mono">
+												TimeBrew.news
+											</div>
 										</div>
-										<div className="text-sm text-muted-foreground font-mono">
-											TimeBrew.news
-										</div>
-									</div>
 
-									{/* Content Area */}
-									<div className="space-y-6">
-										<motion.h3
-											key={currentMockup}
-											initial={{ opacity: 0, y: 10 }}
-											animate={{ opacity: 1, y: 0 }}
-											className="text-xl font-semibold text-card-foreground"
-										>
-											{mockupStates[currentMockup].title}
-										</motion.h3>
-
-										<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-6 rounded-xl border border-accent/20">
-											<motion.p
+										{/* Content */}
+										<div className="space-y-4">
+											<motion.h3
 												key={currentMockup}
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												className="text-card-foreground"
-											>
-												{mockupStates[currentMockup].content}
-											</motion.p>
-										</div>
-
-										{/* Article Previews for Ready State */}
-										{currentMockup === 2 && (
-											<motion.div
-												initial={{ opacity: 0, y: 20 }}
+												initial={{ opacity: 0, y: 10 }}
 												animate={{ opacity: 1, y: 0 }}
-												transition={{ delay: 0.3 }}
-												className="space-y-2"
+												className="text-lg font-semibold"
 											>
-												{[1, 2].map((i) => (
-													<motion.div
-														key={i}
-														initial={{ opacity: 0, x: -20 }}
-														animate={{ opacity: 1, x: 0 }}
-														transition={{ delay: i * 0.1 }}
-														className="bg-muted/50 p-3 rounded-lg border border-border hover:bg-muted/70 transition-colors cursor-pointer group"
-													>
-														<div className="flex items-center space-x-3">
-															<div className="w-8 h-8 bg-primary/20 rounded flex-shrink-0" />
-															<div className="flex-1 space-y-1">
-																<div className="h-2.5 bg-foreground/20 rounded w-full" />
-																<div className="h-2 bg-foreground/10 rounded w-2/3" />
-															</div>
-															<div className="flex items-center space-x-2 text-xs text-muted-foreground">
-																<Clock className="w-3 h-3" />
-																<span>2m</span>
-															</div>
-														</div>
-													</motion.div>
-												))}
-												<div className="text-center pt-2">
-													<span className="text-xs text-muted-foreground">
-														+ 3 more stories
-													</span>
-												</div>
-											</motion.div>
-										)}
+												{mockupStates[currentMockup].title}
+											</motion.h3>
+
+											<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-4 rounded-xl border border-accent/20">
+												<motion.p
+													key={currentMockup}
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													className="text-sm"
+												>
+													{mockupStates[currentMockup].content}
+												</motion.p>
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
-					</motion.div>
+						</motion.div>
+					</div>
+
+					{/* Desktop Layout - Keep as is */}
+					<div className="hidden md:grid grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+						{/* Left Content */}
+						<motion.div
+							initial={{ opacity: 0, y: 50 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.8, ease: "easeOut" }}
+							className="space-y-6 lg:space-y-8 md:col-span-1 lg:col-span-8"
+						>
+							{/* Beta Badge */}
+							<motion.div
+								initial={{ opacity: 0, scale: 0.8 }}
+								animate={{ opacity: 1, scale: 1 }}
+								transition={{ delay: 0.2, duration: 0.5 }}
+								className="inline-flex"
+							>
+								<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
+									<Sparkles className="w-4 h-4" />
+									<span className="text-sm font-medium">Free Beta Access</span>
+								</AnimatedGradientText>
+							</motion.div>
+
+							{/* Main Headline */}
+							<div className="space-y-6">
+								<motion.h1
+									initial={{ opacity: 0, y: 30 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 0.3, duration: 0.8 }}
+									className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight"
+								>
+									Your{" "}
+									<WordRotate
+										words={["Personalized", "Perfect", "Smart", "Curated"]}
+										className="text-gradient-green"
+									/>{" "}
+									News Brew,{" "}
+									<span className="text-gradient-green">on Your Time.</span>
+								</motion.h1>
+
+								<motion.div
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 0.5, duration: 0.6 }}
+									className="text-lg lg:text-xl xl:text-2xl text-muted-foreground leading-relaxed space-y-4"
+								>
+									<p>
+										Choose up to 3 daily brews, set the perfect time, pick 3-8
+										stories each.
+									</p>
+									<TypingAnimation
+										className="text-lg lg:text-xl text-muted-foreground"
+										duration={50}
+									>
+										{
+											"We'll pour the perfect digest—no info-overload, just what you'll actually read."
+										}
+									</TypingAnimation>
+								</motion.div>
+							</div>
+
+							{/* CTA Buttons */}
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.7, duration: 0.6 }}
+								className="flex flex-col sm:flex-row gap-6"
+							>
+								<motion.button
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-3"
+								>
+									<Coffee className="w-5 h-5" />
+									<span>Brew My First Digest</span>
+								</motion.button>
+
+								<ShinyButton className="group text-lg px-8 py-4 flex items-center justify-center space-x-3 [&>span]:!flex [&>span]:!items-center [&>span]:!gap-3">
+									<Eye className="w-5 h-5" />
+									<span>View Sample</span>
+								</ShinyButton>
+							</motion.div>
+
+							{/* Trust Badges */}
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.9, duration: 0.6 }}
+								className="flex items-center gap-6 pt-4"
+							>
+								<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+									<Zap className="w-4 h-4 text-primary" />
+									<span>Powered by AI</span>
+								</div>
+								<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+									<Sparkles className="w-4 h-4 text-purple-500" />
+									<span>Smart Curation</span>
+								</div>
+							</motion.div>
+						</motion.div>
+
+						{/* Right animated mockup - Desktop version */}
+						<motion.div
+							initial={{ opacity: 0, x: 50, rotateY: -15 }}
+							animate={{ opacity: 1, x: 0, rotateY: 0 }}
+							transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+							className="relative md:col-span-1 lg:col-span-4"
+						>
+							<div className="relative group">
+								<div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+
+								<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-8 shadow-2xl">
+									<BorderBeam size={250} duration={12} delay={9} />
+
+									<div className="space-y-6">
+										{/* Browser Header */}
+										<div className="flex items-center space-x-3">
+											<div className="flex space-x-2">
+												<div className="w-3 h-3 bg-red-400 rounded-full" />
+												<div className="w-3 h-3 bg-yellow-400 rounded-full" />
+												<div className="w-3 h-3 bg-green-400 rounded-full" />
+											</div>
+											<div className="text-sm text-muted-foreground font-mono">
+												TimeBrew.news
+											</div>
+										</div>
+
+										{/* Content Area */}
+										<div className="space-y-6">
+											<motion.h3
+												key={currentMockup}
+												initial={{ opacity: 0, y: 10 }}
+												animate={{ opacity: 1, y: 0 }}
+												className="text-xl font-semibold text-card-foreground"
+											>
+												{mockupStates[currentMockup].title}
+											</motion.h3>
+
+											<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-6 rounded-xl border border-accent/20">
+												<motion.p
+													key={currentMockup}
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													className="text-base text-card-foreground"
+												>
+													{mockupStates[currentMockup].content}
+												</motion.p>
+											</div>
+
+											{/* Article Previews for Ready State */}
+											{currentMockup === 2 && (
+												<motion.div
+													initial={{ opacity: 0, y: 20 }}
+													animate={{ opacity: 1, y: 0 }}
+													transition={{ delay: 0.3 }}
+													className="space-y-2"
+												>
+													{[1, 2].map((i) => (
+														<motion.div
+															key={i}
+															initial={{ opacity: 0, x: -20 }}
+															animate={{ opacity: 1, x: 0 }}
+															transition={{ delay: i * 0.1 }}
+															className="bg-muted/50 p-3 rounded-lg border border-border hover:bg-muted/70 transition-colors cursor-pointer group"
+														>
+															<div className="flex items-center space-x-3">
+																<div className="w-8 h-8 bg-primary/20 rounded flex-shrink-0" />
+																<div className="flex-1 space-y-1">
+																	<div className="h-2.5 bg-foreground/20 rounded w-full" />
+																	<div className="h-2 bg-foreground/10 rounded w-2/3" />
+																</div>
+																<div className="flex items-center space-x-2 text-xs text-muted-foreground">
+																	<Clock className="w-3 h-3" />
+																	<span>2m</span>
+																</div>
+															</div>
+														</motion.div>
+													))}
+													<div className="text-center pt-2">
+														<span className="text-xs text-muted-foreground">
+															+ 3 more stories
+														</span>
+													</div>
+												</motion.div>
+											)}
+										</div>
+									</div>
+								</div>
+							</div>
+						</motion.div>
+					</div>
 				</div>
 
-				{/* Enhanced Scroll Indicator */}
+				{/* Scroll indicator - Desktop only */}
 				<motion.div
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 1.5 }}
-					className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+					className="hidden md:block absolute bottom-8 left-1/2 transform -translate-x-1/2"
 				>
 					<motion.div
 						animate={{ y: [0, 10, 0] }}
@@ -304,15 +448,15 @@ const FirstPage = () => {
 				</motion.div>
 			</section>
 
-			{/* Enhanced How It Works Section */}
+			{/* How It Works Section - Better mobile spacing */}
 			<section
 				ref={ref}
 				id="how-it-works"
-				className="py-32 relative overflow-hidden"
+				className="py-20 md:py-24 lg:py-32 relative overflow-hidden"
 			>
-				<div className="max-w-6xl mx-auto px-6 relative z-10">
+				<div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 relative z-10">
 					{/* Header */}
-					<div className="text-center mb-20">
+					<div className="text-center mb-12 md:mb-16 lg:mb-20">
 						<motion.h2
 							initial={{ opacity: 0, y: 30 }}
 							animate={controls}
@@ -320,7 +464,7 @@ const FirstPage = () => {
 								visible: { opacity: 1, y: 0 },
 							}}
 							transition={{ duration: 0.6 }}
-							className="text-5xl lg:text-6xl font-bold text-card-foreground mb-6"
+							className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-card-foreground mb-4 md:mb-6"
 						>
 							How It <span className="text-gradient-green">Works</span>
 						</motion.h2>
@@ -331,14 +475,14 @@ const FirstPage = () => {
 								visible: { opacity: 1, y: 0 },
 							}}
 							transition={{ duration: 0.6, delay: 0.2 }}
-							className="text-xl lg:text-2xl text-muted-foreground"
+							className="text-lg md:text-xl lg:text-2xl text-muted-foreground"
 						>
 							Three simple steps to your perfect news experience
 						</motion.p>
 					</div>
 
-					{/* Enhanced Steps */}
-					<div className="grid lg:grid-cols-3 gap-12">
+					{/* Steps */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 lg:gap-12">
 						{steps.map((step, idx) => (
 							<motion.div
 								key={idx}
@@ -350,28 +494,26 @@ const FirstPage = () => {
 								transition={{ duration: 0.6, delay: idx * 0.2 }}
 								className="relative group"
 							>
-								{/* Background glow */}
 								<div
 									className={`absolute -inset-4 bg-gradient-to-r ${step.color} rounded-3xl blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500`}
 								/>
 
-								{/* Card */}
 								<div className="relative bg-card/50 backdrop-blur-sm border border-border rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-4 group">
-									<BorderBeam
-										size={200}
-										duration={15}
-										delay={idx * 3}
-										className="opacity-0 group-hover:opacity-100"
-									/>
+									{!isMobile && (
+										<BorderBeam
+											size={200}
+											duration={15}
+											delay={idx * 3}
+											className="opacity-0 group-hover:opacity-100"
+										/>
+									)}
 
-									{/* Icon */}
 									<div
 										className={`w-16 h-16 bg-gradient-to-r ${step.color} rounded-2xl mb-6 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}
 									>
 										<step.icon className="w-8 h-8" />
 									</div>
 
-									{/* Content */}
 									<h3 className="text-2xl font-semibold text-card-foreground mb-4">
 										{step.title}
 									</h3>
@@ -379,7 +521,6 @@ const FirstPage = () => {
 										{step.desc}
 									</p>
 
-									{/* Connecting line to next step */}
 									{idx < steps.length - 1 && (
 										<div className="hidden lg:block absolute top-1/2 -right-12 w-12 h-0.5 bg-gradient-to-r from-primary to-accent opacity-30" />
 									)}
