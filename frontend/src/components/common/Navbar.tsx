@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
 	const [scrolled, setScrolled] = useState(false);
@@ -35,7 +36,10 @@ const Navbar = () => {
 
 					<div className="relative flex items-center justify-between">
 						{/* Logo */}
-						<div className="flex items-center space-x-2 group cursor-pointer">
+						<Link
+							to="/"
+							className="flex items-center space-x-2 group cursor-pointer"
+						>
 							<div className="relative">
 								<span className="text-xl font-bold text-white">Time</span>
 								<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -43,7 +47,7 @@ const Navbar = () => {
 								</span>
 								{/* <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></div> */}
 							</div>
-						</div>
+						</Link>
 
 						{/* Desktop Navigation */}
 						<nav className="hidden md:flex items-center space-x-6">
@@ -65,17 +69,20 @@ const Navbar = () => {
 							{/* Vertical divider */}
 							<div className="h-6 w-px bg-slate-700"></div>
 
-							<button className="text-slate-300 hover:text-white font-medium transition-colors duration-300">
+							<Link
+								to="/signin"
+								className="text-slate-300 hover:text-white font-medium transition-colors duration-300"
+							>
 								Login
-							</button>
+							</Link>
 
 							{/* CTA Button */}
-							<button className="relative group">
+							<Link to="/signup" className="relative group">
 								<div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-full blur opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
 								<div className="relative bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 rounded-full font-medium text-sm hover:shadow-lg transition-all duration-300">
 									Get Started
 								</div>
-							</button>
+							</Link>
 						</nav>
 
 						{/* Mobile menu button */}
@@ -114,15 +121,17 @@ const Navbar = () => {
 							>
 								How It Works
 							</a>
-							<a
-								href="#"
+							<Link
+								to="/signin"
 								className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
 							>
 								Login
-							</a>
-							<button className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
-								Get Started
-							</button>
+							</Link>
+							<Link to="/signup" className="block w-full">
+								<div className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
+									Get Started
+								</div>
+							</Link>
 						</div>
 					</div>
 				</div>
