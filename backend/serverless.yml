@@ -1,0 +1,79 @@
+service: timebrew-backend
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    USER_POOL_ID: ${env:USER_POOL_ID}
+    CLIENT_ID: ${env:CLIENT_ID}
+    DB_HOST: ${env:DB_HOST}
+    DB_PORT: ${env:DB_PORT}
+    DB_NAME: ${env:DB_NAME}
+    DB_USER: ${env:DB_USER}
+    DB_PASSWORD: ${env:DB_PASSWORD}
+    SMTP_SERVER: ${env:SMTP_SERVER}
+    SMTP_PORT: ${env:SMTP_PORT}
+    SMTP_USERNAME: ${env:SMTP_USERNAME}
+    SMTP_PASSWORD: ${env:SMTP_PASSWORD}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - cognito-idp:*
+          Resource: "*"
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    pythonBin: python3
+
+functions:
+  # Health check function (simple test)
+  health:
+    handler: handlers/utils/health.handler
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+
+  # Placeholder auth functions
+  register:
+    handler: handlers/auth/register.handler
+    events:
+      - http:
+          path: auth/register
+          method: post
+          cors: true
+
+  login:
+    handler: handlers/auth/login.handler
+    events:
+      - http:
+          path: auth/login
+          method: post
+          cors: true
+
+  # Placeholder brew functions
+  getBrews:
+    handler: handlers/brews/get.handler
+    events:
+      - http:
+          path: brews
+          method: get
+          cors: true
+
+  createBrew:
+    handler: handlers/brews/create.handler
+    events:
+      - http:
+          path: brews
+          method: post
+          cors: true
