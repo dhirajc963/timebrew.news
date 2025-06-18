@@ -13,7 +13,7 @@ const CreateBrew: React.FC = () => {
 		animate: { opacity: 1, y: 0 },
 		exit: { opacity: 0, y: -20 },
 	};
-	
+
 	// Background effects variants
 	const backgroundVariants = {
 		initial: { opacity: 0 },
@@ -24,7 +24,7 @@ const CreateBrew: React.FC = () => {
 	return (
 		<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
 			{/* Background Effects */}
-			<motion.div 
+			<motion.div
 				className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"
 				variants={backgroundVariants}
 				initial="initial"
@@ -42,7 +42,7 @@ const CreateBrew: React.FC = () => {
 				>
 					{/* Header with Back Link */}
 					<div className="mb-8 flex items-center justify-between">
-						<motion.div 
+						<motion.div
 							initial={{ opacity: 0, x: -20 }}
 							animate={{ opacity: 1, x: 0 }}
 							transition={{ duration: 0.3, delay: 0.1 }}
@@ -55,17 +55,6 @@ const CreateBrew: React.FC = () => {
 								<ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
 								Back to Dashboard
 							</Link>
-						</motion.div>
-
-						<motion.div
-							initial={{ opacity: 0, scale: 0.8 }}
-							animate={{ opacity: 1, scale: 1 }}
-							transition={{ delay: 0.2, duration: 0.5 }}
-						>
-							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
-								<Sparkles className="w-4 h-4" />
-								<span className="text-sm font-medium">Create Your Brew</span>
-							</AnimatedGradientText>
 						</motion.div>
 					</div>
 

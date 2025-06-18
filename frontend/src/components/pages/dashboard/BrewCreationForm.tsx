@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TimeBlockPicker } from "@/components/ui/time-block-picker";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
@@ -289,23 +290,38 @@ const BrewCreationForm: React.FC = () => {
 				transition={{ duration: 0.5 }}
 				className="mb-10 text-center"
 			>
-				<h1 className="text-3xl md:text-4xl font-bold mb-4">
-					Craft Your{" "}
+				<motion.h1
+					className="text-3xl md:text-4xl font-bold mb-4 inline-flex items-center justify-center gap-1 md:gap-2"
+					initial={{ scale: 0.98, opacity: 0.9 }}
+					animate={{ scale: 1, opacity: 1 }}
+					transition={{ duration: 0.8, ease: "easeOut" }}
+				>
+					Craft Your
 					<WordRotate
 						words={["Perfect", "Personalized", "Daily", "Curated"]}
-						className="text-gradient-green"
+						className="text-gradient-green mx-0.5"
 						inline={true}
-					/>{" "}
+						motionProps={{
+							initial: { opacity: 0, y: 10 },
+							animate: { opacity: 1, y: 0 },
+							exit: { opacity: 0, y: -10 },
+							transition: { duration: 0.7, ease: "easeInOut" },
+						}}
+					/>
 					Brew
-				</h1>
-				<p className="text-lg text-muted-foreground">
+				</motion.h1>
+				<motion.p
+					className="text-lg text-muted-foreground"
+					animate={{ opacity: 1 }}
+					transition={{ duration: 0.3 }}
+				>
 					Step {currentStep} of 3:{" "}
 					{currentStep === 1
 						? "Name Your Brew"
 						: currentStep === 2
 						? "Select Topics"
 						: "Delivery Settings"}
-				</p>
+				</motion.p>
 			</motion.div>
 
 			{/* Progress Indicator */}
@@ -501,17 +517,12 @@ const BrewCreationForm: React.FC = () => {
 													Delivery Time
 												</Label>
 												<div className="relative">
-													<Clock className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-													<Input
-														id="delivery-time"
-														type="time"
+													<TimeBlockPicker
 														value={formData.delivery_time}
-														onChange={(e) =>
-															handleInputChange("delivery_time", e.target.value)
+														onChange={(value) =>
+															handleInputChange("delivery_time", value)
 														}
-														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														aria-label="Select delivery time"
-														aria-required="true"
+														className="w-full"
 													/>
 												</div>
 												<p className="text-xs text-muted-foreground mt-1">
