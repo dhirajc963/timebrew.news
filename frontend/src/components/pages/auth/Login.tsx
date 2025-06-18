@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
 	Coffee,
 	Mail,
@@ -52,6 +53,7 @@ type LoginStep = "email" | "otp";
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
+	const { login } = useAuth();
 	const [formData, setFormData] = useState<LoginFormData>({
 		email: "",
 		otpCode: "",
@@ -122,14 +124,21 @@ const Login: React.FC = () => {
 
 			const data: VerifyResponse = await response.json();
 
-			if (response.ok && data.accessToken) {
-				// Store tokens and user data
-				localStorage.setItem("accessToken", data.accessToken);
-				localStorage.setItem("refreshToken", data.refreshToken || "");
-				localStorage.setItem("user", JSON.stringify(data.user));
-
-				// Redirect to dashboard
-				navigate("/dashboard");
+			if (response.ok && data.accessToken && data.user) {
+				// Use AuthContext login function to store tokens and user data
+				login(
+					{
+						accessToken: data.accessToken,
+						refreshToken: data.refreshToken || "",
+						expiresIn: data.expiresIn || 3600,
+					},
+					{
+						...data.user,
+						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+						createdAt: new Date().toISOString(),
+					}
+				);
+				// Navigation is handled by the login function in AuthContext
 			} else {
 				setError(data.error || "Invalid verification code. Please try again.");
 			}
@@ -139,6 +148,7 @@ const Login: React.FC = () => {
 			setLoading(false);
 		}
 	};
+
 
 	const handleResendCode = async () => {
 		setLoading(true);
@@ -272,22 +282,22 @@ const Login: React.FC = () => {
 
 											{/* Submit Button */}
 											<ShinyButton
-												type="submit"
-												disabled={loading || !formData.email}
-												className="w-full flex items-center justify-center gap-2"
-											>
-												{loading ? (
-													<>
-														<Loader2 className="w-4 h-4 animate-spin" />
-														Sending Code...
-													</>
-												) : (
-													<>
-														<Send className="w-4 h-4" />
-														Send Verification Code
-													</>
-												)}
-											</ShinyButton>
+										type="submit"
+										disabled={loading || !formData.email}
+										className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+									>
+										{loading ? (
+											<>
+												<Loader2 className="w-4 h-4 animate-spin" />
+												<span>Sending Code...</span>
+											</>
+										) : (
+											<>
+												<Send className="w-4 h-4" />
+												<span>Send Verification Code</span>
+											</>
+										)}
+									</ShinyButton>
 										</form>
 									</motion.div>
 								)}
@@ -356,21 +366,21 @@ const Login: React.FC = () => {
 
 											{/* Submit Button */}
 											<ShinyButton
-												disabled={loading || formData.otpCode.length !== 8}
-												className="w-full flex items-center justify-center gap-2"
-											>
-												{loading ? (
-													<>
-														<Loader2 className="w-4 h-4 animate-spin" />
-														Verifying...
-													</>
-												) : (
-													<>
-														<Zap className="w-4 h-4" />
-														Sign In
-													</>
-												)}
-											</ShinyButton>
+										disabled={loading || formData.otpCode.length !== 8}
+										className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+									>
+										{loading ? (
+											<>
+												<Loader2 className="w-4 h-4 animate-spin" />
+												<span>Verifying...</span>
+											</>
+										) : (
+											<>
+												<Zap className="w-4 h-4" />
+												<span>Sign In</span>
+											</>
+										)}
+									</ShinyButton>
 										</form>
 									</motion.div>
 								)}

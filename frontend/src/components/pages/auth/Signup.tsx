@@ -207,9 +207,9 @@ const Signup: React.FC = () => {
 								</div>
 
 								<Link to="/login">
-									<ShinyButton className="w-full flex items-center justify-center gap-2">
+									<ShinyButton className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
 										<Coffee className="w-4 h-4" />
-										Go to Sign In
+										<span>Go to Sign In</span>
 									</ShinyButton>
 								</Link>
 							</div>
@@ -499,27 +499,21 @@ const Signup: React.FC = () => {
 											</button>
 										) : (
 											<ShinyButton
-												aria-disabled={
-													loading || formData.interests.length === 0
-												}
-												className={`flex items-center gap-2 ${
-													loading || formData.interests.length === 0
-														? "pointer-events-none opacity-60"
-														: ""
-												}`}
-											>
-												{loading ? (
-													<>
-														<Loader2 className="w-4 h-4 animate-spin" />
-														Creating Account...
-													</>
-												) : (
-													<>
-														<Zap className="w-4 h-4" />
-														Create Account
-													</>
-												)}
-											</ShinyButton>
+									disabled={loading || formData.interests.length === 0}
+									className="flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+								>
+									{loading ? (
+										<>
+											<Loader2 className="w-4 h-4 animate-spin" />
+											<span>Creating Account...</span>
+										</>
+									) : (
+										<>
+											<Zap className="w-4 h-4" />
+											<span>Create Account</span>
+										</>
+									)}
+								</ShinyButton>
 										)}
 									</div>
 								</div>

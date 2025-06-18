@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User, Coffee, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
+	const { isAuthenticated, user, logout } = useAuth();
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -51,38 +53,79 @@ const Navbar = () => {
 
 						{/* Desktop Navigation */}
 						<nav className="hidden md:flex items-center space-x-6">
-							<a
-								href="#features"
-								className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
-							>
-								<span>Features</span>
-								<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
-							</a>
-							<a
-								href="#how-it-works"
-								className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
-							>
-								<span>How It Works</span>
-								<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
-							</a>
+						{!isAuthenticated ? (
+							<>
+								<a
+									href="#features"
+									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
+								>
+									<span>Features</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</a>
+								<a
+									href="#how-it-works"
+									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group"
+								>
+									<span>How It Works</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</a>
 
-							{/* Vertical divider */}
-							<div className="h-6 w-px bg-slate-700"></div>
+								{/* Vertical divider */}
+								<div className="h-6 w-px bg-slate-700"></div>
 
-							<Link
-								to="/signin"
-								className="text-slate-300 hover:text-white font-medium transition-colors duration-300"
-							>
-								Login
-							</Link>
+								<Link
+									to="/signin"
+									className="text-slate-300 hover:text-white font-medium transition-colors duration-300"
+								>
+									Login
+								</Link>
 
-							{/* CTA Button */}
-							<Link to="/signup" className="relative group">
-								<div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-full blur opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
-								<div className="relative bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 rounded-full font-medium text-sm hover:shadow-lg transition-all duration-300">
-									Get Started
+								{/* CTA Button */}
+								<Link to="/signup" className="relative group">
+									<div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-full blur opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
+									<div className="relative bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 rounded-full font-medium text-sm hover:shadow-lg transition-all duration-300">
+										Get Started
+									</div>
+								</Link>
+							</>
+						) : (
+							<>
+								<Link
+									to="/dashboard"
+									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group flex items-center gap-2"
+								>
+									<Coffee className="w-4 h-4" />
+									<span>My Brews</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</Link>
+								<Link
+									to="/settings"
+									className="text-slate-300 hover:text-white font-medium transition-all duration-300 relative group flex items-center gap-2"
+								>
+									<Settings className="w-4 h-4" />
+									<span>Settings</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</Link>
+
+								{/* Vertical divider */}
+								<div className="h-6 w-px bg-slate-700"></div>
+
+								{/* User info */}
+								<div className="flex items-center gap-2 text-slate-300">
+									<User className="w-4 h-4" />
+									<span className="font-medium">{user?.firstName || 'User'}</span>
 								</div>
-							</Link>
+
+								{/* Logout Button */}
+								<button
+									onClick={logout}
+									className="flex items-center gap-2 text-slate-300 hover:text-white font-medium transition-colors duration-300"
+								>
+									<LogOut className="w-4 h-4" />
+									Logout
+								</button>
+							</>
+						)}
 						</nav>
 
 						{/* Mobile menu button */}
@@ -109,29 +152,61 @@ const Navbar = () => {
 				>
 					<div className="mx-8 p-4 bg-slate-900/90 backdrop-blur-2xl border border-slate-700/50 rounded-2xl shadow-2xl">
 						<div className="space-y-3">
-							<a
-								href="#features"
-								className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
-							>
-								Features
-							</a>
-							<a
-								href="#how-it-works"
-								className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
-							>
-								How It Works
-							</a>
-							<Link
-								to="/signin"
-								className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
-							>
-								Login
-							</Link>
-							<Link to="/signup" className="block w-full">
-								<div className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
-									Get Started
+						{!isAuthenticated ? (
+							<>
+								<a
+									href="#features"
+									className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									Features
+								</a>
+								<a
+									href="#how-it-works"
+									className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									How It Works
+								</a>
+								<Link
+									to="/signin"
+									className="block px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									Login
+								</Link>
+								<Link to="/signup" className="block w-full">
+									<div className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
+										Get Started
+									</div>
+								</Link>
+							</>
+						) : (
+							<>
+								<div className="flex items-center gap-2 px-4 py-2 text-primary font-medium">
+									<User className="w-4 h-4" />
+									{user?.firstName || 'User'}
 								</div>
-							</Link>
+								<Link
+									to="/dashboard"
+									className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									<Coffee className="w-4 h-4" />
+									My Brews
+								</Link>
+								<Link
+									to="/settings"
+									className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									<Settings className="w-4 h-4" />
+									Settings
+								</Link>
+								<button
+									onClick={logout}
+									className="flex items-center gap-2 w-full px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all"
+								>
+									<LogOut className="w-4 h-4" />
+									Logout
+								</button>
+							</>
+						)}
 						</div>
 					</div>
 				</div>

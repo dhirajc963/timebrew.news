@@ -475,10 +475,10 @@ const ThirdPage: React.FC = () => {
 									<Mail className="w-5 h-5" />
 									<span>Contact Support</span>
 								</motion.button>
-								<ShinyButton className="text-lg px-8 py-4">
-									<Coffee className="w-5 h-5 mr-2" />
-									Join Beta Now
-								</ShinyButton>
+								<ShinyButton className="text-lg px-8 py-4 flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+								<Coffee className="w-5 h-5" />
+								<span>Join Beta Now</span>
+							</ShinyButton>
 							</div>
 						</div>
 					</motion.div>

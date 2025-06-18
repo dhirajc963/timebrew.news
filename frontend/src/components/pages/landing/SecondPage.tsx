@@ -419,9 +419,9 @@ const SecondPage: React.FC = () => {
 							transition={{ duration: 0.6, delay: 1 }}
 							className="flex flex-col sm:flex-row gap-4"
 						>
-							<ShinyButton className="text-lg px-8 py-4">
-								<Coffee className="w-5 h-5 mr-2" />
-								Start Your Free Trial
+							<ShinyButton className="text-lg px-8 py-4 flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+								<Coffee className="w-5 h-5" />
+								<span>Start Your Free Trial</span>
 							</ShinyButton>
 							<motion.button
 								whileHover={{ scale: 1.05 }}

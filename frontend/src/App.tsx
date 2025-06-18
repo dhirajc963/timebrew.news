@@ -4,23 +4,33 @@ import Footer from "./components/common/Footer";
 import LandingPage from "./components/pages/landing/LandingPage";
 import Signup from "./components/pages/auth/Signup";
 import Login from "./components/pages/auth/Login";
+import Dashboard from "./components/pages/dashboard/Dashboard";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const App = () => {
 	return (
 		<Router>
-			<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
-				<Navbar />
-				<main className="flex-1">
-					<Routes>
-						<Route path="/" element={<LandingPage />} />
-						<Route path="/signup" element={<Signup />} />
-						<Route path="/signin" element={<Login />} />
-						{/* Add more routes as needed */}
-						<Route path="/dashboard" element={<h1>Some Dash</h1>} />
-					</Routes>
-				</main>
-				<Footer />
-			</div>
+			<AuthProvider>
+				<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
+					<Navbar />
+					<main className="flex-1">
+						<Routes>
+							{/* Public Routes */}
+							<Route path="/" element={<LandingPage />} />
+							<Route path="/signup" element={<Signup />} />
+							<Route path="/signin" element={<Login />} />
+							
+							{/* Protected Routes */}
+							<Route element={<ProtectedRoute />}>
+								<Route path="/dashboard" element={<Dashboard />} />
+								{/* Add more protected routes here */}
+							</Route>
+						</Routes>
+					</main>
+					<Footer />
+				</div>
+			</AuthProvider>
 		</Router>
 	);
 };
