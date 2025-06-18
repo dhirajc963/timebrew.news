@@ -56,7 +56,7 @@ def handler(event, context):
                         'name': row[1],
                         'topic': row[2],
                         'topics': row[3] if row[3] else [],
-                        'delivery_time': row[4],
+                        'delivery_time': row[4].strftime('%H:%M') if row[4] else None,
                         'article_count': row[5],
                         'created_at': row[6].isoformat() if row[6] else None,
                         'is_active': row[7]
