@@ -5,6 +5,21 @@ provider:
   runtime: python3.9
   region: us-east-1
   stage: ${opt:stage, 'dev'}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - '*'
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Requested-With
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      maxAge: 86400
   environment:
     USER_POOL_ID: ${env:USER_POOL_ID}
     CLIENT_ID: ${env:CLIENT_ID}
@@ -42,7 +57,12 @@ functions:
       - http:
           path: health
           method: get
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   # Auth functions
   register:
@@ -51,7 +71,12 @@ functions:
       - http:
           path: auth/register
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   login:
     handler: handlers/auth/login.handler
@@ -59,7 +84,12 @@ functions:
       - http:
           path: auth/login
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   # ADD THESE TWO:
   verifyOTP:
@@ -68,7 +98,12 @@ functions:
       - http:
           path: auth/verify-otp
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   resendVerification:
     handler: handlers/auth/resend_verification.handler
@@ -76,7 +111,12 @@ functions:
       - http:
           path: auth/resend-verification
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   # Placeholder brew functions
   getBrews:
@@ -85,7 +125,12 @@ functions:
       - http:
           path: brews
           method: get
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   createBrew:
     handler: handlers/brews/create.handler
@@ -93,4 +138,9 @@ functions:
       - http:
           path: brews
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With

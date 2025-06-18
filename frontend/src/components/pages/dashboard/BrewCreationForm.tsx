@@ -10,12 +10,14 @@ import {
 	Zap,
 	Plus,
 	CheckIcon,
+	Newspaper,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TimeBlockPicker } from "@/components/ui/time-block-picker";
+import { ArticleCountPicker } from "@/components/ui/article-count-picker";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
@@ -484,6 +486,24 @@ const BrewCreationForm: React.FC = () => {
 													</div>
 												))}
 											</div>
+
+                                            {/* Article Count Picker - Moved from Step 3 */}
+                                            <div className="mt-8 p-4 border border-border rounded-xl bg-card/50 backdrop-blur-sm">
+                                                <div className="mb-4">
+                                                    <h4 className="text-lg font-medium flex items-center gap-2">
+                                                        <Newspaper className="w-4 h-4 text-primary" />
+                                                        Article Count
+                                                    </h4>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        How many articles would you like in each brew?
+                                                    </p>
+                                                </div>
+                                                <ArticleCountPicker
+                                                    value={formData.article_count}
+                                                    onChange={(value) => handleInputChange("article_count", value)}
+                                                    className="w-full"
+                                                />
+                                            </div>
 										</div>
 									</motion.div>
 								)}
@@ -530,56 +550,19 @@ const BrewCreationForm: React.FC = () => {
 												</p>
 											</div>
 
-											<div className="space-y-4">
-												<Label
-													htmlFor="article-count"
-													className="text-xl font-medium block"
-												>
-													Article Count
-												</Label>
-												<div className="space-y-4">
-													<div className="flex items-center justify-between">
-														<span className="text-4xl font-bold text-primary">
-															{formData.article_count}
-														</span>
-														<span className="text-muted-foreground">
-															articles per day
-														</span>
-													</div>
-
-													<input
-														id="article-count"
-														type="range"
-														min="3"
-														max="8"
-														value={formData.article_count}
-														onChange={(e) =>
-															handleInputChange(
-																"article_count",
-																parseInt(e.target.value)
-															)
-														}
-														className="w-full h-3 bg-gradient-to-r from-white/5 to-white/10 rounded-full appearance-none backdrop-blur-sm border border-white/10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-primary [&::-webkit-slider-thumb]:to-accent [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-primary/20 [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/20"
-														aria-label="Select number of articles"
-														aria-valuemin={3}
-														aria-valuemax={8}
-														aria-valuenow={formData.article_count}
-														aria-valuetext={`${formData.article_count} articles`}
-													/>
-
-													<div className="flex justify-between px-1 text-xs text-muted-foreground">
-														<span>3</span>
-														<span>4</span>
-														<span>5</span>
-														<span>6</span>
-														<span>7</span>
-														<span>8</span>
-													</div>
-												</div>
-												<p className="text-muted-foreground">
-													How many articles would you like in each brew?
-												</p>
-											</div>
+											{/* Article Count section removed and moved to Step 2 */}
+                                                <div className="flex items-center justify-center h-full">
+                                                    <div className="text-center p-6 rounded-xl border border-dashed border-border bg-card/30">
+                                                        <Newspaper className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                                        <h4 className="text-lg font-medium">Article Count Set</h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            You've selected {formData.article_count} articles per brew
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground mt-2">
+                                                            You can change this in step 2 if needed
+                                                        </p>
+                                                    </div>
+                                                </div>
 										</div>
 									</motion.div>
 								)}

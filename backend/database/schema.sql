@@ -1,5 +1,5 @@
 -- Users table with profile information
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS time_brew.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cognito_id VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Brews table (for later)
-CREATE TABLE IF NOT EXISTS brews (
+CREATE TABLE IF NOT EXISTS time_brew.brews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
@@ -29,6 +29,6 @@ CREATE TABLE IF NOT EXISTS brews (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_users_cognito_id ON users(cognito_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_brews_user_id ON brews(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_cognito_id ON time_brew.users(cognito_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON time_brew.users(email);
+CREATE INDEX IF NOT EXISTS idx_brews_user_id ON time_brew.brews(user_id);
