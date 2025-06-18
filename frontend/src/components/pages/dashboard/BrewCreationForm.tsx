@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
 	Coffee,
 	Clock,
@@ -23,6 +24,9 @@ import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { Meteors } from "@/components/magicui/meteors";
 import { WordRotate } from "@/components/magicui/word-rotate";
+import { apiClient, Brew, AuthenticationError } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-toastify";
 
 // Types
 interface BrewFormData {
@@ -58,6 +62,10 @@ const scaleInVariants = {
 };
 
 const BrewCreationForm: React.FC = () => {
+	// Get auth context and navigation
+	const { isAuthenticated, user } = useAuth();
+	const navigate = useNavigate();
+
 	// Form state
 	const [currentStep, setCurrentStep] = useState(1);
 	const [formData, setFormData] = useState<BrewFormData>({
@@ -68,6 +76,7 @@ const BrewCreationForm: React.FC = () => {
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [success, setSuccess] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 	// For mobile responsiveness
 	const [isMobile, setIsMobile] = useState(false);
 
@@ -144,20 +153,59 @@ const BrewCreationForm: React.FC = () => {
 		async (e: React.FormEvent) => {
 			e.preventDefault();
 			setIsSubmitting(true);
+			setError(null);
+
+			// Check if user is authenticated
+			if (!isAuthenticated || !user) {
+				const errorMsg = "You must be logged in to create a brew";
+				setError(errorMsg);
+				toast.error(errorMsg);
+				setIsSubmitting(false);
+				// Redirect to login page after a short delay
+				setTimeout(() => {
+					navigate("/signin");
+				}, 2000);
+				return;
+			}
 
 			try {
-				// Simulate API call
-				await new Promise((resolve) => setTimeout(resolve, 1500));
-				console.log("Brew created:", formData);
+				// Get the first topic as the main topic
+				const mainTopic = formData.topics[0] || "";
+				
+				// Create brew data object
+				const brewData: Brew = {
+					name: formData.name,
+					topic: mainTopic,
+					topics: formData.topics,
+					delivery_time: formData.delivery_time,
+					article_count: formData.article_count
+				};
+
+				// Call API to create brew
+				const response = await apiClient.createBrew(brewData);
+				console.log("Brew created:", response);
 				setSuccess(true);
 			} catch (error) {
 				console.error("Error creating brew:", error);
-				// Handle error state here
+				
+				// Check if it's an authentication error using the custom error class
+				if (error instanceof AuthenticationError) {
+					const errorMsg = "Authentication failed. Please log in again.";
+					setError(errorMsg);
+					toast.error("Authentication required");
+					setTimeout(() => {
+						navigate("/signin");
+					}, 2000);
+				} else {
+					const errorMsg = error instanceof Error ? error.message : "Failed to create brew";
+					setError(errorMsg);
+					toast.error(errorMsg);
+				}
 			} finally {
 				setIsSubmitting(false);
 			}
 		},
-		[formData]
+		[formData, isAuthenticated, user]
 	);
 
 	// Validate current step - memoized with useMemo
@@ -313,55 +361,69 @@ const BrewCreationForm: React.FC = () => {
 					Brew
 				</motion.h1>
 				<motion.p
-					className="text-lg text-muted-foreground"
+					className="text-muted-foreground max-w-lg mx-auto"
+					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
-					transition={{ duration: 0.3 }}
+					transition={{ delay: 0.2 }}
 				>
-					Step {currentStep} of 3:{" "}
-					{currentStep === 1
-						? "Name Your Brew"
-						: currentStep === 2
-						? "Select Topics"
-						: "Delivery Settings"}
+					Customize your daily news digest with topics you care about.
+					<br />
+					We'll brew it fresh and deliver it to your inbox every day.
 				</motion.p>
 			</motion.div>
 
-			{/* Progress Indicator */}
-			<div className="flex items-center justify-center mb-8">
-				{[1, 2, 3].map((step) => (
-					<React.Fragment key={step}>
-						<div
-							className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-								currentStep >= step
-									? "bg-gradient-to-r from-primary to-accent text-white shadow-lg"
-									: "bg-muted text-muted-foreground"
-							}`}
-						>
-							{step < currentStep ? <Check className="w-4 h-4" /> : step}
+			{/* Form Container */}
+			<div className="relative">
+				{/* Background gradient */}
+				<div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-2xl" />
+
+				{/* Form Card */}
+				<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-6 md:p-8 shadow-2xl">
+					{/* Step indicator */}
+					<div className="flex justify-center mb-8">
+						<div className="flex items-center space-x-2">
+							{[1, 2, 3].map((step) => (
+								<React.Fragment key={step}>
+									<div
+										className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === step
+											? "bg-primary text-white"
+											: currentStep > step
+												? "bg-primary/20 text-primary"
+												: "bg-muted text-muted-foreground"
+											}`}
+									>
+										{currentStep > step ? (
+											<Check className="w-4 h-4" />
+										) : (
+											<span>{step}</span>
+										)}
+									</div>
+									{step < 3 && (
+										<div
+											className={`w-10 h-0.5 ${currentStep > step
+												? "bg-primary"
+												: "bg-muted"
+												}`}
+										/>
+									)}
+								</React.Fragment>
+							))}
 						</div>
-						{step < 3 && (
-							<div
-								className={`w-12 h-1 transition-all duration-300 ${
-									currentStep > step
-										? "bg-gradient-to-r from-primary to-accent"
-										: "bg-muted"
-								}`}
-							/>
-						)}
-					</React.Fragment>
-				))}
-			</div>
+					</div>
 
-			{/* Form Steps */}
-			<div className="relative group">
-				<div className="absolute -inset-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-3xl blur-2xl opacity-60" />
-
-				<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-8 shadow-2xl">
-					<BorderBeam size={300} duration={15} delay={3} />
-					<div className="space-y-6">
+					{/* Form */}
+					<div className="max-w-2xl mx-auto">
 						<form onSubmit={handleSubmit}>
+							{/* Error message */}
+							{error && (
+								<div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500">
+									{error}
+								</div>
+							)}
+
+							{/* Form Steps */}
 							<AnimatePresence mode="wait">
-								{/* Step 1: Name Your Brew */}
+								{/* Step 1: Brew Name */}
 								{currentStep === 1 && (
 									<motion.div
 										key="step1"
@@ -372,43 +434,67 @@ const BrewCreationForm: React.FC = () => {
 										transition={{ duration: 0.4 }}
 										className="space-y-8"
 									>
-										<div className="space-y-6">
-											<div className="text-center mb-6">
-												<h3 className="text-xl font-semibold">
-													What would you like to call your brew?
-												</h3>
-												<p className="text-muted-foreground text-sm">
-													Give your brew a memorable name that reflects its
-													content
-												</p>
-											</div>
+										<div className="text-center mb-6">
+											<h3 className="text-xl font-semibold">Name Your Brew</h3>
+											<p className="text-muted-foreground text-sm">
+												Give your daily news digest a memorable name
+											</p>
+										</div>
+
+										<div className="space-y-4">
 											<div className="space-y-2">
-												<Label
-													htmlFor="brew-name"
-													className="text-sm font-medium"
-												>
+												<Label htmlFor="brew-name" className="text-sm font-medium">
 													Brew Name
 												</Label>
 												<div className="relative">
-													<Coffee className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
 													<Input
 														id="brew-name"
-														placeholder="Morning Tech Update"
+														type="text"
 														value={formData.name}
 														onChange={(e) =>
 															handleInputChange("name", e.target.value)
 														}
-														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														aria-label="Brew name"
-														aria-required="true"
+														placeholder="e.g. Morning Tech Update"
+														className="pl-10"
 													/>
+													<Coffee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+												</div>
+												<p className="text-xs text-muted-foreground mt-1">
+													Choose a name that reflects the content you want to
+													receive
+												</p>
+											</div>
+
+											<div className="pt-4">
+												<div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+													<h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+														<Sparkles className="w-4 h-4 text-primary" />
+														Suggested Names
+													</h4>
+													<div className="flex flex-wrap gap-2">
+														{[
+															"Daily Tech Brew",
+															"Morning Business Brief",
+															"Science Roundup",
+															"Startup Insights",
+														].map((name) => (
+															<button
+																key={name}
+																type="button"
+																onClick={() => handleInputChange("name", name)}
+																className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+															>
+																{name}
+															</button>
+														))}
+													</div>
 												</div>
 											</div>
 										</div>
 									</motion.div>
 								)}
 
-								{/* Step 2: Select Topics */}
+								{/* Step 2: Topics */}
 								{currentStep === 2 && (
 									<motion.div
 										key="step2"
@@ -419,85 +505,73 @@ const BrewCreationForm: React.FC = () => {
 										transition={{ duration: 0.4 }}
 										className="space-y-8"
 									>
-										<div>
-											<div className="text-center mb-6">
-												<h3 className="text-xl font-semibold">
-													What topics are you interested in?
-												</h3>
-												<p className="text-muted-foreground text-sm">
-													Choose topics you'd like to receive news about
-												</p>
+										<div className="text-center mb-6">
+											<h3 className="text-xl font-semibold">Select Topics</h3>
+											<p className="text-muted-foreground text-sm">
+												Choose topics you're interested in
+											</p>
+										</div>
+
+										<div className="space-y-6">
+											<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+												{availableTopics.map((topic) => {
+													const isSelected = formData.topics.includes(topic);
+													return (
+														<div
+															key={topic}
+															className={`relative rounded-xl border ${isSelected
+																? "border-primary bg-primary/10"
+																: "border-border hover:border-primary/50 bg-card/50 hover:bg-card"
+																} p-3 cursor-pointer transition-all`}
+															onClick={() => handleTopicToggle(topic)}
+														>
+															{isSelected && (
+																<div className="absolute top-2 right-2 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+																	<Check className="w-3 h-3 text-white" />
+																</div>
+															)}
+															<div className="text-sm font-medium">{topic}</div>
+														</div>
+													);
+												})}
 											</div>
 
-											<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-												{availableTopics.map((topic) => (
-													<div
-														key={topic}
-														onClick={(e) => {
-															e.preventDefault();
-															e.stopPropagation();
-															handleTopicToggle(topic);
-														}}
-														className={`
-                              relative overflow-hidden rounded-xl border p-4 cursor-pointer transition-all duration-300
-                              ${
-																formData.topics.includes(topic)
-																	? "border-primary/50 bg-gradient-to-br from-primary/20 to-accent/10 backdrop-blur-sm shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]"
-																	: "border-border bg-card/50 backdrop-blur-sm hover:bg-card/80 hover:border-primary/30"
-															}`}
-														role="checkbox"
-														aria-checked={formData.topics.includes(topic)}
-														tabIndex={0}
-														onKeyDown={(e) => {
-															if (e.key === "Enter" || e.key === " ") {
-																e.preventDefault();
-																handleTopicToggle(topic);
-															}
-														}}
-													>
-														<div className="flex items-center gap-3">
-															<div className="flex-shrink-0">
-																{/* Use a static checkbox indicator instead of the interactive component */}
-																<div
-																	className={`size-4 rounded-[4px] border flex items-center justify-center ${
-																		formData.topics.includes(topic)
-																			? "bg-primary border-primary text-primary-foreground"
-																			: "border-input bg-background"
-																	}`}
-																>
-																	{formData.topics.includes(topic) && (
-																		<CheckIcon className="size-3.5" />
-																	)}
-																</div>
-															</div>
-															<span
-																className={`${
-																	formData.topics.includes(topic)
-																		? "text-primary font-medium"
-																		: "text-foreground"
-																}`}
+											<div className="pt-4">
+												<p className="text-xs text-muted-foreground mb-2">
+													Selected Topics ({formData.topics.length}):
+												</p>
+												<div className="flex flex-wrap gap-2">
+													{formData.topics.length > 0 ? (
+														formData.topics.map((topic) => (
+															<div
+																key={topic}
+																className="bg-primary/20 text-primary text-xs px-3 py-1 rounded-full flex items-center gap-1"
 															>
 																{topic}
-															</span>
+																<button
+																	type="button"
+																	onClick={() => handleTopicToggle(topic)}
+																	className="hover:text-accent"
+																>
+																	×
+																</button>
+															</div>
+														))
+													) : (
+														<div className="text-xs text-muted-foreground italic">
+															No topics selected yet
 														</div>
-														{formData.topics.includes(topic) && (
-															<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent"></div>
-														)}
-													</div>
-												))}
+													)}
+												</div>
 											</div>
 
-                                            {/* Article Count Picker - Moved from Step 3 */}
-                                            <div className="mt-8 p-4 border border-border rounded-xl bg-card/50 backdrop-blur-sm">
-                                                <div className="mb-4">
-                                                    <h4 className="text-lg font-medium flex items-center gap-2">
-                                                        <Newspaper className="w-4 h-4 text-primary" />
-                                                        Article Count
-                                                    </h4>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        How many articles would you like in each brew?
-                                                    </p>
-                                                </div>
+                                            <div className="pt-6">
+                                                <Label
+                                                    htmlFor="article-count"
+                                                    className="text-sm font-medium mb-2 block"
+                                                >
+                                                    Articles Per Brew
+                                                </Label>
                                                 <ArticleCountPicker
                                                     value={formData.article_count}
                                                     onChange={(value) => handleInputChange("article_count", value)}
@@ -551,18 +625,18 @@ const BrewCreationForm: React.FC = () => {
 											</div>
 
 											{/* Article Count section removed and moved to Step 2 */}
-                                                <div className="flex items-center justify-center h-full">
-                                                    <div className="text-center p-6 rounded-xl border border-dashed border-border bg-card/30">
-                                                        <Newspaper className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                                        <h4 className="text-lg font-medium">Article Count Set</h4>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            You've selected {formData.article_count} articles per brew
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground mt-2">
-                                                            You can change this in step 2 if needed
-                                                        </p>
-                                                    </div>
+                                            <div className="flex items-center justify-center h-full">
+                                                <div className="text-center p-6 rounded-xl border border-dashed border-border bg-card/30">
+                                                    <Newspaper className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                                    <h4 className="text-lg font-medium">Article Count Set</h4>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        You've selected {formData.article_count} articles per brew
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-2">
+                                                        You can change this in step 2 if needed
+                                                    </p>
                                                 </div>
+                                            </div>
 										</div>
 									</motion.div>
 								)}

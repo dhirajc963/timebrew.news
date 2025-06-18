@@ -6,6 +6,14 @@ import React, {
 	ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { 
+	refreshToken as refreshAuthToken, 
+	clearAuthData, 
+	setAuthData,
+	subscribeToAuthEvent, 
+	unsubscribeFromAuthEvent, 
+	AuthTokens 
+} from "@/utils/auth";
 
 // Define types for our context
 interface User {
@@ -27,12 +35,7 @@ interface AuthContextType {
 	logout: () => void;
 	updateUser: (userData: Partial<User>) => void;
 	getAccessToken: () => string | null;
-}
-
-interface AuthTokens {
-	accessToken: string;
-	refreshToken: string;
-	expiresIn: number;
+	refreshToken: () => Promise<string | null>;
 }
 
 interface AuthProviderProps {
@@ -57,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const [isLoading, setIsLoading] = useState(true);
 	const navigate = useNavigate();
 
-	// Check if user is authenticated on initial load
+	// Check if user is authenticated on initial load and subscribe to auth events
 	useEffect(() => {
 		const initializeAuth = async () => {
 			try {
@@ -70,41 +73,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			} catch (error) {
 				console.error("Failed to initialize auth:", error);
 				// Clear potentially corrupted data
-				localStorage.removeItem("user");
-				localStorage.removeItem("accessToken");
-				localStorage.removeItem("refreshToken");
+				clearAuthData();
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
 		initializeAuth();
-	}, []);
+
+		// Subscribe to auth events
+		const handleLogout = () => {
+			setUser(null);
+			// Only navigate if we're not already on the home page
+			if (window.location.pathname !== "/") {
+				navigate("/");
+			}
+		};
+
+		const handleLogin = () => {
+			const storedUser = localStorage.getItem("user");
+			if (storedUser) {
+				setUser(JSON.parse(storedUser));
+			}
+		};
+
+		subscribeToAuthEvent("logout", handleLogout);
+		subscribeToAuthEvent("login", handleLogin);
+		subscribeToAuthEvent("tokenRefreshed", handleLogin);
+
+		// Cleanup subscriptions on unmount
+		return () => {
+			unsubscribeFromAuthEvent("logout", handleLogout);
+			unsubscribeFromAuthEvent("login", handleLogin);
+			unsubscribeFromAuthEvent("tokenRefreshed", handleLogin);
+		};
+	}, [navigate]);
 
 	// Computed property to check if user is authenticated
 	const isAuthenticated = !!user;
 
 	// Login function - store user data and tokens
 	const login = (tokens: AuthTokens, userData: User) => {
-		localStorage.setItem("accessToken", tokens.accessToken);
-		localStorage.setItem("refreshToken", tokens.refreshToken);
-		localStorage.setItem(
-			"tokenExpiry",
-			(Date.now() + tokens.expiresIn * 1000).toString()
-		);
-		localStorage.setItem("user", JSON.stringify(userData));
-
+		// Use the centralized setAuthData function
+		setAuthData(tokens, userData);
+		
+		// The user state will be updated by the event listener
+		// but we still set it directly for immediate UI update
 		setUser(userData);
 		navigate("/dashboard");
 	};
 
 	// Logout function - clear user data and tokens
 	const logout = () => {
-		localStorage.removeItem("user");
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
-		localStorage.removeItem("tokenExpiry");
-
+		clearAuthData();
 		setUser(null);
 		navigate("/");
 	};
@@ -123,6 +144,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		return localStorage.getItem("accessToken");
 	};
 
+	// Refresh token function - uses the shared utility
+	const refreshToken = async (): Promise<string | null> => {
+		const token = await refreshAuthToken();
+		if (!token) {
+			// If refresh fails, log the user out
+			logout();
+		}
+		return token;
+	};
+
 	// Create the value object that will be provided to consumers
 	const value = {
 		user,
@@ -132,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		logout,
 		updateUser,
 		getAccessToken,
+		refreshToken,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

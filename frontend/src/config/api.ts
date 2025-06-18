@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
 		login: "/auth/login",
 		verifyOtp: "/auth/verify-otp",
 		resendVerification: "/auth/resend-verification",
+		refreshToken: "/auth/refresh-token",
 	},
 	// Brew endpoints
 	brews: {
