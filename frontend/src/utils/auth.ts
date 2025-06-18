@@ -69,6 +69,15 @@ export const isTokenExpired = (): boolean => {
 };
 
 /**
+ * Check if user is authenticated with valid tokens
+ */
+export const isAuthenticated = (): boolean => {
+  const accessToken = localStorage.getItem('accessToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  return !!accessToken && !!refreshToken && !isTokenExpired();
+};
+
+/**
  * Refresh the authentication token
  * @returns A promise that resolves to the new access token or null if refresh failed
  */
@@ -91,7 +100,9 @@ export const refreshToken = async (): Promise<string | null> => {
   try {
     const refreshTokenValue = localStorage.getItem('refreshToken');
     if (!refreshTokenValue) {
-      throw new Error('No refresh token available');
+      console.warn('No refresh token available');
+      clearAuthData(); // Clear any partial auth data
+      return null;
     }
 
     // Call the refresh token API endpoint
@@ -104,7 +115,9 @@ export const refreshToken = async (): Promise<string | null> => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to refresh token');
+      console.warn('Failed to refresh token: Server returned', response.status);
+      clearAuthData(); // Clear auth data on server rejection
+      return null;
     }
 
     const data = await response.json();

@@ -12,7 +12,8 @@ import {
 	setAuthData,
 	subscribeToAuthEvent, 
 	unsubscribeFromAuthEvent, 
-	AuthTokens 
+	AuthTokens,
+	isAuthenticated as checkIsAuthenticated
 } from "@/utils/auth";
 
 // Define types for our context
@@ -65,10 +66,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		const initializeAuth = async () => {
 			try {
 				const storedUser = localStorage.getItem("user");
-				const storedToken = localStorage.getItem("accessToken");
-
-				if (storedUser && storedToken) {
+				
+				// Only set user if we have valid authentication
+				if (storedUser && checkIsAuthenticated()) {
 					setUser(JSON.parse(storedUser));
+				} else {
+					// Clear potentially invalid auth data
+					clearAuthData();
 				}
 			} catch (error) {
 				console.error("Failed to initialize auth:", error);
@@ -110,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	}, [navigate]);
 
 	// Computed property to check if user is authenticated
-	const isAuthenticated = !!user;
+	const isAuthenticated = user !== null && checkIsAuthenticated();
 
 	// Login function - store user data and tokens
 	const login = (tokens: AuthTokens, userData: User) => {

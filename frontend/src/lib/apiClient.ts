@@ -1,6 +1,6 @@
 // API client for TimeBrew backend
 import { API_ENDPOINTS, getApiUrl } from '@/config/api';
-import { getAccessToken, isTokenExpired, refreshToken, clearAuthData } from '@/utils/auth';
+import { getAccessToken, isTokenExpired, refreshToken, clearAuthData, isAuthenticated } from '@/utils/auth';
 
 // Custom error class for authentication failures
 export class AuthenticationError extends Error {
@@ -31,7 +31,13 @@ class ApiClient {
     
     // Check if token is expired and refresh if needed
     if (token && isTokenExpired()) {
-      token = await refreshToken();
+      try {
+        token = await refreshToken();
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        // Continue with null token, which will return headers without authorization
+        token = null;
+      }
     }
     
     if (!token) {
@@ -103,7 +109,7 @@ class ApiClient {
         
         // If we get here, either there's no retry function, or token refresh failed
         clearAuthData();
-        throw new AuthenticationError(errorData.error || errorData.message || 'Authentication failed');
+        throw new AuthenticationError(errorData.error || errorData.message || 'Authorization token is required');
       }
       
       // Handle other error types
@@ -118,12 +124,24 @@ class ApiClient {
   }
 
   /**
+   * Check if the user is authenticated before making API calls
+   * @throws {AuthenticationError} If the user is not authenticated
+   */
+  private checkAuthentication(): void {
+    if (!isAuthenticated()) {
+      throw new AuthenticationError('You must be logged in to perform this action');
+    }
+  }
+
+  /**
    * Create a new brew with timeout protection
    * @param brewData The brew data to create
    * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
    */
   async createBrew(brewData: Brew, timeoutMs: number = 10000): Promise<Brew> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(API_ENDPOINTS.brews.create), {
           method: 'POST',
@@ -150,6 +168,8 @@ class ApiClient {
    */
   async getBrews(timeoutMs: number = 10000): Promise<{ brews: Brew[] }> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(API_ENDPOINTS.brews.getAll), {
           method: 'GET',
@@ -176,6 +196,8 @@ class ApiClient {
    */
   async getBrew(id: string, timeoutMs: number = 10000): Promise<Brew> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
           method: 'GET',
@@ -203,6 +225,8 @@ class ApiClient {
    */
   async updateBrew(id: string, brewData: Partial<Brew>, timeoutMs: number = 10000): Promise<Brew> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
           method: 'PUT',
@@ -230,6 +254,8 @@ class ApiClient {
    */
   async deleteBrew(id: string, timeoutMs: number = 10000): Promise<void> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
           method: 'DELETE',
@@ -257,6 +283,8 @@ class ApiClient {
    */
   async toggleBrewStatus(id: string, isActive: boolean, timeoutMs: number = 10000): Promise<Brew> {
     try {
+      this.checkAuthentication();
+      
       const makeRequest = async () => {
         return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}/status`), {
           method: 'PATCH',
