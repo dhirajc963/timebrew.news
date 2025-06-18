@@ -17,6 +17,7 @@ import { AnimatedGradientText } from "@/components/magicui/animated-gradient-tex
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
+import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
 
 // Types
 interface LoginFormData {
@@ -64,9 +65,7 @@ const Login: React.FC = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 
-	// API Configuration
-	const API_BASE_URL =
-		"https://12rj6a2a04.execute-api.us-east-1.amazonaws.com/dev";
+	// API Configuration is now imported from config/api.ts
 
 	const handleInputChange = (field: keyof LoginFormData, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
@@ -79,7 +78,7 @@ const Login: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/auth/login`, {
+			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -110,7 +109,7 @@ const Login: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.verifyOtp), {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -154,7 +153,7 @@ const Login: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/auth/login`, {
+			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Coffee, Settings, Sparkles, Clock } from 'lucide-react';
+import { Coffee, Settings, Sparkles, Clock, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedGradientText } from '@/components/magicui/animated-gradient-text';
 import { BorderBeam } from '@/components/magicui/border-beam';
@@ -69,10 +70,24 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                <ShinyButton className="whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
-                  <Settings className="w-4 h-4" />
-                  <span>Manage Settings</span>
-                </ShinyButton>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link to="/dashboard/create-brew">
+                    <ShinyButton 
+                      className="whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Brew</span>
+                    </ShinyButton>
+                  </Link>
+                  
+                  <ShinyButton 
+                    // variant="outline"
+                    className="whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Manage Settings</span>
+                  </ShinyButton>
+                </div>
               </div>
             </div>
           </motion.div>

@@ -18,6 +18,7 @@ import { AnimatedGradientText } from "@/components/magicui/animated-gradient-tex
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
+import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
 
 // Types
 interface SignupFormData {
@@ -84,9 +85,7 @@ const Signup: React.FC = () => {
 		"Other",
 	];
 
-	// API Configuration
-	const API_BASE_URL =
-		"https://12rj6a2a04.execute-api.us-east-1.amazonaws.com/dev";
+	// API Configuration is now imported from config/api.ts
 
 	const handleInputChange = (field: keyof SignupFormData, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
@@ -124,7 +123,7 @@ const Signup: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/auth/register`, {
+			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.register), {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -314,21 +313,6 @@ const Signup: React.FC = () => {
 												</p>
 											</div>
 
-											{/* Passwordless Info */}
-											<div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-primary/20 rounded-xl p-4 mb-6">
-												<div className="flex items-center space-x-3">
-													<Shield className="w-5 h-5 text-primary" />
-													<div>
-														<div className="font-medium">
-															Passwordless Sign-up
-														</div>
-														<div className="text-sm text-muted-foreground">
-															No password needed - just your email!
-														</div>
-													</div>
-												</div>
-											</div>
-
 											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 												<div className="space-y-2">
 													<label className="text-sm font-medium">
@@ -499,21 +483,21 @@ const Signup: React.FC = () => {
 											</button>
 										) : (
 											<ShinyButton
-									disabled={loading || formData.interests.length === 0}
-									className="flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
-								>
-									{loading ? (
-										<>
-											<Loader2 className="w-4 h-4 animate-spin" />
-											<span>Creating Account...</span>
-										</>
-									) : (
-										<>
-											<Zap className="w-4 h-4" />
-											<span>Create Account</span>
-										</>
-									)}
-								</ShinyButton>
+												disabled={loading || formData.interests.length === 0}
+												className="flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+											>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														<span>Creating Account...</span>
+													</>
+												) : (
+													<>
+														<Zap className="w-4 h-4" />
+														<span>Create Account</span>
+													</>
+												)}
+											</ShinyButton>
 										)}
 									</div>
 								</div>
