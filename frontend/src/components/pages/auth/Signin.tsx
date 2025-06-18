@@ -149,7 +149,6 @@ const Login: React.FC = () => {
 		}
 	};
 
-
 	const handleResendCode = async () => {
 		setLoading(true);
 		setError("");
@@ -191,7 +190,7 @@ const Login: React.FC = () => {
 			{/* Background Effects */}
 			<div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
-			<div className="max-w-md mx-auto px-4 w-full">
+			<div className="max-w-lg mx-auto px-4 w-full">
 				<motion.div
 					initial={{ opacity: 0, y: 30 }}
 					animate={{ opacity: 1, y: 0 }}
@@ -222,7 +221,7 @@ const Login: React.FC = () => {
 						>
 							{currentStep === "otp"
 								? "Enter the verification code we sent to your email"
-								: "Secure passwordless access with just your email"}
+								: "Enter your email"}
 						</TypingAnimation>
 					</div>
 
@@ -244,27 +243,8 @@ const Login: React.FC = () => {
 										transition={{ duration: 0.3 }}
 									>
 										<form onSubmit={handleEmailSubmit} className="space-y-6">
-											{/* Passwordless Info */}
-											<div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-primary/20 rounded-xl p-4 mb-6">
-												<div className="flex items-start space-x-3">
-													<Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-													<div className="text-sm">
-														<div className="font-medium text-primary mb-1">
-															Passwordless Sign-In
-														</div>
-														<div className="text-muted-foreground">
-															We'll send a secure verification code to your
-															email
-														</div>
-													</div>
-												</div>
-											</div>
-
 											{/* Email Field */}
 											<div className="space-y-2">
-												<label className="text-sm font-medium">
-													Email Address
-												</label>
 												<div className="relative">
 													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
 													<input
@@ -274,7 +254,7 @@ const Login: React.FC = () => {
 															handleInputChange("email", e.target.value)
 														}
 														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														placeholder="Enter your email"
+														placeholder="you@anyemail.com"
 														required
 													/>
 												</div>
@@ -282,22 +262,22 @@ const Login: React.FC = () => {
 
 											{/* Submit Button */}
 											<ShinyButton
-										type="submit"
-										disabled={loading || !formData.email}
-										className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
-									>
-										{loading ? (
-											<>
-												<Loader2 className="w-4 h-4 animate-spin" />
-												<span>Sending Code...</span>
-											</>
-										) : (
-											<>
-												<Send className="w-4 h-4" />
-												<span>Send Verification Code</span>
-											</>
-										)}
-									</ShinyButton>
+												type="submit"
+												disabled={loading || !formData.email}
+												className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+											>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														<span>Sending Code...</span>
+													</>
+												) : (
+													<>
+														<Send className="w-4 h-4" />
+														<span>Send Verification Code</span>
+													</>
+												)}
+											</ShinyButton>
 										</form>
 									</motion.div>
 								)}
@@ -332,9 +312,6 @@ const Login: React.FC = () => {
 
 											{/* OTP Field */}
 											<div className="space-y-2">
-												<label className="text-sm font-medium">
-													Verification Code
-												</label>
 												<input
 													type="text"
 													value={formData.otpCode}
@@ -366,21 +343,21 @@ const Login: React.FC = () => {
 
 											{/* Submit Button */}
 											<ShinyButton
-										disabled={loading || formData.otpCode.length !== 8}
-										className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
-									>
-										{loading ? (
-											<>
-												<Loader2 className="w-4 h-4 animate-spin" />
-												<span>Verifying...</span>
-											</>
-										) : (
-											<>
-												<Zap className="w-4 h-4" />
-												<span>Sign In</span>
-											</>
-										)}
-									</ShinyButton>
+												disabled={loading || formData.otpCode.length !== 8}
+												className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+											>
+												{loading ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														<span>Verifying...</span>
+													</>
+												) : (
+													<>
+														<Zap className="w-4 h-4" />
+														<span>Sign In</span>
+													</>
+												)}
+											</ShinyButton>
 										</form>
 									</motion.div>
 								)}

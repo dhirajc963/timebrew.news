@@ -156,11 +156,7 @@ const Navbar = () => {
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 							className="md:hidden text-white p-1.5"
 						>
-							{mobileMenuOpen ? (
-								<X className="w-5 h-5" />
-							) : (
-								<Menu className="w-5 h-5" />
-							)}
+							<Menu className="w-5 h-5" />
 						</button>
 					</div>
 				</div>

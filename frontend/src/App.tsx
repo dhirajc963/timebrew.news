@@ -3,7 +3,7 @@ import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
 import LandingPage from "./components/pages/landing/LandingPage";
 import Signup from "./components/pages/auth/Signup";
-import Login from "./components/pages/auth/Login";
+import Login from "./components/pages/auth/Signin";
 import Dashboard from "./components/pages/dashboard/Dashboard";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -20,7 +20,7 @@ const App = () => {
 							<Route path="/" element={<LandingPage />} />
 							<Route path="/signup" element={<Signup />} />
 							<Route path="/signin" element={<Login />} />
-							
+
 							{/* Protected Routes */}
 							<Route element={<ProtectedRoute />}>
 								<Route path="/dashboard" element={<Dashboard />} />
