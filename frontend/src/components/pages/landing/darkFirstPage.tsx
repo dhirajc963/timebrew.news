@@ -73,7 +73,7 @@ const FirstPage = () => {
 	return (
 		<div className="min-h-screen bg-gray-950 text-white">
 			{/* Hero Section */}
-			<section className="min-h-screen flex items-center justify-center relative overflow-hidden pt-16 sm:pt-20 lg:pt-24">
+			<section className="min-h-screen flex items-center justify-center relative overflow-hidden pt-23 sm:pt-23 md:pt-23 lg:pt-24">
 				<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 md:gap-16 lg:gap-20 xl:gap-24 items-center">
 						{/* Left Content */}

@@ -159,7 +159,7 @@ const Signup: React.FC = () => {
 	// Success screen
 	if (success) {
 		return (
-			<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16">
+			<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
 				<div className="max-w-md mx-auto px-4 text-center">
 					<motion.div
 						initial={{ opacity: 0, scale: 0.8 }}
@@ -221,7 +221,7 @@ const Signup: React.FC = () => {
 	}
 
 	return (
-		<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16">
+		<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
 			{/* Background Effects */}
 			<div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 

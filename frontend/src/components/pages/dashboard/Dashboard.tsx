@@ -10,7 +10,7 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen py-20 px-4">
+    <div className="min-h-screen py-16 md:py-0 pt-23 md:pt-32 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Welcome Header */}
         <motion.div

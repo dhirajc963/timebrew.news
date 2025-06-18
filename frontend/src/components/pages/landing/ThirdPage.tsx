@@ -124,7 +124,7 @@ const ThirdPage: React.FC = () => {
 	return (
 		<>
 			{/* Enhanced Early Adopter CTA */}
-			<section className="py-32 bg-gradient-to-br from-primary via-accent to-primary text-primary-foreground relative overflow-hidden">
+			<section className="py-32 md:py-32 pt-23 md:pt-32 bg-gradient-to-br from-primary via-accent to-primary text-primary-foreground relative overflow-hidden">
 				{/* Floating gradient orbs */}
 				<div className="absolute inset-0 overflow-hidden pointer-events-none">
 					<motion.div
@@ -355,7 +355,7 @@ const ThirdPage: React.FC = () => {
 			</section>
 
 			{/* Enhanced FAQ Section */}
-			<section ref={ref} className="py-32 relative overflow-hidden">
+			<section ref={ref} className="py-32 md:py-32 pt-23 md:pt-32 relative overflow-hidden">
 				<div className="max-w-5xl mx-auto px-6 relative z-10">
 					<BlurIn>
 						<div className="text-center mb-20">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Menu, X, LogOut, User, Coffee, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +7,8 @@ const Navbar = () => {
 	const { isAuthenticated, user, logout } = useAuth();
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const mobileMenuRef = useRef<HTMLDivElement>(null);
+	const mobileButtonRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
 		// Handle scroll for navbar effect
@@ -20,6 +22,26 @@ const Navbar = () => {
 			window.removeEventListener("scroll", handleScroll);
 		};
 	}, []);
+
+	useEffect(() => {
+		// Handle clicks outside of mobile menu
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				mobileMenuOpen &&
+				mobileMenuRef.current &&
+				mobileButtonRef.current &&
+				!mobileMenuRef.current.contains(event.target as Node) &&
+				!mobileButtonRef.current.contains(event.target as Node)
+			) {
+				setMobileMenuOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [mobileMenuOpen]);
 
 	return (
 		<header className="fixed top-3 md:top-6 left-1/2 transform -translate-x-1/2 z-50 px-2 md:px-3 w-full max-w-7xl">
@@ -130,6 +152,7 @@ const Navbar = () => {
 
 						{/* Mobile menu button */}
 						<button
+							ref={mobileButtonRef}
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 							className="md:hidden text-white p-1.5"
 						>
@@ -144,6 +167,7 @@ const Navbar = () => {
 
 				{/* Mobile dropdown */}
 				<div
+					ref={mobileMenuRef}
 					className={`md:hidden absolute top-full left-0 right-0 mt-2 transition-all duration-300 ${
 						mobileMenuOpen
 							? "opacity-100 translate-y-0"
