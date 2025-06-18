@@ -8,7 +8,7 @@ provider:
   httpApi:
     cors:
       allowedOrigins:
-        - '*'
+        - "*"
       allowedHeaders:
         - Content-Type
         - Authorization
@@ -58,7 +58,7 @@ functions:
           path: health
           method: get
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
@@ -72,7 +72,7 @@ functions:
           path: auth/register
           method: post
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
@@ -85,7 +85,7 @@ functions:
           path: auth/login
           method: post
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
@@ -99,7 +99,7 @@ functions:
           path: auth/verify-otp
           method: post
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
@@ -112,13 +112,13 @@ functions:
           path: auth/resend-verification
           method: post
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
               - X-Requested-With
 
-  # Placeholder brew functions
+  # Brew functions
   getBrews:
     handler: handlers/brews/get.handler
     events:
@@ -126,7 +126,20 @@ functions:
           path: brews
           method: get
           cors:
-            origin: '*'
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+  getBrew:
+    handler: handlers/brews/get_by_id.handler
+    events:
+      - http:
+          path: brews/{id}
+          method: get
+          cors:
+            origin: "*"
             headers:
               - Content-Type
               - Authorization
@@ -139,7 +152,7 @@ functions:
           path: brews
           method: post
           cors:
-            origin: '*'
+            origin: "*"
             headers:
               - Content-Type
               - Authorization

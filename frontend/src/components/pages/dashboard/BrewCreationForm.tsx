@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
 	Coffee,
 	Clock,
@@ -171,14 +171,14 @@ const BrewCreationForm: React.FC = () => {
 			try {
 				// Get the first topic as the main topic
 				const mainTopic = formData.topics[0] || "";
-				
+
 				// Create brew data object
 				const brewData: Brew = {
 					name: formData.name,
 					topic: mainTopic,
 					topics: formData.topics,
 					delivery_time: formData.delivery_time,
-					article_count: formData.article_count
+					article_count: formData.article_count,
 				};
 
 				// Call API to create brew
@@ -187,7 +187,7 @@ const BrewCreationForm: React.FC = () => {
 				setSuccess(true);
 			} catch (error) {
 				console.error("Error creating brew:", error);
-				
+
 				// Check if it's an authentication error using the custom error class
 				if (error instanceof AuthenticationError) {
 					const errorMsg = "Authentication failed. Please log in again.";
@@ -197,7 +197,8 @@ const BrewCreationForm: React.FC = () => {
 						navigate("/signin");
 					}, 2000);
 				} else {
-					const errorMsg = error instanceof Error ? error.message : "Failed to create brew";
+					const errorMsg =
+						error instanceof Error ? error.message : "Failed to create brew";
 					setError(errorMsg);
 					toast.error(errorMsg);
 				}
@@ -263,18 +264,28 @@ const BrewCreationForm: React.FC = () => {
 
 					<div className="relative bg-card/80 backdrop-blur-2xl border border-border rounded-3xl p-8 shadow-2xl">
 						<BorderBeam size={250} duration={12} delay={0} />
-						<Meteors number={8} />
+						<Meteors number={5} minDuration={3} maxDuration={8} />
 
 						<div className="space-y-6">
-							<div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto flex items-center justify-center">
+							<motion.div
+								initial={{ opacity: 0, y: -10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.3, duration: 0.5 }}
+								className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto flex items-center justify-center"
+							>
 								<Check className="w-8 h-8 text-white" />
-							</div>
+							</motion.div>
 
-							<div className="text-center">
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ delay: 0.5, duration: 0.5 }}
+								className="text-center"
+							>
 								<h2 className="text-2xl font-bold text-gradient-green mb-2">
 									Your{" "}
 									<AnimatedGradientText>{formData.name}</AnimatedGradientText>{" "}
-									Brew is Ready!
+									Brew is Created!
 								</h2>
 								<p className="text-xl text-muted-foreground">
 									We'll deliver it daily at{" "}
@@ -282,9 +293,14 @@ const BrewCreationForm: React.FC = () => {
 										{formData.delivery_time}
 									</span>
 								</p>
-							</div>
+							</motion.div>
 
-							<div className="bg-primary/10 border border-primary/20 rounded-xl p-4 max-w-md mx-auto">
+							<motion.div
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.7, duration: 0.5 }}
+								className="bg-primary/10 border border-primary/20 rounded-xl p-4 max-w-md mx-auto"
+							>
 								<div className="flex items-center justify-between mb-4">
 									<div className="flex items-center gap-2">
 										<Coffee className="w-5 h-5 text-primary" />
@@ -304,7 +320,7 @@ const BrewCreationForm: React.FC = () => {
 											{formData.topics.map((topic) => (
 												<div
 													key={topic}
-													className="bg-white/10 text-white text-xs px-3 py-1 rounded-full"
+													className="bg-primary/20 text-primary font-medium text-xs px-3 py-1 rounded-full border border-primary/30"
 												>
 													{topic}
 												</div>
@@ -312,18 +328,33 @@ const BrewCreationForm: React.FC = () => {
 										</div>
 									</div>
 								</div>
-							</div>
+							</motion.div>
 
-							<div className="pt-4">
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ delay: 0.9, duration: 0.5 }}
+								className="pt-4 flex gap-3"
+							>
 								<ShinyButton
 									onClick={resetForm}
-									className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+									className="flex-1 flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
 									aria-label="Create another brew"
 								>
 									<Plus className="w-4 h-4" />
 									<span>Create Another Brew</span>
 								</ShinyButton>
-							</div>
+
+								<Link to="/dashboard" className="flex-1">
+									<ShinyButton
+										className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+										aria-label="Go to Dashboard"
+									>
+										<Coffee className="w-4 h-4" />
+										<span>View My Brews</span>
+									</ShinyButton>
+								</Link>
+							</motion.div>
 						</div>
 					</div>
 				</motion.div>
@@ -385,12 +416,13 @@ const BrewCreationForm: React.FC = () => {
 							{[1, 2, 3].map((step) => (
 								<React.Fragment key={step}>
 									<div
-										className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === step
-											? "bg-primary text-white"
-											: currentStep > step
+										className={`w-8 h-8 rounded-full flex items-center justify-center ${
+											currentStep === step
+												? "bg-primary text-white"
+												: currentStep > step
 												? "bg-primary/20 text-primary"
 												: "bg-muted text-muted-foreground"
-											}`}
+										}`}
 									>
 										{currentStep > step ? (
 											<Check className="w-4 h-4" />
@@ -400,10 +432,9 @@ const BrewCreationForm: React.FC = () => {
 									</div>
 									{step < 3 && (
 										<div
-											className={`w-10 h-0.5 ${currentStep > step
-												? "bg-primary"
-												: "bg-muted"
-												}`}
+											className={`w-10 h-0.5 ${
+												currentStep > step ? "bg-primary" : "bg-muted"
+											}`}
 										/>
 									)}
 								</React.Fragment>
@@ -443,7 +474,10 @@ const BrewCreationForm: React.FC = () => {
 
 										<div className="space-y-4">
 											<div className="space-y-2">
-												<Label htmlFor="brew-name" className="text-sm font-medium">
+												<Label
+													htmlFor="brew-name"
+													className="text-sm font-medium"
+												>
 													Brew Name
 												</Label>
 												<div className="relative">
@@ -519,10 +553,11 @@ const BrewCreationForm: React.FC = () => {
 													return (
 														<div
 															key={topic}
-															className={`relative rounded-xl border ${isSelected
-																? "border-primary bg-primary/10"
-																: "border-border hover:border-primary/50 bg-card/50 hover:bg-card"
-																} p-3 cursor-pointer transition-all`}
+															className={`relative rounded-xl border ${
+																isSelected
+																	? "border-primary bg-primary/10"
+																	: "border-border hover:border-primary/50 bg-card/50 hover:bg-card"
+															} p-3 cursor-pointer transition-all`}
 															onClick={() => handleTopicToggle(topic)}
 														>
 															{isSelected && (
@@ -565,19 +600,21 @@ const BrewCreationForm: React.FC = () => {
 												</div>
 											</div>
 
-                                            <div className="pt-6">
-                                                <Label
-                                                    htmlFor="article-count"
-                                                    className="text-sm font-medium mb-2 block"
-                                                >
-                                                    Articles Per Brew
-                                                </Label>
-                                                <ArticleCountPicker
-                                                    value={formData.article_count}
-                                                    onChange={(value) => handleInputChange("article_count", value)}
-                                                    className="w-full"
-                                                />
-                                            </div>
+											<div className="pt-6">
+												<Label
+													htmlFor="article-count"
+													className="text-sm font-medium mb-2 block"
+												>
+													Articles Per Brew
+												</Label>
+												<ArticleCountPicker
+													value={formData.article_count}
+													onChange={(value) =>
+														handleInputChange("article_count", value)
+													}
+													className="w-full"
+												/>
+											</div>
 										</div>
 									</motion.div>
 								)}
@@ -625,18 +662,21 @@ const BrewCreationForm: React.FC = () => {
 											</div>
 
 											{/* Article Count section removed and moved to Step 2 */}
-                                            <div className="flex items-center justify-center h-full">
-                                                <div className="text-center p-6 rounded-xl border border-dashed border-border bg-card/30">
-                                                    <Newspaper className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                                    <h4 className="text-lg font-medium">Article Count Set</h4>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        You've selected {formData.article_count} articles per brew
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground mt-2">
-                                                        You can change this in step 2 if needed
-                                                    </p>
-                                                </div>
-                                            </div>
+											<div className="flex items-center justify-center h-full">
+												<div className="text-center p-6 rounded-xl border border-dashed border-border bg-card/30">
+													<Newspaper className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+													<h4 className="text-lg font-medium">
+														Article Count Set
+													</h4>
+													<p className="text-sm text-muted-foreground">
+														You've selected {formData.article_count} articles
+														per brew
+													</p>
+													<p className="text-xs text-muted-foreground mt-2">
+														You can change this in step 2 if needed
+													</p>
+												</div>
+											</div>
 										</div>
 									</motion.div>
 								)}

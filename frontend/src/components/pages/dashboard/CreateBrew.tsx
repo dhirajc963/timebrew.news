@@ -41,7 +41,7 @@ const CreateBrew: React.FC = () => {
 					className="relative"
 				>
 					{/* Header with Back Link */}
-					<div className="mb-8 flex items-center justify-between">
+					<div className="mb-3 flex items-center justify-between">
 						<motion.div
 							initial={{ opacity: 0, x: -20 }}
 							animate={{ opacity: 1, x: 0 }}

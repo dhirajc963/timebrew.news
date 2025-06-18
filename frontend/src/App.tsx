@@ -6,6 +6,7 @@ import Signup from "./components/pages/auth/Signup";
 import Login from "./components/pages/auth/Signin";
 import Dashboard from "./components/pages/dashboard/Dashboard";
 import CreateBrew from "./components/pages/dashboard/CreateBrew";
+import BrewDetails from "./components/pages/dashboard/BrewDetails";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -26,6 +27,7 @@ const App = () => {
 							<Route element={<ProtectedRoute />}>
 								<Route path="/dashboard" element={<Dashboard />} />
 								<Route path="/dashboard/create-brew" element={<CreateBrew />} />
+								<Route path="/dashboard/brew/:id" element={<BrewDetails />} />
 								{/* Add more protected routes here */}
 							</Route>
 						</Routes>
