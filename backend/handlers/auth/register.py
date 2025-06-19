@@ -93,7 +93,7 @@ def handler(event, context):
                     INSERT INTO time_brew.users (cognito_id, email, first_name, last_name, country, interests, timezone)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, created_at
-                """, (cognito_id, email, first_name, last_name, country, interests, timezone))
+                """, (cognito_id, email, first_name, last_name, country, json.dumps(interests), timezone))
                 
                 user_id, created_at = cur.fetchone()
             

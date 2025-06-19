@@ -62,7 +62,7 @@ def handler(event, context):
                     """INSERT INTO time_brew.brews 
                        (user_id, name, topic, keywords, delivery_time, article_count) 
                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, created_at""",
-                    (user_id, name, topic, topics, delivery_time, article_count)
+                    (user_id, name, topic, json.dumps(topics), delivery_time, article_count)
                 )
                 
                 brew_result = cur.fetchone()
@@ -76,8 +76,8 @@ def handler(event, context):
                     'id': str(brew_id),
                     'name': name,
                     'topic': topic,
-                    'topics': topics,
-                    'delivery_time': delivery_time,
+                    'keywords': topics,
+                    'delivery_time': str(delivery_time),
                     'article_count': article_count,
                     'created_at': created_at.isoformat() + 'Z',  # Add 'Z' to indicate UTC timezone
                     'is_active': True

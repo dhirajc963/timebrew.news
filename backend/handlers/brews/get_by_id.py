@@ -57,14 +57,24 @@ def handler(event, context):
                 if not brew_result:
                     return create_response(404, {'error': 'Brew not found'})
                 
+                # Parse keywords JSON if it exists
+                keywords = brew_result[3]
+                if isinstance(keywords, str):
+                    try:
+                        keywords = json.loads(keywords)
+                    except json.JSONDecodeError:
+                        keywords = []
+                elif keywords is None:
+                    keywords = []
+                
                 brew = {
                     'id': str(brew_result[0]),
                     'name': brew_result[1],
                     'topic': brew_result[2],
-                    'topics': brew_result[3] if brew_result[3] else [],
-                    'delivery_time': brew_result[4].strftime('%H:%M') if brew_result[4] else None,
+                    'keywords': keywords,
+                    'delivery_time': str(brew_result[4]) if brew_result[4] else None,
                     'article_count': brew_result[5],
-                    'created_at': brew_result[6].isoformat() + 'Z' if brew_result[6] else None,  # Add 'Z' to indicate UTC timezone
+                    'created_at': brew_result[6].isoformat() + 'Z' if brew_result[6] else None,
                     'is_active': brew_result[7]
                 }
                 

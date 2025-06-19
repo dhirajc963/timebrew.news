@@ -32,6 +32,9 @@ provider:
     SMTP_PORT: ${env:SMTP_PORT}
     SMTP_USERNAME: ${env:SMTP_USERNAME}
     SMTP_PASSWORD: ${env:SMTP_PASSWORD}
+    PERPLEXITY_API_KEY: ${env:PERPLEXITY_API_KEY}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    STAGE: ${env:STAGE}
 
   iam:
     role:
@@ -39,6 +42,16 @@ provider:
         - Effect: Allow
           Action:
             - cognito-idp:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - states:StartExecution
+            - states:DescribeExecution
+            - states:StopExecution
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
           Resource: "*"
 
 plugins:
@@ -60,9 +73,9 @@ functions:
           cors:
             origin: "*"
             headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
+               - Content-Type
+               - Authorization
+               - X-Requested-With
 
   # Auth functions
   register:
@@ -91,7 +104,6 @@ functions:
               - Authorization
               - X-Requested-With
 
-  # ADD THESE TWO:
   verifyOTP:
     handler: handlers/auth/verify_otp.handler
     events:
@@ -170,3 +182,210 @@ functions:
               - Content-Type
               - Authorization
               - X-Requested-With
+
+  # AI Pipeline Functions
+  newsCollector:
+    handler: handlers/ai/news_collector.lambda_handler
+    timeout: 300
+    memorySize: 512
+
+  newsEditor:
+    handler: handlers/ai/news_editor.lambda_handler
+    timeout: 300
+    memorySize: 512
+
+  emailDispatcher:
+    handler: handlers/ai/email_dispatcher.lambda_handler
+    timeout: 120
+    memorySize: 256
+
+  # Scheduler Functions
+  brewScheduler:
+    handler: handlers/scheduler/brew_scheduler.lambda_handler
+    timeout: 300
+    memorySize: 256
+    events:
+      - schedule: rate(15 minutes)
+
+  triggerBrew:
+    handler: handlers/scheduler/trigger_brew.lambda_handler
+    timeout: 29
+    memorySize: 256
+    environment:
+      AI_PIPELINE_STATE_MACHINE_ARN: !Ref AIPipelineStateMachine
+    events:
+      - http:
+          path: trigger-brew
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+  # Briefings Functions
+  getBriefings:
+    handler: handlers/briefings/get.lambda_handler
+    timeout: 29
+    memorySize: 256
+    events:
+      - http:
+          path: briefings
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+  getBriefing:
+    handler: handlers/briefings/get_by_id.lambda_handler
+    timeout: 29
+    memorySize: 256
+    events:
+      - http:
+          path: briefings/{id}
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+  # Feedback Function
+  submitFeedback:
+    handler: handlers/feedback/submit.lambda_handler
+    timeout: 29
+    memorySize: 256
+    events:
+      - http:
+          path: feedback
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+resources:
+  Resources:
+    # Step Functions State Machine for AI Pipeline
+    AIPipelineStateMachine:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        StateMachineName: ${self:service}-ai-pipeline-${self:provider.stage}
+        RoleArn: !GetAtt StepFunctionsRole.Arn
+        DefinitionString: |
+          {
+            "Comment": "TimeBrew AI Pipeline - News Collection, Editing, and Email Dispatch",
+            "StartAt": "NewsCollector",
+            "States": {
+              "NewsCollector": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Parameters": {
+                  "FunctionName": "${self:service}-${self:provider.stage}-newsCollector",
+                  "Payload.$": "$"
+                },
+                "ResultPath": "$.collectorResult",
+                "Next": "NewsEditor",
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "HandleError",
+                    "ResultPath": "$.error"
+                  }
+                ]
+              },
+              "NewsEditor": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Parameters": {
+                  "FunctionName": "${self:service}-${self:provider.stage}-newsEditor",
+                  "Payload": {
+                    "briefing_id.$": "$.collectorResult.Payload.body.briefing_id"
+                  }
+                },
+                "ResultPath": "$.editorResult",
+                "Next": "EmailDispatcher",
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "HandleError",
+                    "ResultPath": "$.error"
+                  }
+                ]
+              },
+              "EmailDispatcher": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Parameters": {
+                  "FunctionName": "${self:service}-${self:provider.stage}-emailDispatcher",
+                  "Payload": {
+                    "briefing_id.$": "$.collectorResult.Payload.body.briefing_id"
+                  }
+                },
+                "ResultPath": "$.dispatcherResult",
+                "Next": "Success",
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "HandleError",
+                    "ResultPath": "$.error"
+                  }
+                ]
+              },
+              "Success": {
+                "Type": "Pass",
+                "Result": {
+                  "status": "completed",
+                  "message": "AI pipeline completed successfully"
+                },
+                "End": true
+              },
+              "HandleError": {
+                "Type": "Pass",
+                "Result": {
+                  "status": "failed",
+                  "message": "AI pipeline failed"
+                },
+                "End": true
+              }
+            }
+          }
+
+    # IAM Role for Step Functions
+    StepFunctionsRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-stepfunctions-role-${self:provider.stage}
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: states.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: StepFunctionsLambdaInvokePolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                  Resource:
+                    - !GetAtt NewsCollectorLambdaFunction.Arn
+                    - !GetAtt NewsEditorLambdaFunction.Arn
+                    - !GetAtt EmailDispatcherLambdaFunction.Arn
+
+  Outputs:
+    AIPipelineStateMachine:
+      Description: "ARN of the AI Pipeline State Machine"
+      Value: !Ref AIPipelineStateMachine
+      Export:
+        Name: ${self:service}-ai-pipeline-${self:provider.stage}

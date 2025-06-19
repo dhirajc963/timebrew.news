@@ -51,14 +51,24 @@ def handler(event, context):
                 
                 brews = []
                 for row in cur.fetchall():
+                    # Parse keywords JSON if it exists
+                    keywords = row[3]
+                    if isinstance(keywords, str):
+                        try:
+                            keywords = json.loads(keywords)
+                        except json.JSONDecodeError:
+                            keywords = []
+                    elif keywords is None:
+                        keywords = []
+                    
                     brews.append({
                         'id': str(row[0]),
                         'name': row[1],
                         'topic': row[2],
-                        'topics': row[3] if row[3] else [],
-                        'delivery_time': row[4].strftime('%H:%M') if row[4] else None,
+                        'keywords': keywords,
+                        'delivery_time': str(row[4]) if row[4] else None,
                         'article_count': row[5],
-                        'created_at': row[6].isoformat() + 'Z' if row[6] else None,  # Add 'Z' to indicate UTC timezone
+                        'created_at': row[6].isoformat() + 'Z' if row[6] else None,
                         'is_active': row[7]
                     })
                 
