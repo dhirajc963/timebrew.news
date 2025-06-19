@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-[70vh] py-3 md:py-0 px-4">
+		<div className="min-h-[70vh] py-3 md:py-0 px-4 mt-12 md:mt-18">
 			{/* Header with Controls */}
 			<motion.div
 				initial={{ opacity: 0, y: -10 }}
