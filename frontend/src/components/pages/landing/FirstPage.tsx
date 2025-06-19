@@ -250,7 +250,7 @@ const FirstPage = () => {
 								initial={{ opacity: 0, scale: 0.8 }}
 								animate={{ opacity: 1, scale: 1 }}
 								transition={{ delay: 0.2, duration: 0.5 }}
-								className="inline-flex"
+								className="inline-flex  mb-4"
 							>
 								<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
 									<Sparkles className="w-4 h-4" />
