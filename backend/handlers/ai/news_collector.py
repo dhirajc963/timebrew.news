@@ -159,7 +159,7 @@ def lambda_handler(event, context):
             topics_list = []
         else:
             topics_list = topics
-        
+
         brew_focus_topics_str = ", ".join(topics_list)
 
         # Build context sections for the prompt
