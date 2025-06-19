@@ -1,66 +1,129 @@
 import React from "react";
+import ThemeToggle from "./ThemeToggle";
+
+import { Twitter, Github, Linkedin } from "lucide-react";
 
 const Footer = () => {
 	return (
-		<footer className="bg-slate-900 text-white py-16">
-			<div className="max-w-5xl mx-auto px-6">
-				<div className="grid md:grid-cols-4 gap-8">
-					<div className="space-y-4">
-						<div className="flex items-center space-x-2">
-							<span className="text-xl font-bold">TimeBrew</span>
-							<div className="w-2 h-2 bg-accent rounded-full"></div>
-						</div>
-						<p className="text-slate-400">Crafted in New Jersey ☕</p>
+		<footer className="bg-card text-muted-foreground py-12 mt-20">
+			<div className="container mx-auto px-4 md:px-6">
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+					{/* Product */}
+					<div>
+						<h3 className="text-foreground font-semibold mb-4">Product</h3>
+						<ul className="space-y-2">
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Features
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Pricing
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Testimonials
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									FAQ
+								</a>
+							</li>
+						</ul>
 					</div>
 
+					{/* Company */}
 					<div>
-						<h4 className="font-semibold mb-4">Product</h4>
-						<div className="space-y-2 text-slate-400">
-							<a href="#" className="block hover:text-white transition-colors">
-								Features
-							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Pricing
-							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Beta Access
-							</a>
-						</div>
+						<h3 className="text-foreground font-semibold mb-4">Company</h3>
+						<ul className="space-y-2">
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									About
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Blog
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Careers
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Contact
+								</a>
+							</li>
+						</ul>
 					</div>
 
+					{/* Legal */}
 					<div>
-						<h4 className="font-semibold mb-4">Company</h4>
-						<div className="space-y-2 text-slate-400">
-							<a href="#" className="block hover:text-white transition-colors">
-								About
-							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Blog
-							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Contact
-							</a>
-						</div>
+						<h3 className="text-foreground font-semibold mb-4">Legal</h3>
+						<ul className="space-y-2">
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Terms
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Privacy
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Cookies
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-foreground transition-colors">
+									Licenses
+								</a>
+							</li>
+						</ul>
 					</div>
 
+					{/* Social */}
 					<div>
-						<h4 className="font-semibold mb-4">Legal</h4>
-						<div className="space-y-2 text-slate-400">
-							<a href="#" className="block hover:text-white transition-colors">
-								Privacy
+						<h3 className="text-foreground font-semibold mb-4">Connect</h3>
+						<div className="flex space-x-4">
+							<a
+								href="#"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<Twitter className="w-5 h-5" />
 							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Terms
+							<a
+								href="#"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<Github className="w-5 h-5" />
 							</a>
-							<a href="#" className="block hover:text-white transition-colors">
-								Security
+							<a
+								href="#"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<Linkedin className="w-5 h-5" />
 							</a>
 						</div>
 					</div>
 				</div>
 
-				<div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
-					<p>&copy; 2025 TimeBrew LLC - Crafted in New Jersey ☕</p>
+				<div className="pt-8 mt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
+					<p className="text-sm">
+						&copy; {new Date().getFullYear()} TimeBrew. All rights reserved.
+					</p>
+
+					<div className="flex items-center gap-4">
+						<span className="text-sm">Toggle Theme</span>
+						<ThemeToggle variant="icon" />
+					</div>
 				</div>
 			</div>
 		</footer>
