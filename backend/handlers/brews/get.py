@@ -42,7 +42,7 @@ def handler(event, context):
                 
                 # Get brews for user
                 cur.execute(
-                    """SELECT id, name, topic, keywords, delivery_time, article_count, created_at, is_active 
+                    """SELECT id, name, topics, delivery_time, article_count, created_at, is_active 
                        FROM time_brew.brews 
                        WHERE user_id = %s 
                        ORDER BY created_at DESC""",
@@ -51,25 +51,24 @@ def handler(event, context):
                 
                 brews = []
                 for row in cur.fetchall():
-                    # Parse keywords JSON if it exists
-                    keywords = row[3]
-                    if isinstance(keywords, str):
+                    # Parse topics JSON if it exists
+                    topics = row[2]
+                    if isinstance(topics, str):
                         try:
-                            keywords = json.loads(keywords)
+                            topics = json.loads(topics)
                         except json.JSONDecodeError:
-                            keywords = []
-                    elif keywords is None:
-                        keywords = []
+                            topics = []
+                    elif topics is None:
+                        topics = []
                     
                     brews.append({
                         'id': str(row[0]),
                         'name': row[1],
-                        'topic': row[2],
-                        'keywords': keywords,
-                        'delivery_time': str(row[4]) if row[4] else None,
-                        'article_count': row[5],
-                        'created_at': row[6].isoformat() + 'Z' if row[6] else None,
-                        'is_active': row[7]
+                        'topics': topics,
+                        'delivery_time': str(row[3]) if row[3] else None,
+                        'article_count': row[4],
+                        'created_at': row[5].isoformat() + 'Z' if row[5] else None,
+                        'is_active': row[6]
                     })
                 
                 return create_response(200, {

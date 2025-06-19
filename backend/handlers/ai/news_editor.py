@@ -24,7 +24,7 @@ def lambda_handler(event, context):
         # Retrieve briefing and associated data
         cursor.execute("""
             SELECT bf.id, bf.brew_id, bf.user_id, bf.article_count, bf.execution_status,
-                   b.name, b.topic, b.delivery_time, u.timezone,
+                   b.name, b.topics, b.delivery_time, u.timezone,
                    u.email, u.first_name, u.last_name
             FROM time_brew.briefings bf
             JOIN time_brew.brews b ON bf.brew_id = b.id
@@ -37,7 +37,7 @@ def lambda_handler(event, context):
             return create_response(404, {'error': 'Briefing not found'})
         
         (briefing_id, brew_id, user_id, article_count, execution_status, 
-         brew_name, topic, delivery_time, brew_timezone, email, first_name, last_name) = briefing_data
+         brew_name, topics, delivery_time, brew_timezone, email, first_name, last_name) = briefing_data
         
         if execution_status != 'processing':
             return create_response(400, {'error': f'Briefing status is {execution_status}, expected processing'})
@@ -109,13 +109,26 @@ def lambda_handler(event, context):
             for i, article in enumerate(raw_articles)
         ])
         
+        # Parse topics JSON if it exists
+        if isinstance(topics, str):
+            try:
+                topics_list = json.loads(topics)
+            except json.JSONDecodeError:
+                topics_list = []
+        elif topics is None:
+            topics_list = []
+        else:
+            topics_list = topics
+        
+        topics_str = ", ".join(topics_list)
+        
         prompt = f"""
         You are an expert newsletter editor for TimeBrew, a personalized news briefing service.
         
         User Profile:
         - Name: {user_name}
         - Briefing Type: {briefing_type.title()} briefing
-        - Topic Focus: {topic}
+        - Topic Focus: {topics_str}
         - Timezone: {brew_timezone}
         - Current time: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
         {feedback_context}
@@ -132,8 +145,8 @@ def lambda_handler(event, context):
         7. End with a personalized sign-off
         
         Structure:
-        1. Personalized greeting with the date (Good {briefing_type}, {user_name}!)
-        2. Brief intro paragraph mentioning the {briefing_type} briefing and {topic} focus
+        1. Personalized greeting with the date (Good {{briefing_type}}, {{user_name}}!)
+        2. Brief intro paragraph mentioning the {{briefing_type}} briefing and topics focus
         3. Main stories (3-5 top stories with detailed coverage)
         4. Quick hits (remaining stories in brief format)
         5. Closing thought or quote of the day
@@ -146,10 +159,10 @@ def lambda_handler(event, context):
         Also provide a compelling subject line.
         
         Return your response as a JSON object with this structure:
-        {{{
+        {{
           "subject_line": "Compelling subject line for the email",
           "html_content": "Full HTML content of the briefing"
-        }}}
+        }}
         """
         
         # Call OpenAI API
@@ -176,6 +189,10 @@ def lambda_handler(event, context):
         )
         
         ai_response = response.choices[0].message.content
+        
+        # Truncate prompt and response for storage (similar to news_collector)
+        truncated_prompt = prompt[:5000] if len(prompt) > 5000 else prompt
+        truncated_ai_response = ai_response[:5000] if len(ai_response) > 5000 else ai_response
         
         # Parse the JSON response
         try:
@@ -205,11 +222,15 @@ def lambda_handler(event, context):
             SET execution_status = 'completed',
                 subject_line = %s,
                 html_content = %s,
+                editor_prompt = %s,
+                raw_ai_response = %s,
                 updated_at = now()
             WHERE id = %s
         """, (
             subject_line,
             html_content,
+            truncated_prompt,
+            truncated_ai_response,
             briefing_id
         ))
         

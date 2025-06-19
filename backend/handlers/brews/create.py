@@ -33,12 +33,11 @@ def handler(event, context):
         
         # Validate required fields
         name = body.get('name')
-        topic = body.get('topics', [])[0] if body.get('topics') else None  # Use first topic as main topic
         topics = body.get('topics', [])
         delivery_time = body.get('delivery_time')
         article_count = body.get('article_count', 5)
         
-        if not name or not topic or not delivery_time:
+        if not name or not topics or not delivery_time:
             return create_response(400, {'error': 'Name, topics, and delivery time are required'})
         
         # Get user ID from database
@@ -60,9 +59,9 @@ def handler(event, context):
                 # Insert brew
                 cur.execute(
                     """INSERT INTO time_brew.brews 
-                       (user_id, name, topic, keywords, delivery_time, article_count) 
-                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, created_at""",
-                    (user_id, name, topic, json.dumps(topics), delivery_time, article_count)
+                       (user_id, name, topics, delivery_time, article_count) 
+                       VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at""",
+                    (user_id, name, json.dumps(topics), delivery_time, article_count)
                 )
                 
                 brew_result = cur.fetchone()
@@ -75,8 +74,7 @@ def handler(event, context):
                 return create_response(201, {
                     'id': str(brew_id),
                     'name': name,
-                    'topic': topic,
-                    'keywords': topics,
+                    'topics': topics,
                     'delivery_time': str(delivery_time),
                     'article_count': article_count,
                     'created_at': created_at.isoformat() + 'Z',  # Add 'Z' to indicate UTC timezone

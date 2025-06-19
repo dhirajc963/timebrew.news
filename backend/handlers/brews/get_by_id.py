@@ -47,7 +47,7 @@ def handler(event, context):
                 
                 # Get specific brew by ID for this user
                 cur.execute(
-                    """SELECT id, name, topic, keywords, delivery_time, article_count, created_at, is_active 
+                    """SELECT id, name, topics, delivery_time, article_count, created_at, is_active 
                        FROM time_brew.brews 
                        WHERE id = %s AND user_id = %s""",
                     (brew_id, user_id)
@@ -57,25 +57,24 @@ def handler(event, context):
                 if not brew_result:
                     return create_response(404, {'error': 'Brew not found'})
                 
-                # Parse keywords JSON if it exists
-                keywords = brew_result[3]
-                if isinstance(keywords, str):
+                # Parse topics JSON if it exists
+                topics = brew_result[2]
+                if isinstance(topics, str):
                     try:
-                        keywords = json.loads(keywords)
+                        topics = json.loads(topics)
                     except json.JSONDecodeError:
-                        keywords = []
-                elif keywords is None:
-                    keywords = []
+                        topics = []
+                elif topics is None:
+                    topics = []
                 
                 brew = {
                     'id': str(brew_result[0]),
                     'name': brew_result[1],
-                    'topic': brew_result[2],
-                    'keywords': keywords,
-                    'delivery_time': str(brew_result[4]) if brew_result[4] else None,
-                    'article_count': brew_result[5],
-                    'created_at': brew_result[6].isoformat() + 'Z' if brew_result[6] else None,
-                    'is_active': brew_result[7]
+                    'topics': topics,
+                    'delivery_time': str(brew_result[3]) if brew_result[3] else None,
+                    'article_count': brew_result[4],
+                    'created_at': brew_result[5].isoformat() + 'Z' if brew_result[5] else None,
+                    'is_active': brew_result[6]
                 }
                 
                 return create_response(200, {

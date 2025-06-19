@@ -85,7 +85,10 @@ CREATE TABLE briefings (
 	click_count int4 NULL DEFAULT 0,
 	delivery_status varchar(20) NULL DEFAULT 'sent'::character varying,
 	execution_status varchar(20) NULL DEFAULT 'completed'::character varying,
+	editor_prompt text NULL,
+	raw_ai_response text NULL,
 	created_at timestamp NULL DEFAULT now(),
+	updated_at timestamp NULL DEFAULT now(),
 	CONSTRAINT briefings_delivery_status_check CHECK (((delivery_status)::text = ANY ((ARRAY['sent'::character varying, 'bounced'::character varying, 'failed'::character varying])::text[]))),
 	CONSTRAINT briefings_execution_status_check CHECK (((execution_status)::text = ANY ((ARRAY['processing'::character varying, 'completed'::character varying, 'failed'::character varying])::text[]))),
 	CONSTRAINT briefings_pkey PRIMARY KEY (id),
@@ -97,6 +100,13 @@ CREATE INDEX idx_briefings_content_search ON time_brew.briefings USING gin (to_t
 CREATE INDEX idx_briefings_delivery_status ON time_brew.briefings USING btree (delivery_status);
 CREATE INDEX idx_briefings_opened ON time_brew.briefings USING btree (user_id, opened_at) WHERE (opened_at IS NOT NULL);
 CREATE INDEX idx_briefings_user_date ON time_brew.briefings USING btree (user_id, sent_at DESC);
+
+-- Table Triggers
+
+create trigger update_briefings_updated_at before
+update
+    on
+    time_brew.briefings for each row execute function time_brew.update_updated_at_column();
 
 
 -- time_brew.curation_cache definition
