@@ -474,13 +474,6 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 									const createdDate = new Date(brew.created_at);
 									const now = new Date();
 
-									console.log(
-										`Brew "${brew.name}" parsed date:`,
-										createdDate,
-										"UTC time:",
-										createdDate.toISOString()
-									);
-
 									// Check if the date is invalid, in the future, or more than a year ahead
 									if (
 										isNaN(createdDate.getTime()) ||
