@@ -118,7 +118,11 @@ const Signup: React.FC = () => {
 	
 	const handleEmailBlur = useCallback(() => {
 		setTouchedFields(prev => ({ ...prev, email: true }));
-	}, []);
+		// Only show email validation error when the field is blurred and has content
+		if (formData.email && !validateEmail(formData.email)) {
+			setShowEmailError(true);
+		}
+	}, [formData.email]);
 	
 	const handleCountryBlur = useCallback(() => {
 		setTouchedFields(prev => ({ ...prev, country: true }));
@@ -145,10 +149,8 @@ const Signup: React.FC = () => {
 					formData.country
 				);
 
-				// Show email validation error if email is invalid
-				if (formData.email && !validateEmail(formData.email)) {
-					setShowEmailError(true);
-				}
+				// We'll only show email validation errors when the field is blurred or form is submitted
+				// Not while the user is still typing
 				return isValid;
 			case 2:
 				return formData.interests.length > 0;
@@ -222,6 +224,11 @@ const Signup: React.FC = () => {
 				email: (!formData.email || !validateEmail(formData.email)) || prev.email,
 				country: !formData.country || prev.country
 			}));
+			
+			// Show email validation error only when trying to proceed with invalid email
+			if (formData.email && !validateEmail(formData.email)) {
+				setShowEmailError(true);
+			}
 		}
 	};
 
