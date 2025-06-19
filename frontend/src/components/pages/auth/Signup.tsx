@@ -166,7 +166,7 @@ const Signup: React.FC = () => {
 					<>
 						This email is already registered.{" "}
 						<Link
-							to="/login"
+							to="/signin"
 							className="text-primary hover:underline font-medium"
 						>
 							Sign in
@@ -244,7 +244,7 @@ const Signup: React.FC = () => {
 									</div>
 								</div>
 
-								<Link to="/login">
+								<Link to="/signin">
 									<ShinyButton className="w-full flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
 										<Coffee className="w-4 h-4" />
 										<span>Go to Sign In</span>
@@ -559,7 +559,7 @@ const Signup: React.FC = () => {
 					<p className="text-center text-sm text-muted-foreground mt-8">
 						Already have an account?{" "}
 						<Link
-							to="/login"
+							to="/signin"
 							className="text-primary hover:text-primary/80 transition-colors font-medium"
 						>
 							Sign in

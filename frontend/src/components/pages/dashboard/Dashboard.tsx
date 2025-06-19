@@ -34,6 +34,98 @@ import {
 import { apiClient, Brew } from "@/lib/apiClient";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 
+// Skeleton components for loading state
+const SkeletonBrewCard: React.FC<{ index: number }> = ({ index }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.1 + index * 0.05 }}
+    >
+      <Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
+        <CardHeader className="pb-2 pt-3 px-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="h-6 w-32 bg-muted/60 rounded animate-pulse"></div>
+              <div className="mt-1 h-4 w-40 bg-muted/40 rounded animate-pulse"></div>
+            </div>
+            <div className="px-2 py-0.5 h-5 w-16 bg-muted/60 rounded-full animate-pulse"></div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pb-2 px-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <div className="h-3 w-20 bg-muted/40 rounded animate-pulse mb-1"></div>
+              <div className="flex items-center mt-0.5">
+                <div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+                <div className="h-4 w-16 bg-muted/60 rounded animate-pulse"></div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end text-right">
+              <div className="h-3 w-16 bg-muted/40 rounded animate-pulse mb-1 ml-auto"></div>
+              <div className="flex items-center mt-0.5">
+                <div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+                <div className="h-4 w-20 bg-muted/60 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex justify-between border-t !pt-3 mt-0 px-4">
+          <div className="flex items-center">
+            <div className="w-3 h-3 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+            <div className="h-3 w-24 bg-muted/40 rounded animate-pulse"></div>
+          </div>
+
+          <div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
+        </CardFooter>
+      </Card>
+    </motion.div>
+  );
+};
+
+// Skeleton for compact row view
+const SkeletonBrewCompactRow: React.FC<{ index: number }> = ({ index }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.05 + index * 0.03 }}
+    >
+      <div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-all duration-300">
+        <div className="relative p-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-2 h-2 rounded-full bg-muted/60 animate-pulse"></div>
+
+            <div className="flex-1 min-w-0">
+              <div className="h-4 w-32 bg-muted/60 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-40 bg-muted/40 rounded animate-pulse"></div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
+                <div className="h-3 w-16 bg-muted/40 rounded animate-pulse"></div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
+                <div className="h-3 w-20 bg-muted/40 rounded animate-pulse"></div>
+              </div>
+            </div>
+
+            <div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const Dashboard: React.FC = () => {
 	const { user } = useAuth();
 	const [brews, setBrews] = useState<Brew[]>([]);
@@ -140,9 +232,14 @@ const Dashboard: React.FC = () => {
 							onClick={fetchBrews}
 							className="w-9 h-9 p-0 md:w-auto md:h-auto md:p-2 md:px-3 whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
 							title="Refresh Brews"
+							disabled={loading}
 						>
-							<RefreshCw className="w-4 h-4" />
-							<span className="hidden md:inline">Refresh</span>
+							{loading ? (
+								<Loader2 className="w-4 h-4 animate-spin" />
+							) : (
+								<RefreshCw className="w-4 h-4" />
+							)}
+							<span className="hidden md:inline">{loading ? "Loading..." : "Refresh"}</span>
 						</ShinyButton>
 
 						<Link to="/dashboard/create-brew">
@@ -157,11 +254,29 @@ const Dashboard: React.FC = () => {
 
 			<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl -mx-4 px-4 py-3">
 				{/* Brews Content */}
-				{loading && filteredBrews.length === 0 ? (
-					<div className="flex justify-center items-center py-6">
-						<Loader2 className="w-8 h-8 animate-spin text-primary mr-2" />
-						<span className="text-lg">Loading your brews...</span>
-					</div>
+				{loading ? (
+					<>
+						<div className="mb-6">
+							<div className="flex items-center mb-3">
+								<div className="h-6 w-28 bg-muted/60 rounded animate-pulse"></div>
+								<div className="ml-2 px-2 py-0.5 h-5 w-8 bg-muted/40 rounded-full animate-pulse"></div>
+							</div>
+
+							{viewMode === "grid" ? (
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+									{[...Array(4)].map((_, index) => (
+										<SkeletonBrewCard key={index} index={index} />
+									))}
+								</div>
+							) : (
+								<div className="space-y-2">
+									{[...Array(4)].map((_, index) => (
+										<SkeletonBrewCompactRow key={index} index={index} />
+									))}
+								</div>
+							)}
+						</div>
+					</>
 				) : error ? (
 					<div className="text-center py-6">
 						<div className="bg-red-500/10 text-red-500 p-3 rounded-lg inline-flex items-center">
@@ -210,7 +325,12 @@ const Dashboard: React.FC = () => {
 					<>
 						{/* Active Brews Section */}
 						{groupedBrews.active.length > 0 && (
-							<div className="mb-6">
+							<motion.div 
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ duration: 0.3 }}
+								className="mb-6"
+							>
 								<div className="flex items-center mb-3">
 									<h3 className="text-lg font-semibold">Active Brews</h3>
 									<div className="ml-2 px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-xs">
@@ -231,12 +351,16 @@ const Dashboard: React.FC = () => {
 										))}
 									</div>
 								)}
-							</div>
+							</motion.div>
 						)}
 
 						{/* Inactive Brews Section */}
 						{groupedBrews.inactive.length > 0 && (
-							<div>
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ duration: 0.3, delay: 0.1 }}
+							>
 								<div className="flex items-center mb-3">
 									<h3 className="text-lg font-semibold">Inactive Brews</h3>
 									<div className="ml-2 px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-500 text-xs">
@@ -257,7 +381,7 @@ const Dashboard: React.FC = () => {
 										))}
 									</div>
 								)}
-							</div>
+							</motion.div>
 						)}
 					</>
 				)}
