@@ -19,6 +19,7 @@ import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
+import { validateEmail } from "@/lib/utils";
 
 // Types
 interface SignupFormData {
@@ -48,8 +49,9 @@ const Signup: React.FC = () => {
 
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState(false);
-	const [error, setError] = useState("");
+	const [error, setError] = useState<React.ReactNode>("");
 	const [currentStep, setCurrentStep] = useState(1);
+	const [showEmailError, setShowEmailError] = useState(false);
 
 	// Available interests
 	const availableInterests = [
@@ -90,6 +92,10 @@ const Signup: React.FC = () => {
 	const handleInputChange = (field: keyof SignupFormData, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		if (error) setError("");
+		// Reset validation error display when user types in the email field
+		if (field === "email") {
+			setShowEmailError(false);
+		}
 	};
 
 	const handleInterestToggle = (interest: string) => {
@@ -101,15 +107,25 @@ const Signup: React.FC = () => {
 		}));
 	};
 
+
+
 	const validateStep = (step: number): boolean => {
 		switch (step) {
 			case 1:
-				return !!(
+				// Check if email is valid in addition to other fields
+				const isValid = !!(
 					formData.firstName &&
 					formData.lastName &&
 					formData.email &&
+					validateEmail(formData.email) &&
 					formData.country
 				);
+				
+				// Show email validation error if email is invalid
+				if (formData.email && !validateEmail(formData.email)) {
+					setShowEmailError(true);
+				}
+				return isValid;
 			case 2:
 				return formData.interests.length > 0;
 			default:
@@ -121,6 +137,14 @@ const Signup: React.FC = () => {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
+
+		// Validate email format again before submission
+		if (!validateEmail(formData.email)) {
+			setError("Please enter a valid email address");
+			setShowEmailError(true);
+			setLoading(false);
+			return;
+		}
 
 		try {
 			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.register), {
@@ -135,6 +159,14 @@ const Signup: React.FC = () => {
 
 			if (response.ok) {
 				setSuccess(true);
+			} else if (data.error?.toLowerCase().includes("already exists") || 
+					   data.error?.toLowerCase().includes("already registered")) {
+				// Email already registered - suggest sign in
+				setError(
+					<>
+						This email is already registered. <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link> to your account.
+					</>
+				);
 			} else {
 				setError(data.error || "Registration failed. Please try again.");
 			}
@@ -354,23 +386,26 @@ const Signup: React.FC = () => {
 											</div>
 
 											<div className="space-y-2">
-												<label className="text-sm font-medium">
-													Email Address
-												</label>
-												<div className="relative">
-													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-													<input
-														type="email"
-														value={formData.email}
-														onChange={(e) =>
-															handleInputChange("email", e.target.value)
-														}
-														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														placeholder="john@example.com"
-														required
-													/>
-												</div>
-											</div>
+										<label className="text-sm font-medium">
+											Email Address
+										</label>
+										<div className="relative">
+											<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+											<input
+										type="email"
+										value={formData.email}
+										onChange={(e) =>
+											handleInputChange("email", e.target.value)
+										}
+										className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${showEmailError && !validateEmail(formData.email) ? 'border-red-500 ring-1 ring-red-500/50' : 'border-border'}`}
+										placeholder="john@example.com"
+										required
+									/>
+									{showEmailError && !validateEmail(formData.email) && (
+										<div className="text-xs text-red-500 mt-1 ml-1">Please enter a valid email address</div>
+									)}
+										</div>
+									</div>
 
 											<div className="space-y-2">
 												<label className="text-sm font-medium">Country</label>
@@ -450,7 +485,9 @@ const Signup: React.FC = () => {
 										className="flex items-center space-x-2 text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl p-3"
 									>
 										<AlertCircle className="w-4 h-4 flex-shrink-0" />
-										<span className="text-sm">{error}</span>
+										<span className="text-sm">
+											{typeof error === "string" ? error : error}
+										</span>
 									</motion.div>
 								)}
 

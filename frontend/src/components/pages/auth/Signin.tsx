@@ -18,6 +18,7 @@ import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
+import { validateEmail } from "@/lib/utils";
 
 // Types
 interface LoginFormData {
@@ -63,19 +64,34 @@ const Login: React.FC = () => {
 	const [currentStep, setCurrentStep] = useState<LoginStep>("email");
 	const [session, setSession] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState("");
+	const [error, setError] = useState<React.ReactNode>("");
+	const [showEmailError, setShowEmailError] = useState(false);
 
 	// API Configuration is now imported from config/api.ts
 
 	const handleInputChange = (field: keyof LoginFormData, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		if (error) setError("");
+		// Reset validation error display when user types in the email field
+		if (field === "email") {
+			setShowEmailError(false);
+		}
 	};
+
+
 
 	const handleEmailSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
+
+		// Validate email format first
+		if (!validateEmail(formData.email)) {
+			setError("Please enter a valid email address");
+			setShowEmailError(true);
+			setLoading(false);
+			return;
+		}
 
 		try {
 			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
@@ -86,17 +102,41 @@ const Login: React.FC = () => {
 				body: JSON.stringify({ email: formData.email }),
 			});
 
-			const data: LoginResponse = await response.json();
+			// Try to parse the response, but handle the case where it might not be valid JSON
+			let data: LoginResponse;
+			try {
+				data = await response.json();
+			} catch (jsonError) {
+				console.error("Failed to parse response:", jsonError);
+				setError("Server error. Please try again later.");
+				setLoading(false);
+				return;
+			}
 
 			if (response.ok && data.challengeName === "EMAIL_OTP") {
 				setSession(data.session || "");
 				setCurrentStep("otp");
+			} else if (response.status === 404 || data.error?.toLowerCase().includes("not found")) {
+				// User not found - suggest sign up
+				setError(
+					<>
+						Account not found. <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link> to create an account.
+					</>
+				);
+			} else if (response.status === 500) {
+				// Handle server error - likely a new email that doesn't exist in the system
+				setError(
+					<>
+						This email is not registered. <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link> to create an account.
+					</>
+				);
 			} else {
 				setError(
 					data.error || "Failed to send verification code. Please try again."
 				);
 			}
 		} catch (err) {
+			console.error("Login error:", err);
 			setError("Network error. Please check your connection and try again.");
 		} finally {
 			setLoading(false);
@@ -245,18 +285,21 @@ const Login: React.FC = () => {
 											{/* Email Field */}
 											<div className="space-y-2">
 												<div className="relative">
-													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-													<input
-														type="email"
-														value={formData.email}
-														onChange={(e) =>
-															handleInputChange("email", e.target.value)
-														}
-														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-														placeholder="you@anyemail.com"
-														required
-													/>
-												</div>
+											<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+											<input
+												type="email"
+												value={formData.email}
+												onChange={(e) =>
+													handleInputChange("email", e.target.value)
+												}
+												className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${showEmailError && !validateEmail(formData.email) ? 'border-red-500 ring-1 ring-red-500/50' : 'border-border'}`}
+												placeholder="you@anyemail.com"
+												required
+											/>
+											{showEmailError && !validateEmail(formData.email) && (
+												<div className="text-xs text-red-500 mt-1 ml-1">Please enter a valid email address</div>
+											)}
+										</div>
 											</div>
 
 											{/* Submit Button */}
@@ -370,7 +413,9 @@ const Login: React.FC = () => {
 									className="flex items-center space-x-2 text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl p-3 mt-6"
 								>
 									<AlertCircle className="w-4 h-4 flex-shrink-0" />
-									<span className="text-sm">{error}</span>
+									<span className="text-sm">
+										{typeof error === "string" ? error : error}
+									</span>
 								</motion.div>
 							)}
 						</div>
