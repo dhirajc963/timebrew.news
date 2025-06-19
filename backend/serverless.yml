@@ -118,6 +118,19 @@ functions:
               - Authorization
               - X-Requested-With
 
+  refreshToken:
+    handler: handlers/auth/refresh_token.handler
+    events:
+      - http:
+          path: auth/refresh-token
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
   # Brew functions
   getBrews:
     handler: handlers/brews/get.handler

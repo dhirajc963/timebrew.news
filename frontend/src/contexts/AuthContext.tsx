@@ -13,8 +13,10 @@ import {
 	subscribeToAuthEvent, 
 	unsubscribeFromAuthEvent, 
 	AuthTokens,
-	isAuthenticated as checkIsAuthenticated
+	isAuthenticated as checkIsAuthenticated,
+	isTokenExpiringSoon
 } from "@/utils/auth";
+import { logTokenStatus } from "@/utils/tokenDebug";
 
 // Define types for our context
 interface User {
@@ -95,6 +97,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		};
 
 		const handleLogin = () => {
+			console.log('🔐 User logged in, updating auth state');
+			logTokenStatus();
 			const storedUser = localStorage.getItem("user");
 			if (storedUser) {
 				setUser(JSON.parse(storedUser));
@@ -112,6 +116,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			unsubscribeFromAuthEvent("tokenRefreshed", handleLogin);
 		};
 	}, [navigate]);
+
+	// Proactive token refresh - check every 2 minutes
+	useEffect(() => {
+		if (!user) return; // Only run if user is logged in
+
+		const checkAndRefreshToken = async () => {
+			if (isTokenExpiringSoon() && checkIsAuthenticated()) {
+				console.log('Token expiring soon, refreshing proactively...');
+				try {
+					await refreshAuthToken();
+				} catch (error) {
+					console.error('Proactive token refresh failed:', error);
+					// Don't logout here - let the API calls handle it
+				}
+			}
+		};
+
+		// Check immediately
+		checkAndRefreshToken();
+
+		// Set up interval to check every 2 minutes
+		const interval = setInterval(checkAndRefreshToken, 2 * 60 * 1000);
+
+		return () => clearInterval(interval);
+	}, [user]);
 
 	// Computed property to check if user is authenticated
 	const isAuthenticated = user !== null && checkIsAuthenticated();

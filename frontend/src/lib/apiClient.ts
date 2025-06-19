@@ -93,13 +93,17 @@ class ApiClient {
       if (response.status === 401) {
         if (retryFn) {
           try {
+            console.log('Received 401, attempting token refresh...');
             // Try to refresh the token
             const newToken = await refreshToken();
             
             if (newToken) {
+              console.log('Token refresh successful, retrying request...');
               // Retry the request with the new token
               const retryResponse = await retryFn();
               return this.handleResponse<T>(retryResponse);
+            } else {
+              console.warn('Token refresh returned null, user will be logged out');
             }
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError);
@@ -108,6 +112,8 @@ class ApiClient {
         }
         
         // If we get here, either there's no retry function, or token refresh failed
+        // Only clear auth data if we're sure the refresh failed
+        console.warn('Authentication failed, clearing auth data');
         clearAuthData();
         throw new AuthenticationError(errorData.error || errorData.message || 'Authorization token is required');
       }

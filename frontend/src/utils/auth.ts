@@ -69,6 +69,18 @@ export const isTokenExpired = (): boolean => {
 };
 
 /**
+ * Check if the current token will expire soon (within 5 minutes)
+ */
+export const isTokenExpiringSoon = (): boolean => {
+  const expiryString = localStorage.getItem('tokenExpiry');
+  if (!expiryString) return true;
+  
+  const expiry = parseInt(expiryString, 10);
+  const fiveMinutesFromNow = Date.now() + (5 * 60 * 1000); // 5 minutes in milliseconds
+  return fiveMinutesFromNow >= expiry;
+};
+
+/**
  * Check if user is authenticated with valid tokens
  */
 export const isAuthenticated = (): boolean => {
@@ -78,10 +90,13 @@ export const isAuthenticated = (): boolean => {
 };
 
 /**
- * Refresh the authentication token
+ * Refresh the authentication token with retry logic
+ * @param retryCount Number of retry attempts (default: 0)
  * @returns A promise that resolves to the new access token or null if refresh failed
  */
-export const refreshToken = async (): Promise<string | null> => {
+export const refreshToken = async (retryCount: number = 0): Promise<string | null> => {
+  const maxRetries = 2;
+  
   if (isRefreshing) {
     // Wait for the current refresh to complete
     return new Promise((resolve) => {
@@ -92,6 +107,12 @@ export const refreshToken = async (): Promise<string | null> => {
           resolve(token);
         }
       }, 100);
+      
+      // Timeout after 10 seconds to prevent infinite waiting
+      setTimeout(() => {
+        clearInterval(checkToken);
+        resolve(null);
+      }, 10000);
     });
   }
   
@@ -115,27 +136,61 @@ export const refreshToken = async (): Promise<string | null> => {
     });
 
     if (!response.ok) {
-      console.warn('Failed to refresh token: Server returned', response.status);
-      clearAuthData(); // Clear auth data on server rejection
+      const errorData = await response.json().catch(() => ({}));
+      console.warn('Failed to refresh token: Server returned', response.status, errorData);
+      
+      // If it's a 401 (unauthorized), the refresh token is invalid - don't retry
+      if (response.status === 401) {
+        console.warn('Refresh token is invalid or expired');
+        clearAuthData();
+        return null;
+      }
+      
+      // For other errors, retry if we haven't exceeded max retries
+      if (retryCount < maxRetries) {
+        console.log(`Retrying token refresh (attempt ${retryCount + 1}/${maxRetries})`);
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        return refreshToken(retryCount + 1);
+      }
+      
+      clearAuthData(); // Clear auth data after all retries failed
       return null;
     }
 
     const data = await response.json();
+    
+    // Validate response data
+    if (!data.accessToken) {
+      console.error('Invalid refresh token response: missing accessToken');
+      clearAuthData();
+      return null;
+    }
     
     // Update tokens in localStorage
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem(
       'tokenExpiry',
-      (Date.now() + data.expiresIn * 1000).toString()
+      (Date.now() + (data.expiresIn || 3600) * 1000).toString()
     );
 
     // Notify listeners that token was refreshed
     triggerAuthEvent('tokenRefreshed');
     
+    console.log('Token refreshed successfully');
     return data.accessToken;
   } catch (error) {
     console.error('Failed to refresh token:', error);
+    
+    // Retry on network errors if we haven't exceeded max retries
+    if (retryCount < maxRetries && error instanceof TypeError) {
+      console.log(`Retrying token refresh due to network error (attempt ${retryCount + 1}/${maxRetries})`);
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      return refreshToken(retryCount + 1);
+    }
+    
     // Clear auth data and notify listeners of logout
     clearAuthData();
     return null;
