@@ -240,7 +240,7 @@ const Login: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
+		<div className="min-h-[70vh]  flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
 			{/* Background Effects */}
 			<div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 

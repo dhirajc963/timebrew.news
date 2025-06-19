@@ -197,7 +197,7 @@ const Signup: React.FC = () => {
 	// Success screen
 	if (success) {
 		return (
-			<div className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
+			<div className="min-h-[70vh]  flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-16">
 				<div className="max-w-md mx-auto px-4 text-center">
 					<motion.div
 						initial={{ opacity: 0, scale: 0.8 }}

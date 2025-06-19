@@ -36,94 +36,94 @@ import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 
 // Skeleton components for loading state
 const SkeletonBrewCard: React.FC<{ index: number }> = ({ index }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1 + index * 0.05 }}
-    >
-      <Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="h-6 w-32 bg-muted/60 rounded animate-pulse"></div>
-              <div className="mt-1 h-4 w-40 bg-muted/40 rounded animate-pulse"></div>
-            </div>
-            <div className="px-2 py-0.5 h-5 w-16 bg-muted/60 rounded-full animate-pulse"></div>
-          </div>
-        </CardHeader>
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.5, delay: 0.1 + index * 0.05 }}
+		>
+			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
+				<CardHeader className="pb-2 pt-3 px-4">
+					<div className="flex justify-between items-start">
+						<div>
+							<div className="h-6 w-32 bg-muted/60 rounded animate-pulse"></div>
+							<div className="mt-1 h-4 w-40 bg-muted/40 rounded animate-pulse"></div>
+						</div>
+						<div className="px-2 py-0.5 h-5 w-16 bg-muted/60 rounded-full animate-pulse"></div>
+					</div>
+				</CardHeader>
 
-        <CardContent className="pb-2 px-4">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col">
-              <div className="h-3 w-20 bg-muted/40 rounded animate-pulse mb-1"></div>
-              <div className="flex items-center mt-0.5">
-                <div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
-                <div className="h-4 w-16 bg-muted/60 rounded animate-pulse"></div>
-              </div>
-            </div>
+				<CardContent className="pb-2 px-4">
+					<div className="grid grid-cols-2 gap-2">
+						<div className="flex flex-col">
+							<div className="h-3 w-20 bg-muted/40 rounded animate-pulse mb-1"></div>
+							<div className="flex items-center mt-0.5">
+								<div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+								<div className="h-4 w-16 bg-muted/60 rounded animate-pulse"></div>
+							</div>
+						</div>
 
-            <div className="flex flex-col items-end text-right">
-              <div className="h-3 w-16 bg-muted/40 rounded animate-pulse mb-1 ml-auto"></div>
-              <div className="flex items-center mt-0.5">
-                <div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
-                <div className="h-4 w-20 bg-muted/60 rounded animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
+						<div className="flex flex-col items-end text-right">
+							<div className="h-3 w-16 bg-muted/40 rounded animate-pulse mb-1 ml-auto"></div>
+							<div className="flex items-center mt-0.5">
+								<div className="w-3.5 h-3.5 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+								<div className="h-4 w-20 bg-muted/60 rounded animate-pulse"></div>
+							</div>
+						</div>
+					</div>
+				</CardContent>
 
-        <CardFooter className="flex justify-between border-t !pt-3 mt-0 px-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
-            <div className="h-3 w-24 bg-muted/40 rounded animate-pulse"></div>
-          </div>
+				<CardFooter className="flex justify-between border-t !pt-3 mt-0 px-4">
+					<div className="flex items-center">
+						<div className="w-3 h-3 mr-1 bg-muted/60 rounded-full animate-pulse"></div>
+						<div className="h-3 w-24 bg-muted/40 rounded animate-pulse"></div>
+					</div>
 
-          <div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
-        </CardFooter>
-      </Card>
-    </motion.div>
-  );
+					<div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
+				</CardFooter>
+			</Card>
+		</motion.div>
+	);
 };
 
 // Skeleton for compact row view
 const SkeletonBrewCompactRow: React.FC<{ index: number }> = ({ index }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: 0.05 + index * 0.03 }}
-    >
-      <div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-all duration-300">
-        <div className="relative p-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-2 h-2 rounded-full bg-muted/60 animate-pulse"></div>
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.3, delay: 0.05 + index * 0.03 }}
+		>
+			<div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-all duration-300">
+				<div className="relative p-2.5 flex items-center justify-between">
+					<div className="flex items-center gap-3 flex-1 min-w-0">
+						<div className="w-2 h-2 rounded-full bg-muted/60 animate-pulse"></div>
 
-            <div className="flex-1 min-w-0">
-              <div className="h-4 w-32 bg-muted/60 rounded animate-pulse mb-1"></div>
-              <div className="h-3 w-40 bg-muted/40 rounded animate-pulse"></div>
-            </div>
-          </div>
+						<div className="flex-1 min-w-0">
+							<div className="h-4 w-32 bg-muted/60 rounded animate-pulse mb-1"></div>
+							<div className="h-3 w-40 bg-muted/40 rounded animate-pulse"></div>
+						</div>
+					</div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
-                <div className="h-3 w-16 bg-muted/40 rounded animate-pulse"></div>
-              </div>
+					<div className="flex items-center gap-4">
+						<div className="hidden md:flex items-center gap-4">
+							<div className="flex items-center gap-1">
+								<div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
+								<div className="h-3 w-16 bg-muted/40 rounded animate-pulse"></div>
+							</div>
 
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
-                <div className="h-3 w-20 bg-muted/40 rounded animate-pulse"></div>
-              </div>
-            </div>
+							<div className="flex items-center gap-1">
+								<div className="w-3 h-3 bg-muted/60 rounded-full animate-pulse"></div>
+								<div className="h-3 w-20 bg-muted/40 rounded animate-pulse"></div>
+							</div>
+						</div>
 
-            <div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
+						<div className="h-6 w-14 bg-muted/60 rounded animate-pulse"></div>
+					</div>
+				</div>
+			</div>
+		</motion.div>
+	);
 };
 
 const Dashboard: React.FC = () => {
@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
 	};
 
 	return (
-		<div className="h-[70vh] py-3 md:py-0 pt-16 md:pt-20 px-4">
+		<div className="min-h-[70vh] py-3 md:py-0 px-4">
 			{/* Header with Controls */}
 			<motion.div
 				initial={{ opacity: 0, y: -10 }}
@@ -239,7 +239,9 @@ const Dashboard: React.FC = () => {
 							) : (
 								<RefreshCw className="w-4 h-4" />
 							)}
-							<span className="hidden md:inline">{loading ? "Loading..." : "Refresh"}</span>
+							<span className="hidden md:inline">
+								{loading ? "Loading..." : "Refresh"}
+							</span>
 						</ShinyButton>
 
 						<Link to="/dashboard/create-brew">
@@ -325,7 +327,7 @@ const Dashboard: React.FC = () => {
 					<>
 						{/* Active Brews Section */}
 						{groupedBrews.active.length > 0 && (
-							<motion.div 
+							<motion.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
 								transition={{ duration: 0.3 }}
