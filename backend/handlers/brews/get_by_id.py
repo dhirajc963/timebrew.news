@@ -64,7 +64,7 @@ def handler(event, context):
                     'topics': brew_result[3] if brew_result[3] else [],
                     'delivery_time': brew_result[4].strftime('%H:%M') if brew_result[4] else None,
                     'article_count': brew_result[5],
-                    'created_at': brew_result[6].isoformat() if brew_result[6] else None,
+                    'created_at': brew_result[6].isoformat() + 'Z' if brew_result[6] else None,  # Add 'Z' to indicate UTC timezone
                     'is_active': brew_result[7]
                 }
                 

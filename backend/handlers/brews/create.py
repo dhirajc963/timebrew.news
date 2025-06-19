@@ -79,7 +79,7 @@ def handler(event, context):
                     'topics': topics,
                     'delivery_time': delivery_time,
                     'article_count': article_count,
-                    'created_at': created_at.isoformat(),
+                    'created_at': created_at.isoformat() + 'Z',  # Add 'Z' to indicate UTC timezone
                     'is_active': True
                 })
                 

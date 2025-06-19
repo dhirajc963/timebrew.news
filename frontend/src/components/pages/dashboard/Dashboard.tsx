@@ -90,12 +90,12 @@ const Dashboard: React.FC = () => {
 				initial={{ opacity: 0, y: -10 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.3 }}
-				className="bg-card/30 rounded-t-xl -mx-4 px-8 pt-7 md:pt-8 py-2.5 mb-0"
+				className="bg-card/30 rounded-t-xl -mx-4 px-5 pt-7 md:pt-8 py-2.5 mb-0  max-w-7xl mx-auto "
 			>
 				<div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1.5">
 					{/* Left: Welcome & Title */}
 					<div className="flex items-center gap-3">
-						<h1 className="text-xl font-bold">
+						<h1 className="text-2xl font-bold">
 							Hi,{" "}
 							<span className="text-gradient-green">
 								{user?.firstName || "Brewer"}
@@ -155,7 +155,7 @@ const Dashboard: React.FC = () => {
 				</div>
 			</motion.div>
 
-			<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl border-b border-x border-border/40 -mx-4 px-4 py-3">
+			<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl -mx-4 px-4 py-3">
 				{/* Brews Content */}
 				{loading && filteredBrews.length === 0 ? (
 					<div className="flex justify-center items-center py-6">
@@ -279,10 +279,10 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5, delay: 0.1 + index * 0.05 }}
 		>
-			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300">
+			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
 				{/* <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div> */}
 
-				<CardHeader className="pb-2 pt-3">
+				<CardHeader className="pb-2 pt-3  px-4">
 					<div className="flex justify-between items-start">
 						<div>
 							<CardTitle className="text-lg">{brew.name}</CardTitle>
@@ -302,7 +302,7 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 					</div>
 				</CardHeader>
 
-				<CardContent className="pb-2">
+				<CardContent className="pb-2 px-4">
 					<div className="grid grid-cols-2 gap-2">
 						<div className="flex flex-col">
 							<span className="text-xs text-muted-foreground">
@@ -330,11 +330,47 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 					</div>
 				</CardContent>
 
-				<CardFooter className="flex justify-between border-t pt-2 mt-0">
+				<CardFooter className="flex justify-between border-t !pt-3 mt-0  px-4">
 					<div className="flex items-center text-xs text-muted-foreground">
 						<Calendar className="w-3 h-3 mr-1" />
 						{brew.created_at && (
-							<span>{formatDistanceToNow(new Date(brew.created_at))} ago</span>
+							<>
+								{console.log(
+									`Brew "${brew.name}" created_at:`,
+									brew.created_at
+								)}
+								{console.log(
+									`Brew "${brew.name}" created_at as Date:`,
+									new Date(brew.created_at)
+								)}
+								{(() => {
+									// Parse the ISO string with timezone information
+									const createdDate = new Date(brew.created_at);
+									const now = new Date();
+
+									console.log(
+										`Brew "${brew.name}" parsed date:`,
+										createdDate,
+										"UTC time:",
+										createdDate.toISOString()
+									);
+
+									// Check if the date is invalid, in the future, or more than a year ahead
+									if (
+										isNaN(createdDate.getTime()) ||
+										createdDate > now ||
+										createdDate.getFullYear() > now.getFullYear() + 1
+									) {
+										console.log(
+											`Detected invalid or future date for brew "${brew.name}", displaying "just now" instead`
+										);
+										return <span>just now</span>;
+									} else {
+										// formatDistanceToNow will use the browser's timezone for calculation
+										return <span>{formatDistanceToNow(createdDate)} ago</span>;
+									}
+								})()}
+							</>
 						)}
 					</div>
 

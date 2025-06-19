@@ -78,8 +78,6 @@ const Login: React.FC = () => {
 		}
 	};
 
-
-
 	const handleEmailSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
@@ -116,18 +114,35 @@ const Login: React.FC = () => {
 			if (response.ok && data.challengeName === "EMAIL_OTP") {
 				setSession(data.session || "");
 				setCurrentStep("otp");
-			} else if (response.status === 404 || data.error?.toLowerCase().includes("not found")) {
+			} else if (
+				response.status === 404 ||
+				data.error?.toLowerCase().includes("not found")
+			) {
 				// User not found - suggest sign up
 				setError(
 					<>
-						Account not found. <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link> to create an account.
+						Account not found.{" "}
+						<Link
+							to="/signup"
+							className="text-primary hover:underline font-medium"
+						>
+							Sign up
+						</Link>{" "}
+						to create an account.
 					</>
 				);
 			} else if (response.status === 500) {
 				// Handle server error - likely a new email that doesn't exist in the system
 				setError(
 					<>
-						This email is not registered. <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link> to create an account.
+						This email is not registered.{" "}
+						<Link
+							to="/signup"
+							className="text-primary hover:underline font-medium"
+						>
+							Sign up
+						</Link>{" "}
+						to create an account.
 					</>
 				);
 			} else {
@@ -285,21 +300,27 @@ const Login: React.FC = () => {
 											{/* Email Field */}
 											<div className="space-y-2">
 												<div className="relative">
-											<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-											<input
-												type="email"
-												value={formData.email}
-												onChange={(e) =>
-													handleInputChange("email", e.target.value)
-												}
-												className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${showEmailError && !validateEmail(formData.email) ? 'border-red-500 ring-1 ring-red-500/50' : 'border-border'}`}
-												placeholder="you@anyemail.com"
-												required
-											/>
-											{showEmailError && !validateEmail(formData.email) && (
-												<div className="text-xs text-red-500 mt-1 ml-1">Please enter a valid email address</div>
-											)}
-										</div>
+													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+													<input
+														type="email"
+														value={formData.email}
+														onChange={(e) =>
+															handleInputChange("email", e.target.value)
+														}
+														className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
+															showEmailError && !validateEmail(formData.email)
+																? "border-red-500 ring-1 ring-red-500/50"
+																: "border-border"
+														}`}
+														placeholder="you@anyemail.com"
+														required
+													/>
+													{showEmailError && !validateEmail(formData.email) && (
+														<div className="text-xs text-red-500 mt-1 ml-1">
+															Please enter a valid email address
+														</div>
+													)}
+												</div>
 											</div>
 
 											{/* Submit Button */}

@@ -107,8 +107,6 @@ const Signup: React.FC = () => {
 		}));
 	};
 
-
-
 	const validateStep = (step: number): boolean => {
 		switch (step) {
 			case 1:
@@ -120,7 +118,7 @@ const Signup: React.FC = () => {
 					validateEmail(formData.email) &&
 					formData.country
 				);
-				
+
 				// Show email validation error if email is invalid
 				if (formData.email && !validateEmail(formData.email)) {
 					setShowEmailError(true);
@@ -159,12 +157,21 @@ const Signup: React.FC = () => {
 
 			if (response.ok) {
 				setSuccess(true);
-			} else if (data.error?.toLowerCase().includes("already exists") || 
-					   data.error?.toLowerCase().includes("already registered")) {
+			} else if (
+				data.error?.toLowerCase().includes("already exists") ||
+				data.error?.toLowerCase().includes("already registered")
+			) {
 				// Email already registered - suggest sign in
 				setError(
 					<>
-						This email is already registered. <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link> to your account.
+						This email is already registered.{" "}
+						<Link
+							to="/login"
+							className="text-primary hover:underline font-medium"
+						>
+							Sign in
+						</Link>{" "}
+						to your account.
 					</>
 				);
 			} else {
@@ -386,26 +393,32 @@ const Signup: React.FC = () => {
 											</div>
 
 											<div className="space-y-2">
-										<label className="text-sm font-medium">
-											Email Address
-										</label>
-										<div className="relative">
-											<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-											<input
-										type="email"
-										value={formData.email}
-										onChange={(e) =>
-											handleInputChange("email", e.target.value)
-										}
-										className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${showEmailError && !validateEmail(formData.email) ? 'border-red-500 ring-1 ring-red-500/50' : 'border-border'}`}
-										placeholder="john@example.com"
-										required
-									/>
-									{showEmailError && !validateEmail(formData.email) && (
-										<div className="text-xs text-red-500 mt-1 ml-1">Please enter a valid email address</div>
-									)}
-										</div>
-									</div>
+												<label className="text-sm font-medium">
+													Email Address
+												</label>
+												<div className="relative">
+													<Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+													<input
+														type="email"
+														value={formData.email}
+														onChange={(e) =>
+															handleInputChange("email", e.target.value)
+														}
+														className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
+															showEmailError && !validateEmail(formData.email)
+																? "border-red-500 ring-1 ring-red-500/50"
+																: "border-border"
+														}`}
+														placeholder="john@example.com"
+														required
+													/>
+													{showEmailError && !validateEmail(formData.email) && (
+														<div className="text-xs text-red-500 mt-1 ml-1">
+															Please enter a valid email address
+														</div>
+													)}
+												</div>
+											</div>
 
 											<div className="space-y-2">
 												<label className="text-sm font-medium">Country</label>

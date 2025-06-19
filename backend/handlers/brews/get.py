@@ -58,7 +58,7 @@ def handler(event, context):
                         'topics': row[3] if row[3] else [],
                         'delivery_time': row[4].strftime('%H:%M') if row[4] else None,
                         'article_count': row[5],
-                        'created_at': row[6].isoformat() if row[6] else None,
+                        'created_at': row[6].isoformat() + 'Z' if row[6] else None,  # Add 'Z' to indicate UTC timezone
                         'is_active': row[7]
                     })
                 
