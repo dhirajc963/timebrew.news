@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
 	Coffee,
@@ -52,6 +52,14 @@ const Signup: React.FC = () => {
 	const [error, setError] = useState<React.ReactNode>("");
 	const [currentStep, setCurrentStep] = useState(1);
 	const [showEmailError, setShowEmailError] = useState(false);
+	
+	// Track which fields have been touched/interacted with
+	const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({
+		firstName: false,
+		lastName: false,
+		email: false,
+		country: false
+	});
 
 	// Available interests
 	const availableInterests = [
@@ -96,7 +104,25 @@ const Signup: React.FC = () => {
 		if (field === "email") {
 			setShowEmailError(false);
 		}
+		// We'll only mark fields as touched on blur, not on every input change
 	};
+	
+	// Create memoized blur handlers for each field
+	const handleFirstNameBlur = useCallback(() => {
+		setTouchedFields(prev => ({ ...prev, firstName: true }));
+	}, []);
+	
+	const handleLastNameBlur = useCallback(() => {
+		setTouchedFields(prev => ({ ...prev, lastName: true }));
+	}, []);
+	
+	const handleEmailBlur = useCallback(() => {
+		setTouchedFields(prev => ({ ...prev, email: true }));
+	}, []);
+	
+	const handleCountryBlur = useCallback(() => {
+		setTouchedFields(prev => ({ ...prev, country: true }));
+	}, []);
 
 	const handleInterestToggle = (interest: string) => {
 		setFormData((prev) => ({
@@ -185,14 +211,29 @@ const Signup: React.FC = () => {
 	};
 
 	const nextStep = () => {
+		// Only validate the current step without automatically marking fields as touched
 		if (validateStep(currentStep)) {
 			setCurrentStep((prev) => Math.min(prev + 1, 2));
+		} else if (currentStep === 1) {
+			// Only mark fields as touched if validation fails and they're not already touched
+			setTouchedFields(prev => ({
+				firstName: !formData.firstName || prev.firstName,
+				lastName: !formData.lastName || prev.lastName,
+				email: (!formData.email || !validateEmail(formData.email)) || prev.email,
+				country: !formData.country || prev.country
+			}));
 		}
 	};
 
 	const prevStep = () => {
 		setCurrentStep((prev) => Math.max(prev - 1, 1));
 	};
+	
+	// Memoize the validation result to prevent unnecessary re-renders
+	const isCurrentStepValid = useMemo(
+		() => validateStep(currentStep),
+		[currentStep, formData.firstName, formData.lastName, formData.email, formData.country, formData.interests]
+	);
 
 	// Success screen
 	if (success) {
@@ -365,10 +406,16 @@ const Signup: React.FC = () => {
 															onChange={(e) =>
 																handleInputChange("firstName", e.target.value)
 															}
-															className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+															className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${touchedFields.firstName && !formData.firstName ? "border-red-500 ring-1 ring-red-500/50" : "border-border"}`}
 															placeholder="John"
 															required
+															onBlur={handleFirstNameBlur}
 														/>
+														{touchedFields.firstName && !formData.firstName && (
+															<div className="text-xs text-red-500 mt-1 ml-1">
+																First name is required
+															</div>
+														)}
 													</div>
 												</div>
 
@@ -384,10 +431,16 @@ const Signup: React.FC = () => {
 															onChange={(e) =>
 																handleInputChange("lastName", e.target.value)
 															}
-															className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+															className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${touchedFields.lastName && !formData.lastName ? "border-red-500 ring-1 ring-red-500/50" : "border-border"}`}
 															placeholder="Doe"
 															required
+															onBlur={handleLastNameBlur}
 														/>
+														{touchedFields.lastName && !formData.lastName && (
+															<div className="text-xs text-red-500 mt-1 ml-1">
+																Last name is required
+															</div>
+														)}
 													</div>
 												</div>
 											</div>
@@ -405,16 +458,22 @@ const Signup: React.FC = () => {
 															handleInputChange("email", e.target.value)
 														}
 														className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
-															showEmailError && !validateEmail(formData.email)
+															(showEmailError && !validateEmail(formData.email)) || (touchedFields.email && !formData.email)
 																? "border-red-500 ring-1 ring-red-500/50"
 																: "border-border"
 														}`}
 														placeholder="john@example.com"
 														required
+														onBlur={handleEmailBlur}
 													/>
 													{showEmailError && !validateEmail(formData.email) && (
 														<div className="text-xs text-red-500 mt-1 ml-1">
 															Please enter a valid email address
+														</div>
+													)}
+													{touchedFields.email && !formData.email && (
+														<div className="text-xs text-red-500 mt-1 ml-1">
+															Email address is required
 														</div>
 													)}
 												</div>
@@ -429,8 +488,9 @@ const Signup: React.FC = () => {
 														onChange={(e) =>
 															handleInputChange("country", e.target.value)
 														}
-														className="w-full pl-10 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+														className={`w-full pl-10 pr-4 py-3 bg-background/50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none ${touchedFields.country && !formData.country ? "border-red-500 ring-1 ring-red-500/50" : "border-border"}`}
 														required
+														onBlur={handleCountryBlur}
 													>
 														<option value="">Select your country</option>
 														{countries.map((country) => (
@@ -439,6 +499,11 @@ const Signup: React.FC = () => {
 															</option>
 														))}
 													</select>
+														{touchedFields.country && !formData.country && (
+															<div className="text-xs text-red-500 mt-1 ml-1">
+																Please select your country
+															</div>
+														)}
 												</div>
 											</div>
 										</motion.div>
@@ -518,19 +583,19 @@ const Signup: React.FC = () => {
 
 									<div className="ml-auto">
 										{currentStep < 2 ? (
-											<button
-												type="button"
-												onClick={nextStep}
-												disabled={!validateStep(currentStep)}
-												className={`px-6 py-2 rounded-xl font-medium transition-all flex items-center space-x-2 ${
-													validateStep(currentStep)
-														? "bg-gradient-to-r from-primary to-accent text-white hover:shadow-lg"
-														: "bg-muted text-muted-foreground cursor-not-allowed"
-												}`}
-											>
-												<span>Next</span>
-												<ArrowRight className="w-4 h-4" />
-											</button>
+										<button
+											type="button"
+											onClick={nextStep}
+											disabled={!isCurrentStepValid}
+											className={`px-6 py-2 rounded-xl font-medium transition-all flex items-center space-x-2 ${
+												isCurrentStepValid
+													? "bg-gradient-to-r from-primary to-accent text-white hover:shadow-lg"
+													: "bg-muted text-muted-foreground cursor-not-allowed"
+											}`}
+										>
+											<span>Next</span>
+											<ArrowRight className="w-4 h-4" />
+										</button>
 										) : (
 											<ShinyButton
 												disabled={loading || formData.interests.length === 0}
