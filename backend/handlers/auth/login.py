@@ -22,13 +22,29 @@ def handler(event, context):
         
         # Initiate EMAIL_OTP authentication with Cognito
         try:
+            # First check if the user exists in Cognito to avoid unexpected errors
+            try:
+                # Try to get the user by email
+                user_response = cognito.admin_get_user(
+                    UserPoolId=os.environ['USER_POOL_ID'],
+                    Username=email
+                )
+                # User exists, proceed with authentication
+            except cognito.exceptions.UserNotFoundException:
+                # User not found, return a clear message
+                print(f"User not found: {email}")
+                return create_response(404, {'error': 'No account found with this email address. Please sign up first.'})
+            except Exception as e:
+                print(f"Error checking user existence: {e}")
+                raise e
+            
+            # Proceed with authentication
             response = cognito.initiate_auth(
                 ClientId=os.environ['CLIENT_ID'],
                 AuthFlow='USER_AUTH',
                 AuthParameters={
                     'USERNAME': email,
                     'PREFERRED_CHALLENGE': 'EMAIL_OTP'  # Request EMAIL_OTP challenge
-
                 }
             )
             
