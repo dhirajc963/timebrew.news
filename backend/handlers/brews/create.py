@@ -4,15 +4,18 @@ import boto3
 import os
 from utils.db import get_db_connection
 from utils.response import create_response
+from utils.logger import logger
 
 cognito = boto3.client("cognito-idp")
 
 
 def handler(event, context):
+    logger.info("Starting brew creation handler")
     try:
         # Check for Authorization header
         auth_header = event.get("headers", {}).get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warn("Brew creation attempt without authorization token")
             return create_response(401, {"error": "Authorization token is required"})
 
         # Extract token
@@ -23,11 +26,12 @@ def handler(event, context):
             user_response = cognito.get_user(AccessToken=token)
             cognito_id = user_response.get("Username")
         except Exception as e:
-            print(f"Cognito error: {e}")
+            logger.error(f"Cognito error during brew creation: {e}")
             return create_response(401, {"error": "Invalid or expired token"})
 
         # Parse request body
         if not event.get("body"):
+            logger.warn("Brew creation attempt without request body")
             return create_response(400, {"error": "Request body is required"})
 
         body = json.loads(event["body"])
@@ -39,6 +43,7 @@ def handler(event, context):
         article_count = body.get("article_count", 5)
 
         if not name or not topics or not delivery_time:
+            logger.warn(f"Brew creation attempt with missing fields for user {cognito_id}")
             return create_response(
                 400, {"error": "Name, topics, and delivery time are required"}
             )
@@ -55,6 +60,7 @@ def handler(event, context):
                 user_result = cur.fetchone()
 
                 if not user_result:
+                    logger.error(f"User not found in database for cognito_id: {cognito_id}")
                     return create_response(404, {"error": "User not found"})
 
                 user_id = user_result[0]
@@ -72,6 +78,7 @@ def handler(event, context):
                 created_at = brew_result[1]
 
                 conn.commit()
+                logger.info(f"Brew created successfully: {brew_id} for user {user_id}")
 
                 # Return created brew
                 return create_response(
@@ -90,13 +97,14 @@ def handler(event, context):
 
         except Exception as e:
             conn.rollback()
-            print(f"Database error: {e}")
+            logger.error(f"Database error during brew creation for user {cognito_id}: {e}")
             return create_response(500, {"error": f"Database error: {str(e)}"})
         finally:
             conn.close()
 
     except json.JSONDecodeError:
+        logger.error("Invalid JSON in brew creation request body")
         return create_response(400, {"error": "Invalid JSON in request body"})
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error in brew creation handler: {e}")
         return create_response(500, {"error": "Internal server error"})

@@ -1,16 +1,13 @@
 import json
 import os
 import boto3
-import logging
+import json
 from datetime import datetime, timedelta
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
+from utils.logger import logger
 import requests
-
-# Configure logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
@@ -19,20 +16,37 @@ def lambda_handler(event, context):
     Collects articles from Perplexity AI based on user preferences and temporal context
     """
     start_time = datetime.utcnow()
-    logger.info(f"Starting news collection for event: {event}")
+    logger.log_request_start(event, context, "ai/news_collector")
 
     try:
         # Extract and validate brew_id from event
         brew_id = event.get("brew_id")
         if not brew_id:
-            logger.error("Missing brew_id in event")
+            logger.error("News collection failed: missing brew_id in event")
             return create_response(400, {"error": "brew_id is required"})
 
+        # Set context for subsequent logs
+        logger.set_context(brew_id=brew_id)
+
         # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        logger.info("Connecting to database for brew data retrieval")
+        db_start_time = datetime.utcnow()
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            db_connect_duration = (
+                datetime.utcnow() - db_start_time
+            ).total_seconds() * 1000
+            logger.log_db_operation("connect", "brews", db_connect_duration)
+        except Exception as e:
+            logger.error("Failed to connect to database", error=e)
+            return create_response(500, {"error": "Database connection failed"})
 
         # Retrieve brew and user data
+        logger.info("Retrieving brew and user data")
+        query_start_time = datetime.utcnow()
+
         cursor.execute(
             """
             SELECT b.id, b.user_id, b.name, b.topics, b.delivery_time, 
@@ -46,7 +60,13 @@ def lambda_handler(event, context):
         )
 
         brew_data = cursor.fetchone()
+        query_duration = (datetime.utcnow() - query_start_time).total_seconds() * 1000
+        logger.log_db_operation("select", "brews", query_duration, table_join="users")
+
         if not brew_data:
+            logger.warn("Active brew not found for provided brew_id")
+            cursor.close()
+            conn.close()
             return create_response(404, {"error": "Active brew not found"})
 
         (
@@ -63,6 +83,9 @@ def lambda_handler(event, context):
             last_name,
         ) = brew_data
 
+        # Add user context to logger
+        logger.set_context(user_id=user_id, user_email=email)
+
         # Determine if this is morning or evening briefing based on delivery time
         delivery_hour = delivery_time.hour
         briefing_type = "morning" if delivery_hour < 12 else "evening"
@@ -77,6 +100,15 @@ def lambda_handler(event, context):
         # Determine temporal window
         user_tz = pytz.timezone(brew_timezone)
         now = datetime.now(user_tz)
+
+        logger.info(
+            "Brew configuration loaded",
+            brew_name=brew_name,
+            briefing_type=briefing_type,
+            article_count=article_count,
+            user_timezone=brew_timezone,
+            topics_count=len(topics_list) if isinstance(topics, str) else 0,
+        )
 
         if last_sent_date:
             # Convert last_sent_date to user timezone
@@ -95,6 +127,9 @@ def lambda_handler(event, context):
             temporal_context = "past 3 days"
 
         # Get last 10 articles sent to this user for context
+        logger.info("Retrieving previous articles for context")
+        prev_articles_start_time = datetime.utcnow()
+
         cursor.execute(
             """
             SELECT cc.raw_articles, bf.subject_line, bf.sent_at
@@ -105,6 +140,17 @@ def lambda_handler(event, context):
             LIMIT 10
         """,
             (user_id,),
+        )
+
+        prev_articles_duration = (
+            datetime.utcnow() - prev_articles_start_time
+        ).total_seconds() * 1000
+        logger.log_db_operation(
+            "select",
+            "briefings",
+            prev_articles_duration,
+            table_join="curation_cache",
+            limit=10,
         )
 
         previous_articles = []
@@ -128,6 +174,9 @@ def lambda_handler(event, context):
                     )
 
         # Get user feedback for personalization
+        logger.info("Retrieving user feedback for personalization")
+        feedback_start_time = datetime.utcnow()
+
         cursor.execute(
             """
             SELECT f.feedback_type, f.article_position, bf.subject_line
@@ -138,6 +187,17 @@ def lambda_handler(event, context):
             LIMIT 10
         """,
             (user_id,),
+        )
+
+        feedback_duration = (
+            datetime.utcnow() - feedback_start_time
+        ).total_seconds() * 1000
+        logger.log_db_operation(
+            "select",
+            "user_feedback",
+            feedback_duration,
+            table_join="briefings",
+            limit=10,
         )
 
         user_feedback = []
@@ -235,8 +295,10 @@ Format your response as a JSON array of articles with the following structure:
         )
 
         # Call Perplexity AI API
+        logger.info("Preparing Perplexity AI API call for article curation")
         perplexity_api_key = os.environ.get("PERPLEXITY_API_KEY")
         if not perplexity_api_key:
+            logger.error("Perplexity AI API key not found in environment variables")
             raise Exception("PERPLEXITY_API_KEY not found in environment variables")
 
         headers = {
@@ -251,16 +313,39 @@ Format your response as a JSON array of articles with the following structure:
             "max_tokens": 4000,
         }
 
+        logger.info(
+            "Making request to Perplexity AI",
+            model=payload["model"],
+            temperature=payload["temperature"],
+            prompt_length=len(prompt),
+            requested_articles=article_count,
+        )
+
+        api_start_time = datetime.utcnow()
         response = requests.post(
             "https://api.perplexity.ai/chat/completions",
             headers=headers,
             json=payload,
             timeout=30,
         )
+        api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
+
+        logger.log_external_api_call(
+            "Perplexity AI",
+            "/chat/completions",
+            "POST",
+            response.status_code,
+            api_duration,
+            model=payload["model"],
+            prompt_tokens=len(prompt.split()),  # Rough token estimate
+            requested_articles=article_count,
+        )
 
         if response.status_code != 200:
             logger.error(
-                f"Perplexity AI API error: {response.status_code} - {response.text}"
+                "Perplexity AI API request failed",
+                status_code=response.status_code,
+                response_text=response.text[:500],  # Limit response text for logging
             )
             raise Exception(
                 f"Perplexity AI API error: {response.status_code} - {response.text}"
@@ -269,7 +354,15 @@ Format your response as a JSON array of articles with the following structure:
         ai_response = response.json()
         content = ai_response["choices"][0]["message"]["content"]
 
+        logger.info(
+            "Received response from Perplexity AI",
+            response_length=len(content),
+            has_choices=bool(ai_response.get("choices")),
+            content_preview=content[:100] + "..." if len(content) > 100 else content,
+        )
+
         # Parse the JSON response
+        logger.info("Parsing articles from AI response")
         try:
             # Extract JSON from the response (in case there's additional text)
             start_idx = content.find("[")
@@ -277,37 +370,66 @@ Format your response as a JSON array of articles with the following structure:
             if start_idx != -1 and end_idx != 0:
                 json_str = content[start_idx:end_idx]
                 articles = json.loads(json_str)
+                logger.info(
+                    "Successfully extracted JSON array from AI response",
+                    json_start_index=start_idx,
+                    json_end_index=end_idx,
+                )
             else:
                 # Fallback: try to parse the entire content
                 articles = json.loads(content)
+                logger.info("Successfully parsed entire content as JSON")
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parsing error: {e}")
-            logger.error(f"Raw content: {content[:500]}...")  # Log first 500 chars only
+            logger.error(
+                "Failed to parse JSON from AI response",
+                error=e,
+                content_preview=content[:500],  # Log first 500 chars only
+                json_start_found=start_idx != -1,
+                json_end_found=end_idx != 0,
+            )
             raise Exception("Failed to parse articles from AI response")
 
         # Validate articles structure and content
+        logger.info("Validating articles structure and content")
         if not articles or not isinstance(articles, list):
             logger.error(
-                f"Invalid articles format: expected list, got {type(articles)}"
+                "Invalid articles format from AI response",
+                expected_type="list",
+                actual_type=type(articles).__name__,
+                articles_truthy=bool(articles),
             )
             raise Exception("No valid articles returned from AI")
 
         if len(articles) == 0:
-            logger.warning("AI returned empty articles list")
+            logger.warn("AI returned empty articles list")
             raise Exception("No articles found for the specified criteria")
 
         # Validate each article has required fields
         required_fields = ["headline", "summary", "source"]
+        valid_articles = 0
+        articles_with_issues = 0
+
         for i, article in enumerate(articles):
             if not isinstance(article, dict):
-                logger.error(f"Article {i+1} is not a dictionary: {type(article)}")
+                logger.error(
+                    "Article validation failed: not a dictionary",
+                    article_index=i + 1,
+                    actual_type=type(article).__name__,
+                )
+                articles_with_issues += 1
                 continue
 
             missing_fields = [
                 field for field in required_fields if not article.get(field)
             ]
             if missing_fields:
-                logger.warning(f"Article {i+1} missing fields: {missing_fields}")
+                logger.warn(
+                    "Article missing required fields",
+                    article_index=i + 1,
+                    missing_fields=missing_fields,
+                    headline=article.get("headline", "N/A")[:50],
+                )
+                articles_with_issues += 1
                 # Set default values for missing fields
                 for field in missing_fields:
                     if field == "headline":
@@ -317,12 +439,22 @@ Format your response as a JSON array of articles with the following structure:
                     elif field == "source":
                         article[field] = "Unknown Source"
 
-        logger.info(f"Successfully parsed {len(articles)} articles from AI response")
+            valid_articles += 1
+
+        logger.info(
+            "Article validation completed",
+            total_articles=len(articles),
+            valid_articles=valid_articles,
+            articles_with_issues=articles_with_issues,
+        )
 
         # Create basic placeholder subject line and content
         # The news_editor will generate the final subject line and HTML content
         subject_line = f"TimeBrew {briefing_type.title()} Brief - Processing"
         initial_html = "<p>Briefing content is being prepared...</p>"
+
+        logger.info("Creating briefing record in database")
+        briefing_insert_start_time = datetime.utcnow()
 
         cursor.execute(
             """
@@ -343,9 +475,22 @@ Format your response as a JSON array of articles with the following structure:
         )
 
         briefing_id = cursor.fetchone()[0]
+        briefing_insert_duration = (
+            datetime.utcnow() - briefing_insert_start_time
+        ).total_seconds() * 1000
+        logger.log_db_operation(
+            "insert",
+            "briefings",
+            briefing_insert_duration,
+            briefing_id=briefing_id,
+            article_count=len(articles),
+        )
 
         # Store articles in curation_cache as raw_articles JSONB array
         search_topics = topics_list
+
+        logger.info("Storing articles in curation cache")
+        cache_insert_start_time = datetime.utcnow()
 
         cursor.execute(
             """
@@ -365,7 +510,27 @@ Format your response as a JSON array of articles with the following structure:
             ),
         )
 
+        cache_insert_duration = (
+            datetime.utcnow() - cache_insert_start_time
+        ).total_seconds() * 1000
+        logger.log_db_operation(
+            "insert",
+            "curation_cache",
+            cache_insert_duration,
+            briefing_id=briefing_id,
+            articles_stored=len(articles),
+            prompt_length=len(prompt),
+            response_length=len(content),
+        )
+
+        # Commit transaction
+        commit_start_time = datetime.utcnow()
         conn.commit()
+        commit_duration = (datetime.utcnow() - commit_start_time).total_seconds() * 1000
+        logger.log_db_operation(
+            "commit", "briefings", commit_duration, records_affected=2
+        )  # briefings + curation_cache
+
         cursor.close()
         conn.close()
 
@@ -374,8 +539,15 @@ Format your response as a JSON array of articles with the following structure:
         processing_time = (end_time - start_time).total_seconds()
 
         logger.info(
-            f"News collection completed successfully in {processing_time:.2f}s for briefing_id: {briefing_id}"
+            "News collection completed successfully",
+            briefing_id=briefing_id,
+            processing_time_seconds=round(processing_time, 2),
+            articles_collected=len(articles),
+            temporal_context=temporal_context,
+            topics=topics_list,
         )
+
+        logger.log_request_end("ai/news_collector", 200, processing_time * 1000)
 
         return {
             "statusCode": 200,
@@ -390,13 +562,20 @@ Format your response as a JSON array of articles with the following structure:
         }
 
     except Exception as e:
-        logger.error(f"Error in news_collector: {str(e)}")
+        logger.error("News collection failed: unexpected error", error=e)
         # Ensure database connection is closed on error
         try:
             if "conn" in locals():
                 conn.rollback()
                 conn.close()
-        except:
-            pass
+                logger.info("Database connection rolled back and closed due to error")
+        except Exception as cleanup_error:
+            logger.error("Failed to cleanup database connection", error=cleanup_error)
+
+        # Calculate processing time for failed request
+        end_time = datetime.utcnow()
+        processing_time = (end_time - start_time).total_seconds()
+        logger.log_request_end("ai/news_collector", 500, processing_time * 1000)
+
         # Re-raise the exception to ensure Step Functions marks this as failed
         raise e

@@ -3,15 +3,18 @@ import boto3
 import os
 from utils.db import get_db_connection
 from utils.response import create_response
+from utils.logger import logger
 
 cognito = boto3.client("cognito-idp")
 
 
 def handler(event, context):
+    logger.info("Get brews handler called")
     try:
         # Check for Authorization header
         auth_header = event.get("headers", {}).get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warn("Missing or invalid authorization header in get brews request")
             return create_response(401, {"error": "Authorization token is required"})
 
         # Extract token
@@ -22,7 +25,7 @@ def handler(event, context):
             user_response = cognito.get_user(AccessToken=token)
             cognito_id = user_response.get("Username")
         except Exception as e:
-            print(f"Cognito error: {e}")
+            logger.error(f"Cognito error during get brews authentication: {e}")
             return create_response(401, {"error": "Invalid or expired token"})
 
         # Get user ID from database
@@ -37,6 +40,7 @@ def handler(event, context):
                 user_result = cur.fetchone()
 
                 if not user_result:
+                    logger.error(f"User not found in database for cognito_id: {cognito_id}")
                     return create_response(404, {"error": "User not found"})
 
                 user_id = user_result[0]
@@ -74,14 +78,15 @@ def handler(event, context):
                         }
                     )
 
+                logger.info(f"Successfully retrieved {len(brews)} brews for user {user_id}")
                 return create_response(200, {"brews": brews})
 
         except Exception as e:
-            print(f"Database error: {e}")
+            logger.error(f"Database error during get brews for user {cognito_id}: {e}")
             return create_response(500, {"error": f"Database error: {str(e)}"})
         finally:
             conn.close()
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error in get brews handler: {e}")
         return create_response(500, {"error": "Internal server error"})
