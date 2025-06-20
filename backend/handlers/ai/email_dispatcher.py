@@ -120,7 +120,7 @@ def lambda_handler(event, context):
             )
             raise Exception("SMTP configuration incomplete")
 
-        FROM_ADDRESS = ("Inspire Inbox", "no-reply@inspireinbox.com")
+        FROM_ADDRESS = ("News Briefings", "no-reply@inspireinbox.com")
         # Create email message
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject_line

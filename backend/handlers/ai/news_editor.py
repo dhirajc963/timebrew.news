@@ -166,14 +166,70 @@ def lambda_handler(event, context):
         ❌ "This is important for investors"
         ✅ "Translation: your portfolio is about to get interesting"
 
+        # VISUAL FORMATTING REQUIREMENTS
+        Use this exact CSS foundation for all emails:
+
+        **Base Email Structure:**
+        ```html
+        <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #ffffff; padding: 20px;">
+            <!-- Header -->
+            <div style="text-align: center; padding: 20px 0; border-bottom: 1px solid #e9ecef; margin-bottom: 24px;">
+                <h1 style="font-size: 20px; font-weight: 600; color: #1a252f; margin: 0;">Your {brew_name} • {now.strftime('%A, %B %d')}</h1>
+            </div>
+            
+            <!-- Personal Greeting -->
+            <div style="margin-bottom: 24px;">
+                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Greeting paragraph here</p>
+            </div>
+            
+            <!-- Story Cards -->
+            [Multiple story cards here]
+            
+            <!-- Sign-off -->
+            <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Sign-off message</p>
+                <p style="font-size: 14px; color: #6c757d; margin: 8px 0 0 0;">Your TimeBrew Team</p>
+            </div>
+        </div>
+        ```
+
+        **Story Card Template (use for each article):**
+        ```html
+        <div style="background: #f8f9fa; padding: 20px; margin: 16px 0; border-radius: 8px; border: 1px solid #e9ecef;">
+            <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 500;">[SOURCE] • [TIME AGO]</div>
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #1a252f; line-height: 1.4;">[HEADLINE]</h3>
+            <p style="margin: 0 0 16px 0; line-height: 1.6; color: #2c3e50; font-size: 16px;">[STORY CONTENT]</p>
+            <a href="[URL]" style="color: #3498db; text-decoration: none; font-weight: 500; font-size: 15px;">Read the full story →</a>
+        </div>
+        ```
+
+        **Typography Rules:**
+        - Body text: 16px, line-height: 1.6, color: #2c3e50
+        - Headers: 18px (only 2px bigger), font-weight: 600, color: #1a252f
+        - Metadata: 14px, color: #6c757d
+        - Links: color: #3498db, font-weight: 500
+
+        **Visual Formatting Examples:**
+        ❌ Large headers: <h1 style="font-size: 24px;">Breaking News</h1>
+        ✅ Proper headers: <h3 style="font-size: 18px; font-weight: 600;">Breaking News</h3>
+
+        ❌ Plain text blocks with no spacing
+        ✅ Story cards with backgrounds and proper padding
+
+        ❌ Generic "Read more" links
+        ✅ Contextual links: "Read the full story →" or "Get the details →"
+
         # {briefing_type.upper()} BRIEFING SPECIFICS
         {"Morning briefings: Set the tone for the day ahead. Focus on 'Here's what you need to know before your first meeting' energy." if briefing_type == "morning" else "Evening briefings: Wrap up the day's chaos. Focus on 'Here's what actually mattered today' energy."}
 
         # FORMATTING REQUIREMENTS
-        - **Subject line**: Specific, curious, benefit-driven (not generic)
-        - **Opening**: Personal greeting + one-liner about the day/briefing
-        - **Transitions**: Smooth bridges between unrelated stories
-        - **Closing**: Memorable sign-off that feels personal
+        - **Email Structure**: Clean, card-based layout with consistent spacing using the exact templates above
+        - **Typography**: Headers only 2px larger than body text (18px vs 16px), use font-weight for emphasis
+        - **Story Cards**: Each article MUST use the story card template with background and padding
+        - **Visual Hierarchy**: Source info → Headline → Summary → Read more link
+        - **Brand Feel**: Professional but friendly, like a premium newsletter
+        - **Mobile-First**: 600px max width, proper padding for mobile readability
+        - **Consistency**: Use the exact CSS values provided - don't deviate from colors, spacing, or sizing
 
         # PERSONALIZATION CONTEXT
         User Profile:
@@ -184,7 +240,7 @@ def lambda_handler(event, context):
         - Current Moment: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
 
         # YOUR MISSION
-        Transform these raw articles into a briefing that makes {user_name} think "This person gets it" while keeping them informed on {topics_str}.
+        Transform these raw articles into a briefing that makes {user_name} think "This person gets it" while keeping them informed on {topics_str}. Use the exact HTML structure and CSS provided above.
 
         Raw Articles:
         {articles_text}
@@ -197,12 +253,12 @@ def lambda_handler(event, context):
         </email_subject>
         
         <email_content>
-        Full HTML with proper email formatting and inline CSS. You can use quotes, newlines, and any characters freely within these tags.
+        Full HTML using the exact structure and CSS templates provided above. Include the complete email with header, greeting, story cards, and sign-off.
         </email_content>
         
         Do not include any other text outside these tags.
 
-        Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters.
+        Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters. Use the visual formatting religiously - every story must be in a card, every element must use the specified styles.
         """
 
         # Call OpenAI API
@@ -217,7 +273,7 @@ def lambda_handler(event, context):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings. You MUST respond using XML-like tags: <email_subject>subject here</email_subject> and <email_content>HTML content here</email_content>. Do not include any other text outside these tags.",
+                    "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings with professional visual formatting. You MUST respond using XML-like tags: <email_subject>subject here</email_subject> and <email_content>HTML content here</email_content>. Use the exact HTML structure and CSS provided in the prompt. Do not include any other text outside these tags.",
                 },
                 {"role": "user", "content": prompt},
             ],
