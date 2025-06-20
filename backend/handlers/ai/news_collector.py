@@ -8,6 +8,7 @@ from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
 import requests
+from utils.text_utils import format_list_with_quotes
 
 
 def lambda_handler(event, context):
@@ -119,9 +120,7 @@ def lambda_handler(event, context):
             last_sent_user_tz = last_sent_utc.astimezone(user_tz)
 
             # Use actual time range from last sent to now
-            temporal_context = (
-                f"since {last_sent_user_tz.strftime('%Y-%m-%d %H:%M %Z')}"
-            )
+            temporal_context = f"{last_sent_user_tz.strftime('%Y-%m-%d %H:%M %Z')} to {now.strftime('%Y-%m-%d %H:%M %Z')}"
         else:
             # For new users with no previous briefings
             temporal_context = "past 3 days"
@@ -220,15 +219,14 @@ def lambda_handler(event, context):
         else:
             topics_list = topics
 
-        brew_focus_topics_str = ", ".join(topics_list)
+        # Format topics with proper grammar and quotes using utility function
+        brew_focus_topics_str = format_list_with_quotes(topics_list)
 
         # Build context sections for the prompt
         previous_articles_context = ""
         if previous_articles:
             previous_articles_context = f"""
-        
-        IMPORTANT - Previously Sent Articles (AVOID DUPLICATES):
-        The user has recently received these articles. DO NOT include similar stories or duplicate coverage:
+The user has recently received these articles. DO NOT include same stories or duplicate coverage:
         """
             for i, article in enumerate(previous_articles[:10], 1):
                 previous_articles_context += f"""
@@ -236,63 +234,87 @@ def lambda_handler(event, context):
         Summary: {article['summary'][:100]}..."""
 
         feedback_context = ""
+
+        # Improve the feedback context section
         if user_feedback:
-            liked = [f for f in user_feedback if f["type"] == "like"]
-            disliked = [f for f in user_feedback if f["type"] == "dislike"]
-
-            if liked or disliked:
-                feedback_context = f"""
-        
-        User Feedback Insights (Personalize Based On This):"""
-
-                if liked:
-                    feedback_context += f"""
-        - LIKED: User enjoyed briefings about: {', '.join([f['subject'] for f in liked[:3]])}"""
-
-                if disliked:
-                    feedback_context += f"""
-        - DISLIKED: User was less interested in: {', '.join([f['subject'] for f in disliked[:3]])}"""
-
-        prompt = (
-            f"""
-You are a expert news curator for a personalized briefing service called TimeBrew specializing in "{brew_focus_topics_str}". Right now, you are tasked with to  prepare {user_name}'s news briefing.
-
-User Profile:
-- Timezone: {brew_timezone}
-- Current time: {now.strftime('%Y-%m-%d %H:%M %Z')}
-"""
-            + previous_articles_context
-            + feedback_context
-            + f"""
-Task: Find exactly {article_count} significant news articles from the {temporal_context} that would be relevant for this user's briefing on the topics "{brew_focus_topics_str}".
-
-CRITICAL REQUIREMENTS:
-1. DO NOT include any articles that are similar to or duplicate the previously sent articles listed above
-2. Focus on breaking news and major developments that are genuinely NEW
-3. Consider the user's feedback patterns - emphasize topics they've rated highly, avoid topics they've disliked
-5. Articles that would be interesting and engaging to read
-6. Mix of global, national, and industry-specific news
-
-For each article, provide:
-- Headline
-- Brief summary (2-3 sentences)
-- Source publication
-- Estimated publication time
-- Why it's relevant/interesting
-
-Format your response as a JSON array of articles with the following structure:
-[
-    {{
-    "headline": "Article headline",
-    "summary": "Brief summary of the article",
-    "source": "Publication name",
-    "published_time": "Estimated time (e.g., '2 hours ago', 'this morning')",
-    "relevance": "Why this article is relevant",
-    "url": "https://example.com/article" (if available, otherwise null)
-    }}
-]
+            feedback_context = f"""
+        # USER PREFERENCES (Learned from {len(user_feedback)} interactions)
         """
-        )
+
+            # Group feedback by type for better context
+            liked_topics = [f["subject"] for f in user_feedback if f["type"] == "like"]
+            disliked_topics = [
+                f["subject"] for f in user_feedback if f["type"] == "dislike"
+            ]
+
+            if liked_topics:
+                feedback_context += (
+                    f"**HIGH INTEREST:** {', '.join(liked_topics[:3])}\n"
+                )
+            if disliked_topics:
+                feedback_context += (
+                    f"**LOW INTEREST:** {', '.join(disliked_topics[:3])}\n"
+                )
+
+        prompt = f"""# ROLE & CONTEXT
+        You are an expert news curator for TimeBrew, a personalized briefing service. You're preparing {user_name}'s "{brew_name}" briefing for delivery at {delivery_hour:02d}:00 {brew_timezone}.
+
+        **Current Time:** {now.strftime('%Y-%m-%d %H:%M %Z')}
+        **Focus Topics:** {brew_focus_topics_str}
+        **Articles Needed:** {article_count}
+        **Time Window:** {temporal_context}
+
+        # PERSONALIZATION CONTEXT
+        {previous_articles_context}
+        {feedback_context}
+
+        # PRIMARY TASK
+        Find exactly {article_count} high-quality, recent news articles that match this user's interests and briefing preferences.
+
+        # CRITICAL REQUIREMENTS
+        1. **NO DUPLICATES:** Avoid any articles similar to those previously sent (listed above)
+        2. **RECENCY FOCUS:** Prioritize breaking news and major developments from {temporal_context}
+        3. **PERSONALIZATION:** Apply user feedback patterns - emphasize liked topics, minimize disliked ones
+        4. **QUALITY SOURCES:** Use only reputable news sources (major newspapers, wire services, established publications)
+        5. **ENGAGEMENT:** Select articles that are genuinely interesting and worth reading
+        6. **DIVERSITY:** Mix global, national, and topic-specific coverage
+
+        # ARTICLE SELECTION CRITERIA
+        - **Significance:** Major developments, breaking news, or important updates
+        - **Relevance:** Directly related to user's specified topics
+        - **Freshness:** Published within the specified time window
+        - **Readability:** Clear, well-written articles from credible sources
+        - **Impact:** Stories that matter to someone interested in these topics
+
+        # OUTPUT FORMAT
+        Return ONLY a valid JSON array with this exact structure:
+
+        [
+            {{
+                "headline": "Exact article headline",
+                "summary": "Concise 3-4 sentence summary highlighting key points",
+                "source": "Publication name (e.g., Reuters, BBC, Wall Street Journal)",
+                "published_time": "Relative time (e.g., '2 hours ago', 'this morning', 'yesterday')",
+                "relevance": "1-2 sentences explaining why this matters to the user",
+                "url": "Direct article URL"
+            }}
+        ]
+
+        # QUALITY CHECKLIST
+        Before finalizing, ensure each article:
+        - Has a compelling, newsworthy headline
+        - Provides genuine value to someone interested in {brew_focus_topics_str}
+        - Comes from a credible, recognizable source
+        - Isn't already covered in previous briefings
+        - Fits the {briefing_type} briefing context
+
+        # VALIDATION REQUIREMENTS:
+        - Verify JSON is properly formatted and parseable
+        - Ensure all required fields are present and non-empty
+        - Double-check URLs are accessible and relevant
+        - Confirm articles are genuinely from {temporal_context}
+
+        Begin JSON array:"""
 
         # Call Perplexity AI API
         logger.info("Preparing Perplexity AI API call for article curation")
@@ -307,7 +329,7 @@ Format your response as a JSON array of articles with the following structure:
         }
 
         payload = {
-            "model": "llama-3.1-sonar-large-128k-online",
+            "model": "sonar",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
             "max_tokens": 4000,
@@ -358,7 +380,7 @@ Format your response as a JSON array of articles with the following structure:
             "Received response from Perplexity AI",
             response_length=len(content),
             has_choices=bool(ai_response.get("choices")),
-            content_preview=content[:100] + "..." if len(content) > 100 else content,
+            content_preview=content[:200] + "..." if len(content) > 200 else content,
         )
 
         # Parse the JSON response
@@ -423,21 +445,16 @@ Format your response as a JSON array of articles with the following structure:
                 field for field in required_fields if not article.get(field)
             ]
             if missing_fields:
-                logger.warn(
-                    "Article missing required fields",
+                logger.error(
+                    "Article missing critical required fields",
                     article_index=i + 1,
                     missing_fields=missing_fields,
                     headline=article.get("headline", "N/A")[:50],
                 )
-                articles_with_issues += 1
-                # Set default values for missing fields
-                for field in missing_fields:
-                    if field == "headline":
-                        article[field] = f"News Update {i+1}"
-                    elif field == "summary":
-                        article[field] = "Summary not available"
-                    elif field == "source":
-                        article[field] = "Unknown Source"
+                raise Exception(
+                    f"Article {i+1} is missing critical fields: {', '.join(missing_fields)}. "
+                    f"Headline: {article.get('headline', 'N/A')[:50]}"
+                )
 
             valid_articles += 1
 
@@ -450,7 +467,7 @@ Format your response as a JSON array of articles with the following structure:
 
         # Create basic placeholder subject line and content
         # The news_editor will generate the final subject line and HTML content
-        subject_line = f"TimeBrew {briefing_type.title()} Brief - Processing"
+        subject_line = f"{user_name}'s {brew_name} Brief - Processing"
         initial_html = "<p>Briefing content is being prepared...</p>"
 
         logger.info("Creating briefing record in database")
@@ -496,15 +513,15 @@ Format your response as a JSON array of articles with the following structure:
             """
             INSERT INTO time_brew.curation_cache 
             (briefing_id, raw_articles, topics_searched, articles_found, 
-             collector_prompt, raw_llm_response, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                collector_prompt, raw_llm_response, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
         """,
             (
                 briefing_id,
                 json.dumps(articles),  # Store as JSONB array
                 search_topics,
                 len(articles),
-                prompt[:1000],  # Truncate prompt for storage
+                prompt[:5000],  # Truncate prompt for storage
                 content[:5000],  # Store the raw LLM response (truncated to 5000 chars)
                 datetime.utcnow(),
             ),
@@ -552,12 +569,15 @@ Format your response as a JSON array of articles with the following structure:
         return {
             "statusCode": 200,
             "body": {
-                "briefing_id": briefing_id,
-                "articles_collected": len(articles),
-                "temporal_context": temporal_context,
-                "topics": topics_list,
-                "processing_time_seconds": processing_time,
                 "message": "Articles collected successfully",
+                "briefing_id": briefing_id,
+                "user_name": user_name,
+                "brew_name": brew_name,
+                "articles_collected": len(articles),
+                "articles_found": str(article)[:200],
+                "topics": topics_list,
+                "temporal_context": temporal_context,
+                "processing_time_seconds": processing_time,
             },
         }
 

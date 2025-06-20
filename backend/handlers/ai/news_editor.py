@@ -4,6 +4,7 @@ from datetime import datetime
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
+from utils.text_utils import format_list_simple
 import openai
 
 
@@ -26,8 +27,8 @@ def lambda_handler(event, context):
         cursor.execute(
             """
             SELECT bf.id, bf.brew_id, bf.user_id, bf.article_count, bf.execution_status,
-                   b.name, b.topics, b.delivery_time, u.timezone,
-                   u.email, u.first_name, u.last_name
+                b.name, b.topics, b.delivery_time, u.timezone,
+                u.email, u.first_name, u.last_name
             FROM time_brew.briefings bf
             JOIN time_brew.brews b ON bf.brew_id = b.id
             JOIN time_brew.users u ON bf.user_id = u.id
@@ -105,36 +106,6 @@ def lambda_handler(event, context):
         user_tz = pytz.timezone(brew_timezone)
         now = datetime.now(user_tz)
 
-        # Get user feedback for personalization (if any)
-        cursor.execute(
-            """
-            SELECT article_title, feedback_type, created_at
-            FROM time_brew.user_feedback
-            WHERE user_id = %s AND article_title IS NOT NULL
-            ORDER BY created_at DESC
-            LIMIT 10
-        """,
-            (user_id,),
-        )
-
-        feedback_data = cursor.fetchall()
-        feedback_context = ""
-        if feedback_data:
-            liked_articles = [row[0] for row in feedback_data if row[1] == "like"]
-            disliked_articles = [row[0] for row in feedback_data if row[1] == "dislike"]
-
-            if liked_articles or disliked_articles:
-                feedback_context = "\n\nUser Preferences (based on recent feedback):\n"
-                if liked_articles:
-                    feedback_context += (
-                        f"- Liked articles: {', '.join(liked_articles[:3])}\n"
-                    )
-                if disliked_articles:
-                    feedback_context += (
-                        f"- Disliked articles: {', '.join(disliked_articles[:3])}\n"
-                    )
-                feedback_context += "Please consider these preferences when formatting and prioritizing content.\n"
-
         # Construct OpenAI prompt for formatting
         articles_text = "\n\n".join(
             [
@@ -143,6 +114,7 @@ def lambda_handler(event, context):
                 f"Summary: {article['summary']}\n"
                 f"Source: {article['source']}\n"
                 f"Published: {article['published_time']}\n"
+                f"URL: {article.get('url', 'N/A')}\n"
                 f"Relevance: {article['relevance']}"
                 for i, article in enumerate(raw_articles)
             ]
@@ -159,49 +131,73 @@ def lambda_handler(event, context):
         else:
             topics_list = topics
 
-        topics_str = ", ".join(topics_list)
+        topics_str = format_list_simple(topics_list)
 
         prompt = f"""
-        You are an expert newsletter editor for TimeBrew, a personalized news briefing service.
-        
+        You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're writing {user_name}'s personalized {briefing_type} briefing.
+
+        # THE MORNING BREW VOICE
+        - **Like talking to your smartest friend over coffee** - conversational, witty, but never trying too hard
+        - **Make complex stuff simple** - use analogies, metaphors, and relatable comparisons
+        - **Always answer "So what?"** - explain WHY each story matters, not just what happened
+        - **Connect dots** - show how stories relate to bigger trends and your reader's life
+        - **Smart humor** - clever observations, not forced jokes or puns
+        - **Millennial energy** - culturally aware but professional
+
+        # WRITING PRINCIPLES
+        1. **Lead with impact**: Start each story with WHY it matters
+        2. **Use the "Netflix analogy" approach**: Compare complex topics to familiar things
+        3. **Build narrative threads**: Connect stories to show larger patterns
+        4. **Write scannable**: Use formatting that works for busy readers
+        5. **End with memory**: Close with something that sticks
+
+        # STORY STRUCTURE (for each article)
+        - **Hook**: 1-2 sentences on why this matters NOW
+        - **What happened**: The facts, but make them interesting
+        - **The bigger picture**: What this means for trends/future/reader
+        - **The bottom line**: One clear takeaway
+
+        # TONE EXAMPLES
+        ❌ "Apple announced new AI features"
+        ✅ "Apple just made your iPhone smarter than your college roommate"
+
+        ❌ "The Federal Reserve is considering rate changes"
+        ✅ "The Fed is playing economic Jenga with interest rates again"
+
+        ❌ "This is important for investors"
+        ✅ "Translation: your portfolio is about to get interesting"
+
+        # {briefing_type.upper()} BRIEFING SPECIFICS
+        {"Morning briefings: Set the tone for the day ahead. Focus on 'Here's what you need to know before your first meeting' energy." if briefing_type == "morning" else "Evening briefings: Wrap up the day's chaos. Focus on 'Here's what actually mattered today' energy."}
+
+        # FORMATTING REQUIREMENTS
+        - **Subject line**: Specific, curious, benefit-driven (not generic)
+        - **Opening**: Personal greeting + one-liner about the day/briefing
+        - **Transitions**: Smooth bridges between unrelated stories
+        - **Closing**: Memorable sign-off that feels personal
+
+        # PERSONALIZATION CONTEXT
         User Profile:
         - Name: {user_name}
-        - Briefing Type: {briefing_type.title()} briefing
-        - Topic Focus: {topics_str}
-        - Timezone: {brew_timezone}
-        - Current time: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
-        {feedback_context}
-        
-        Task: Transform the following raw articles into a polished, engaging {briefing_type} briefing in the style of Morning Brew.
-        
-        Style Guidelines:
-        1. Conversational and witty tone
-        2. Use engaging headlines and subheadings
-        3. Include brief, punchy summaries
-        4. Add context and analysis where relevant
-        5. Use emojis sparingly but effectively
-        6. Keep it scannable with good formatting
-        7. End with a personalized sign-off
-        
-        Structure:
-        1. Personalized greeting with the date (Good {{briefing_type}}, {{user_name}}!)
-        2. Brief intro paragraph mentioning the {{briefing_type}} briefing and topics focus
-        3. Main stories (3-5 top stories with detailed coverage)
-        4. Quick hits (remaining stories in brief format)
-        5. Closing thought or quote of the day
-        6. Personalized sign-off from TimeBrew
-        
+        - Briefing Name: {brew_name}
+        - Focus Areas: {topics_str}
+        - Location Context: {brew_timezone}
+        - Current Moment: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
+
+        # YOUR MISSION
+        Transform these raw articles into a briefing that makes {user_name} think "This person gets it" while keeping them informed on {topics_str}.
+
         Raw Articles:
         {articles_text}
-        
-        Please format this as HTML suitable for email, using proper HTML tags for structure.
-        Also provide a compelling subject line.
-        
-        Return your response as a JSON object with this structure:
+
+        # OUTPUT REQUIREMENTS
+        Return valid JSON with enhanced structure:
         {{
-          "subject_line": "Compelling subject line for the email",
-          "html_content": "Full HTML content of the briefing"
+            "subject_line": "Specific, benefit-driven subject line (not 'Your briefing for...')",
+            "html_content": "Full HTML with proper email formatting and inline CSS and clear separation where applicable"
         }}
+
+        Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters.
         """
 
         # Call OpenAI API
