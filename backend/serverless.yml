@@ -73,9 +73,9 @@ functions:
           cors:
             origin: "*"
             headers:
-               - Content-Type
-               - Authorization
-               - X-Requested-With
+              - Content-Type
+              - Authorization
+              - X-Requested-With
 
   # Auth functions
   register:
@@ -364,7 +364,7 @@ resources:
       Properties:
         RoleName: ${self:service}-stepfunctions-role-${self:provider.stage}
         AssumeRolePolicyDocument:
-          Version: '2012-10-17'
+          Version: "2012-10-17"
           Statement:
             - Effect: Allow
               Principal:
@@ -373,7 +373,7 @@ resources:
         Policies:
           - PolicyName: StepFunctionsLambdaInvokePolicy
             PolicyDocument:
-              Version: '2012-10-17'
+              Version: "2012-10-17"
               Statement:
                 - Effect: Allow
                   Action:

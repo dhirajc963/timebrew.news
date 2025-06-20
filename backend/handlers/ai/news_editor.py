@@ -13,6 +13,7 @@ def lambda_handler(event, context):
     News Editor Lambda Function
     Formats collected articles into a Morning Brew-style briefing using OpenAI
     """
+    start_time = datetime.utcnow()
     try:
         # Extract briefing_id from event
         briefing_id = event.get("briefing_id")
@@ -134,7 +135,7 @@ def lambda_handler(event, context):
         topics_str = format_list_simple(topics_list)
 
         prompt = f"""
-        You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're writing {user_name}'s personalized {briefing_type} briefing.
+        You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're preparing {user_name}'s "{brew_name}" briefing for delivery at {delivery_hour:02d}:00 {brew_timezone}.
 
         # THE MORNING BREW VOICE
         - **Like talking to your smartest friend over coffee** - conversational, witty, but never trying too hard
@@ -256,7 +257,7 @@ def lambda_handler(event, context):
         cursor.execute(
             """
             UPDATE time_brew.briefings 
-            SET execution_status = 'completed',
+            SET execution_status = 'formatted',
                 subject_line = %s,
                 html_content = %s,
                 editor_prompt = %s,
@@ -277,13 +278,23 @@ def lambda_handler(event, context):
         cursor.close()
         conn.close()
 
+        # Calculate processing time
+        end_time = datetime.utcnow()
+        processing_time = (end_time - start_time).total_seconds()
+
         return {
             "statusCode": 200,
             "body": {
+                "message": "Briefing formatted successfully",
                 "briefing_id": briefing_id,
+                "user_name": user_name,
+                "brew_name": brew_name,
+                "briefing_type": briefing_type,
                 "subject_line": subject_line,
                 "content_length": len(html_content),
-                "message": "Briefing formatted successfully",
+                "articles_processed": article_count,
+                "ai_response_preview": str(ai_response)[:200],
+                "processing_time_seconds": round(processing_time, 2),
             },
         }
 
