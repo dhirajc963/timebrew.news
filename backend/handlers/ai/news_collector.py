@@ -137,7 +137,7 @@ def lambda_handler(event, context):
             WHERE bf.user_id = %s AND bf.execution_status = 'dispatched' AND bf.sent_at IS NOT NULL
             ORDER BY bf.sent_at DESC
             LIMIT 10
-        """,
+            """,
             (user_id,),
         )
 

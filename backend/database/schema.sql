@@ -42,8 +42,7 @@ CREATE TABLE brews (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NULL,
 	"name" varchar(255) NOT NULL,
-	topic varchar(255) NOT NULL,
-	keywords _text NULL,
+	topics _text NULL,
 	delivery_time time NOT NULL,
 	article_count int4 NULL DEFAULT 5,
 	is_active bool NULL DEFAULT true,
@@ -85,12 +84,12 @@ CREATE TABLE briefings (
 	click_count int4 NULL DEFAULT 0,
 	delivery_status varchar(20) NULL DEFAULT 'sent'::character varying,
 	execution_status varchar(20) NULL DEFAULT 'completed'::character varying,
+	created_at timestamp NULL DEFAULT now(),
 	editor_prompt text NULL,
 	raw_ai_response text NULL,
-	created_at timestamp NULL DEFAULT now(),
 	updated_at timestamp NULL DEFAULT now(),
 	CONSTRAINT briefings_delivery_status_check CHECK (((delivery_status)::text = ANY ((ARRAY['sent'::character varying, 'bounced'::character varying, 'failed'::character varying])::text[]))),
-	CONSTRAINT briefings_execution_status_check CHECK (((execution_status)::text = ANY ((ARRAY['processing'::character varying, 'completed'::character varying, 'failed'::character varying])::text[]))),
+	CONSTRAINT briefings_execution_status_check CHECK (((execution_status)::text = ANY ((ARRAY['failed'::character varying, 'dispatched'::character varying, 'curated'::character varying, 'edited'::character varying])::text[]))),
 	CONSTRAINT briefings_pkey PRIMARY KEY (id),
 	CONSTRAINT briefings_brew_id_fkey FOREIGN KEY (brew_id) REFERENCES brews(id) ON DELETE CASCADE,
 	CONSTRAINT briefings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -123,9 +122,9 @@ CREATE TABLE curation_cache (
 	search_timeframe tsrange NULL,
 	articles_found int4 NOT NULL,
 	collector_prompt text NULL,
-	raw_llm_response text NULL,
 	collection_duration_ms int4 NULL,
 	created_at timestamp NULL DEFAULT now(),
+	raw_llm_response text NULL,
 	CONSTRAINT curation_cache_pkey PRIMARY KEY (id),
 	CONSTRAINT curation_cache_briefing_id_fkey FOREIGN KEY (briefing_id) REFERENCES briefings(id) ON DELETE CASCADE
 );
@@ -151,6 +150,8 @@ CREATE TABLE user_feedback (
 	source_url varchar(1000) NULL,
 	engagement_duration_seconds int4 NULL,
 	created_at timestamp NULL DEFAULT now(),
+	article_title varchar(500) NULL,
+	article_source varchar(200) NULL,
 	CONSTRAINT user_feedback_article_position_check CHECK (((article_position >= 0) AND (article_position < 20))),
 	CONSTRAINT user_feedback_feedback_type_check CHECK (((feedback_type)::text = ANY ((ARRAY['like'::character varying, 'dislike'::character varying])::text[]))),
 	CONSTRAINT user_feedback_pkey PRIMARY KEY (id),
@@ -158,6 +159,8 @@ CREATE TABLE user_feedback (
 	CONSTRAINT user_feedback_briefing_id_fkey FOREIGN KEY (briefing_id) REFERENCES briefings(id) ON DELETE CASCADE,
 	CONSTRAINT user_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+CREATE INDEX idx_feedback_article_source ON time_brew.user_feedback USING btree (article_source);
+CREATE INDEX idx_feedback_article_title ON time_brew.user_feedback USING btree (article_title);
 CREATE INDEX idx_feedback_created ON time_brew.user_feedback USING btree (created_at);
 CREATE INDEX idx_feedback_position ON time_brew.user_feedback USING btree (briefing_id, article_position);
 CREATE INDEX idx_feedback_user_briefing ON time_brew.user_feedback USING btree (user_id, briefing_id);
