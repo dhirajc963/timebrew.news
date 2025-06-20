@@ -66,15 +66,15 @@ def lambda_handler(event, context):
             last_name,
         ) = briefing_data
 
-        if execution_status != "formatted":
+        if execution_status != "edited":
             logger.error(
-                f"Invalid briefing status: {execution_status}, expected formatted"
+                f"Invalid briefing status: {execution_status}, expected edited"
             )
             cursor.close()
             conn.close()
             return create_response(
                 400,
-                {"error": f"Briefing status is {execution_status}, expected formatted"},
+                {"error": f"Briefing status is {execution_status}, expected edited"},
             )
 
         if not html_content or not subject_line:
@@ -166,7 +166,7 @@ Note: For the best experience, please view this email in HTML format.
                 server.login(smtp_username, smtp_password)
                 server.sendmail(FROM_ADDRESS[1], email, msg.as_string())
 
-            delivery_status = "sent"
+            delivery_status = "dispatched"
             error_message = None
             logger.info("Email sent successfully")
 
@@ -197,14 +197,14 @@ Note: For the best experience, please view this email in HTML format.
             WHERE id = %s
         """,
             (
-                "sent" if delivery_status == "sent" else "failed",
+                "dispatched" if delivery_status == "dispatched" else "failed",
                 sent_at_utc,
                 briefing_id,
             ),
         )
 
         # Update brew's last_sent_date if email was sent successfully
-        if delivery_status == "sent":
+        if delivery_status == "dispatched":
             cursor.execute(
                 """
                 UPDATE time_brew.brews 
@@ -228,7 +228,7 @@ Note: For the best experience, please view this email in HTML format.
             processing_time_seconds=round(processing_time, 2),
         )
 
-        if delivery_status == "sent":
+        if delivery_status == "dispatched":
             return {
                 "statusCode": 200,
                 "body": {

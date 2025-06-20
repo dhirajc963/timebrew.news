@@ -57,12 +57,10 @@ def lambda_handler(event, context):
             last_name,
         ) = briefing_data
 
-        if execution_status != "processing":
+        if execution_status != "curated":
             return create_response(
                 400,
-                {
-                    "error": f"Briefing status is {execution_status}, expected processing"
-                },
+                {"error": f"Briefing status is {execution_status}, expected curated"},
             )
 
         # Determine briefing type and build user name
@@ -192,11 +190,17 @@ def lambda_handler(event, context):
         {articles_text}
 
         # OUTPUT REQUIREMENTS
-        Return valid JSON with enhanced structure:
-        {{
-            "subject_line": "Specific, benefit-driven subject line (not 'Your briefing for...')",
-            "html_content": "Full HTML with proper email formatting and inline CSS and clear separation where applicable"
-        }}
+        Return your response using XML-like tags for easier parsing. This format is more reliable than JSON for HTML content:
+        
+        <email_subject>
+        Your specific, benefit-driven subject line (not 'Your briefing for...')
+        </email_subject>
+        
+        <email_content>
+        Full HTML with proper email formatting and inline CSS. You can use quotes, newlines, and any characters freely within these tags.
+        </email_content>
+        
+        Do not include any other text outside these tags.
 
         Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters.
         """
@@ -213,7 +217,7 @@ def lambda_handler(event, context):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings. Always respond with valid JSON containing subject_line and html_content fields.",
+                    "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings. You MUST respond using XML-like tags: <email_subject>subject here</email_subject> and <email_content>HTML content here</email_content>. Do not include any other text outside these tags.",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -229,35 +233,88 @@ def lambda_handler(event, context):
             ai_response[:5000] if len(ai_response) > 5000 else ai_response
         )
 
-        # Parse the JSON response
+        # Parse the XML-tagged response (much more reliable than JSON for HTML content)
+        import re
+
         try:
-            # Extract JSON from the response
-            start_idx = ai_response.find("{")
-            end_idx = ai_response.rfind("}") + 1
-            if start_idx != -1 and end_idx != 0:
-                json_str = ai_response[start_idx:end_idx]
-                formatted_content = json.loads(json_str)
+            # Extract subject using XML tags
+            subject_match = re.search(
+                r"<email_subject>\s*(.+?)\s*</email_subject>", ai_response, re.DOTALL
+            )
+            content_match = re.search(
+                r"<email_content>\s*(.+?)\s*</email_content>", ai_response, re.DOTALL
+            )
+
+            if subject_match and content_match:
+                subject_line = subject_match.group(1).strip()
+                html_content = content_match.group(1).strip()
+
+                formatted_content = {
+                    "subject_line": subject_line,
+                    "html_content": html_content,
+                }
             else:
-                # Fallback: try to parse the entire content
-                formatted_content = json.loads(ai_response)
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"Raw AI response: {ai_response}")
-            raise Exception("Failed to parse formatted content from AI response")
+                # Fallback: try to find the content even if tags are malformed
+                print("XML tags not found, attempting fallback extraction")
 
-        subject_line = formatted_content.get(
-            "subject_line", f'Your TimeBrew for {now.strftime("%B %d")}'
-        )
-        html_content = formatted_content.get("html_content", "")
+                # Look for subject line patterns
+                subject_patterns = [
+                    r"<email_subject>(.+?)</email_subject>",
+                    r"Subject:\s*(.+?)\n",
+                    r'subject_line["\']?\s*:\s*["\'](.+?)["\']',
+                ]
 
-        if not html_content:
+                subject_line = None
+                for pattern in subject_patterns:
+                    match = re.search(pattern, ai_response, re.DOTALL | re.IGNORECASE)
+                    if match:
+                        subject_line = match.group(1).strip()
+                        break
+
+                # Look for HTML content patterns
+                content_patterns = [
+                    r"<email_content>(.+?)</email_content>",
+                    r"<html[^>]*>(.+?)</html>",
+                    r'html_content["\']?\s*:\s*["\'](.+?)["\']',
+                ]
+
+                html_content = None
+                for pattern in content_patterns:
+                    match = re.search(pattern, ai_response, re.DOTALL | re.IGNORECASE)
+                    if match:
+                        html_content = match.group(1).strip()
+                        break
+
+                if subject_line and html_content:
+                    formatted_content = {
+                        "subject_line": subject_line,
+                        "html_content": html_content,
+                    }
+                else:
+                    raise Exception(
+                        "Could not extract content using any parsing method"
+                    )
+
+        except Exception as e:
+            print(f"XML parsing error: {e}")
+            print(f"Raw AI response (first 1000 chars): {ai_response[:1000]}")
+            print(f"Raw AI response (last 500 chars): {ai_response[-500:]}")
+
+            # Re-raise the exception instead of providing a fallback
+            print(f"Failed to parse AI response after all attempts: {str(e)}")
+            raise
+
+        subject_line = formatted_content.get("subject_line")
+        html_content = formatted_content.get("html_content")
+
+        if not html_content or not subject_line:
             raise Exception("No HTML content generated by AI")
 
         # Update briefing with formatted content
         cursor.execute(
             """
             UPDATE time_brew.briefings 
-            SET execution_status = 'formatted',
+            SET execution_status = 'edited',
                 subject_line = %s,
                 html_content = %s,
                 editor_prompt = %s,

@@ -64,7 +64,7 @@ def lambda_handler(event, context):
         cursor.execute(
             """
             SELECT bf.id, bf.brew_id, bf.execution_status, bf.article_count,
-                   bf.user_id, u.email
+                bf.user_id, u.email
             FROM time_brew.briefings bf
             LEFT JOIN time_brew.users u ON bf.user_id = u.id
             WHERE bf.id = %s

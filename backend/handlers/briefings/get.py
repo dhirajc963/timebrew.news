@@ -119,8 +119,8 @@ def lambda_handler(event, context):
         # Get briefings with pagination
         briefings_query = f"""
             SELECT bf.id, bf.brew_id, bf.execution_status, bf.subject_line, bf.article_count,
-                   bf.created_at, bf.updated_at, bf.sent_at,
-                   b.delivery_time, u.timezone
+                bf.created_at, bf.updated_at, bf.sent_at,
+                b.delivery_time, u.timezone
             FROM time_brew.briefings bf
             LEFT JOIN time_brew.brews b ON bf.brew_id = b.id
             LEFT JOIN time_brew.users u ON bf.user_id = u.id

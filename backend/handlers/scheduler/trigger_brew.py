@@ -75,7 +75,7 @@ def lambda_handler(event, context):
             """
             SELECT id, execution_status, created_at
             FROM time_brew.briefings
-            WHERE brew_id = %s AND execution_status IN ('processing', 'formatted')
+            WHERE brew_id = %s AND execution_status IN ('curated', 'edited')
             ORDER BY created_at DESC
             LIMIT 1
         """,
