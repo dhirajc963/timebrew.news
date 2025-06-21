@@ -13,8 +13,7 @@ import {
 	subscribeToAuthEvent, 
 	unsubscribeFromAuthEvent, 
 	AuthTokens,
-	isAuthenticated as checkIsAuthenticated,
-	isTokenExpiringSoon
+	isAuthenticated as checkIsAuthenticated
 } from "@/utils/auth";
 import { logTokenStatus } from "@/utils/tokenDebug";
 
@@ -117,30 +116,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		};
 	}, [navigate]);
 
-	// Proactive token refresh - check every 2 minutes
-	useEffect(() => {
-		if (!user) return; // Only run if user is logged in
-
-		const checkAndRefreshToken = async () => {
-			if (isTokenExpiringSoon() && checkIsAuthenticated()) {
-				console.log('Token expiring soon, refreshing proactively...');
-				try {
-					await refreshAuthToken();
-				} catch (error) {
-					console.error('Proactive token refresh failed:', error);
-					// Don't logout here - let the API calls handle it
-				}
-			}
-		};
-
-		// Check immediately
-		checkAndRefreshToken();
-
-		// Set up interval to check every 2 minutes
-		const interval = setInterval(checkAndRefreshToken, 2 * 60 * 1000);
-
-		return () => clearInterval(interval);
-	}, [user]);
+	// Removed proactive token refresh - now using reactive approach
+	// Token refresh will happen automatically when API calls detect expired tokens
 
 	// Computed property to check if user is authenticated
 	const isAuthenticated = user !== null && checkIsAuthenticated();
@@ -177,14 +154,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		return localStorage.getItem("accessToken");
 	};
 
-	// Refresh token function - uses the shared utility
+	// Refresh token function - uses the shared utility (reactive approach)
 	const refreshToken = async (): Promise<string | null> => {
-		const token = await refreshAuthToken();
-		if (!token) {
-			// If refresh fails, log the user out
-			logout();
-		}
-		return token;
+		// Simply delegate to the auth utility without aggressive logout
+		// The auth utility will handle clearing data for permanent failures
+		// Temporary failures (network issues) won't trigger logout
+		return await refreshAuthToken();
 	};
 
 	// Create the value object that will be provided to consumers

@@ -461,14 +461,14 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 						<Calendar className="w-3 h-3 mr-1" />
 						{brew.created_at && (
 							<>
-								{console.log(
+								{/* {console.log(
 									`Brew "${brew.name}" created_at:`,
 									brew.created_at
 								)}
 								{console.log(
 									`Brew "${brew.name}" created_at as Date:`,
 									new Date(brew.created_at)
-								)}
+								)} */}
 								{(() => {
 									// Parse the ISO string with timezone information
 									const createdDate = new Date(brew.created_at);
@@ -546,7 +546,9 @@ const BrewCompactRow: React.FC<BrewCardProps> = ({ brew, index }) => {
 
 							<div className="flex items-center gap-1">
 								<Newspaper className="w-3 h-3 text-muted-foreground" />
-								<span className="text-xs">{brew.briefings_sent || 0} briefings</span>
+								<span className="text-xs">
+									{brew.briefings_sent || 0} briefings
+								</span>
 							</div>
 						</div>
 
