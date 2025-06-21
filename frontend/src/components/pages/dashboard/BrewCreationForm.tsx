@@ -144,7 +144,7 @@ const BrewCreationForm: React.FC = () => {
 				return { ...prev, topics: newTopics };
 			});
 		} catch (error) {
-			console.error("Error toggling topic:", error);
+			// Error toggling topic
 		}
 	}, []);
 
@@ -182,10 +182,8 @@ const BrewCreationForm: React.FC = () => {
 
 				// Call API to create brew
 				const response = await apiClient.createBrew(brewData);
-				console.log("Brew created:", response.brew);
 				setSuccess(true);
 			} catch (error) {
-				console.error("Error creating brew:", error);
 
 				// Check if it's an authentication error using the custom error class
 				if (error instanceof AuthenticationError) {

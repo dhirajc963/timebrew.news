@@ -35,13 +35,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 	onFeedback,
 	feedbackLoading,
 }) => {
-	// Debug logging
-	console.log(`🎯 BriefingCard ${briefing.id} data:`, {
-		delivery_status: briefing.delivery_status,
-		execution_status: briefing.execution_status,
-		sent_at: briefing.sent_at,
-		subject_line: briefing.subject_line,
-	});
+
 	const getDeliveryStatusIcon = () => {
 		switch (briefing.delivery_status) {
 			case "sent":

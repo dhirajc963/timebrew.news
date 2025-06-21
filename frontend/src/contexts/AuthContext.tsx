@@ -6,16 +6,15 @@ import React, {
 	ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-	refreshToken as refreshAuthToken, 
-	clearAuthData, 
+import {
+	refreshToken as refreshAuthToken,
+	clearAuthData,
 	setAuthData,
-	subscribeToAuthEvent, 
-	unsubscribeFromAuthEvent, 
+	subscribeToAuthEvent,
+	unsubscribeFromAuthEvent,
 	AuthTokens,
-	isAuthenticated as checkIsAuthenticated
+	isAuthenticated as checkIsAuthenticated,
 } from "@/utils/auth";
-import { logTokenStatus } from "@/utils/tokenDebug";
 
 // Define types for our context
 interface User {
@@ -67,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		const initializeAuth = async () => {
 			try {
 				const storedUser = localStorage.getItem("user");
-				
+
 				// Only set user if we have valid authentication
 				if (storedUser && checkIsAuthenticated()) {
 					setUser(JSON.parse(storedUser));
@@ -76,8 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 					clearAuthData();
 				}
 			} catch (error) {
-				console.error("Failed to initialize auth:", error);
-				// Clear potentially corrupted data
+				setIsLoading(false); // Clear potentially corrupted data
 				clearAuthData();
 			} finally {
 				setIsLoading(false);
@@ -96,8 +94,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		};
 
 		const handleLogin = () => {
-			console.log('🔐 User logged in, updating auth state');
-			logTokenStatus();
 			const storedUser = localStorage.getItem("user");
 			if (storedUser) {
 				setUser(JSON.parse(storedUser));
@@ -126,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const login = (tokens: AuthTokens, userData: User) => {
 		// Use the centralized setAuthData function
 		setAuthData(tokens, userData);
-		
+
 		// The user state will be updated by the event listener
 		// but we still set it directly for immediate UI update
 		setUser(userData);

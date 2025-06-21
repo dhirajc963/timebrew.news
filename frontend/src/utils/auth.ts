@@ -121,7 +121,6 @@ export const refreshToken = async (retryCount: number = 0): Promise<string | nul
   try {
     const refreshTokenValue = localStorage.getItem('refreshToken');
     if (!refreshTokenValue) {
-      console.warn('No refresh token available');
       clearAuthData(); // Clear any partial auth data
       return null;
     }
@@ -137,18 +136,15 @@ export const refreshToken = async (retryCount: number = 0): Promise<string | nul
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.warn('Failed to refresh token: Server returned', response.status, errorData);
       
       // If it's a 401 (unauthorized), the refresh token is invalid - don't retry
       if (response.status === 401) {
-        console.warn('Refresh token is invalid or expired');
         clearAuthData();
         return null;
       }
       
       // For other errors, retry if we haven't exceeded max retries
       if (retryCount < maxRetries) {
-        console.log(`Retrying token refresh (attempt ${retryCount + 1}/${maxRetries})`);
         // Wait before retrying (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
         return refreshToken(retryCount + 1);
@@ -162,7 +158,6 @@ export const refreshToken = async (retryCount: number = 0): Promise<string | nul
     
     // Validate response data
     if (!data.accessToken) {
-      console.error('Invalid refresh token response: missing accessToken');
       clearAuthData();
       return null;
     }
@@ -178,14 +173,11 @@ export const refreshToken = async (retryCount: number = 0): Promise<string | nul
     // Notify listeners that token was refreshed
     triggerAuthEvent('tokenRefreshed');
     
-    console.log('Token refreshed successfully');
     return data.accessToken;
   } catch (error) {
-    console.error('Failed to refresh token:', error);
     
     // Retry on network errors if we haven't exceeded max retries
     if (retryCount < maxRetries && error instanceof TypeError) {
-      console.log(`Retrying token refresh due to network error (attempt ${retryCount + 1}/${maxRetries})`);
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
       return refreshToken(retryCount + 1);

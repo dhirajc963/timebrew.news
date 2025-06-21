@@ -55,12 +55,8 @@ const BrewDetails: React.FC = () => {
 		setError(null);
 		try {
 			const response = await apiClient.getBrew(id);
-			console.log("🍺 Brew Data:", response);
-			console.log("🍺 Brew is_active:", response.brew?.is_active);
-			console.log("🍺 Brew delivery_time:", response.brew?.delivery_time);
 			setBrew(response.brew);
 		} catch (err) {
-			console.error("Error fetching brew:", err);
 			setError("Failed to load brew details. Please try again.");
 		} finally {
 			setLoading(false);
@@ -73,22 +69,9 @@ const BrewDetails: React.FC = () => {
 		setBriefingsLoading(true);
 		try {
 			const response = await apiClient.getBriefings(id, 20, 0, user.id);
-			console.log("📰 Briefings Response:", response);
-			console.log("📰 Briefings Array:", response.briefings);
-			response.briefings.forEach((briefing, index) => {
-				console.log(`📰 Briefing ${index + 1}:`, {
-					id: briefing.id,
-					subject_line: briefing.subject_line,
-					delivery_status: briefing.delivery_status,
-					execution_status: briefing.execution_status,
-					sent_at: briefing.sent_at,
-					brew_info: briefing.brew_info,
-				});
-			});
 			setBriefings(response.briefings);
 		} catch (err) {
-			console.error("Error fetching briefings:", err);
-			// Don't set error state for briefings, just log it
+			// Don't set error state for briefings, just handle silently
 		} finally {
 			setBriefingsLoading(false);
 		}
@@ -128,7 +111,6 @@ const BrewDetails: React.FC = () => {
 			});
 			// You could show a success message here
 		} catch (err) {
-			console.error("Error submitting feedback:", err);
 			// You could show an error message here
 		} finally {
 			setFeedbackLoading((prev) => {

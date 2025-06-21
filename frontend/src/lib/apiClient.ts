@@ -70,18 +70,14 @@ class ApiClient {
 
 		// Check if token is expired or expiring soon and refresh if needed
 		if (token && (isTokenExpired() || isTokenExpiringSoon())) {
-			console.log("Token expired or expiring soon, refreshing reactively...");
 			try {
 				const newToken = await refreshToken();
 				if (newToken) {
-					token = newToken;
-					console.log("Reactive token refresh successful");
-				} else {
-					console.warn("Token refresh returned null");
-					token = null;
-				}
-			} catch (error) {
-				console.error("Error refreshing token:", error);
+				token = newToken;
+			} else {
+				token = null;
+			}
+		} catch (error) {
 				// Continue with existing token - let the API call fail and handle 401
 				// This allows the handleResponse method to attempt refresh again
 			}
@@ -106,8 +102,6 @@ class ApiClient {
 	 * @param error The error that occurred
 	 */
 	private handleError(context: string, error: unknown): never {
-		console.error(`Error ${context}:`, error);
-
 		// Check for network errors and provide a more user-friendly message
 		if (error instanceof TypeError && error.message.includes("fetch")) {
 			throw new Error(
@@ -148,30 +142,22 @@ class ApiClient {
 			if (response.status === 401) {
 				if (retryFn) {
 					try {
-						console.log("Received 401, attempting token refresh...");
 						// Try to refresh the token
 						const newToken = await refreshToken();
 
 						if (newToken) {
-							console.log("Token refresh successful, retrying request...");
-							// Retry the request with the new token
-							const retryResponse = await retryFn();
-							return this.handleResponse<T>(retryResponse);
-						} else {
-							console.warn(
-								"Token refresh returned null, user will be logged out"
-							);
-						}
-					} catch (refreshError) {
-						console.error("Token refresh failed:", refreshError);
+					// Retry the request with the new token
+					const retryResponse = await retryFn();
+					return this.handleResponse<T>(retryResponse);
+				}
+			} catch (refreshError) {
 						// Fall through to the clearAuthData and throw below
 					}
 				}
 
 				// If we get here, either there's no retry function, or token refresh failed
-				// Only clear auth data if we're sure the refresh failed
-				console.warn("Authentication failed, clearing auth data");
-				clearAuthData();
+			// Only clear auth data if we're sure the refresh failed
+			clearAuthData();
 				throw new AuthenticationError(
 					errorData.error ||
 						errorData.message ||

@@ -105,8 +105,7 @@ const Login: React.FC = () => {
 			try {
 				data = await response.json();
 			} catch (jsonError) {
-				console.error("Failed to parse response:", jsonError);
-				setError("Server error. Please try again later.");
+			setError("Server error. Please try again later.");
 				setLoading(false);
 				return;
 			}
@@ -151,7 +150,6 @@ const Login: React.FC = () => {
 				);
 			}
 		} catch (err) {
-			console.error("Login error:", err);
 			setError("Network error. Please check your connection and try again.");
 		} finally {
 			setLoading(false);

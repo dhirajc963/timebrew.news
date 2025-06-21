@@ -141,7 +141,6 @@ const Dashboard: React.FC = () => {
 			const response = await apiClient.getBrews();
 			setBrews(response.brews);
 		} catch (err) {
-			console.error("Error fetching brews:", err);
 			setError("Failed to load your brews. Please try again.");
 		} finally {
 			setLoading(false);
@@ -461,14 +460,6 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 						<Calendar className="w-3 h-3 mr-1" />
 						{brew.created_at && (
 							<>
-								{/* {console.log(
-									`Brew "${brew.name}" created_at:`,
-									brew.created_at
-								)}
-								{console.log(
-									`Brew "${brew.name}" created_at as Date:`,
-									new Date(brew.created_at)
-								)} */}
 								{(() => {
 									// Parse the ISO string with timezone information
 									const createdDate = new Date(brew.created_at);
@@ -480,9 +471,6 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 										createdDate > now ||
 										createdDate.getFullYear() > now.getFullYear() + 1
 									) {
-										console.log(
-											`Detected invalid or future date for brew "${brew.name}", displaying "just now" instead`
-										);
 										return <span>just now</span>;
 									} else {
 										// formatDistanceToNow will use the browser's timezone for calculation
