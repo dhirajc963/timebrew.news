@@ -167,7 +167,7 @@ export const refreshToken = async (retryCount: number = 0): Promise<string | nul
     localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem(
       'tokenExpiry',
-      (Date.now() + (data.expiresIn || 3600) * 1000).toString()
+      (Date.now() + data.expiresIn * 1000).toString()
     );
 
     // Notify listeners that token was refreshed

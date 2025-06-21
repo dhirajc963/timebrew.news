@@ -31,12 +31,26 @@ export interface Brew {
 	user_id?: string;
 }
 
+export interface EditorDraft {
+	intro: string;
+	outro: string;
+	subject: string;
+	articles: Array<{
+		type: string;
+		source: string;
+		headline: string;
+		original_url: string;
+		story_content: string;
+		published_time: string;
+		relevance_score: number;
+	}>;
+}
+
 export interface Briefing {
 	id: string;
 	brew_id: string;
 	user_id: string;
-	subject_line: string;
-	html_content: string;
+	editor_draft: EditorDraft;
 	sent_at: string;
 	article_count: number;
 	opened_at?: string;
@@ -126,26 +140,32 @@ class ApiClient {
 			if (response.status === 401) {
 				if (retryFn) {
 					try {
-						// Try to refresh the token
 						const newToken = await refreshToken();
 
 						if (newToken) {
-					// Retry the request with the new token
-					const retryResponse = await retryFn();
-					return this.handleResponse<T>(retryResponse);
-				}
-			} catch (refreshError) {
-						// Fall through to the clearAuthData and throw below
+							// Clone the original request to modify headers
+							const originalRequest = new Request(response.url, {
+								method: response.headers.get("method") || "GET",
+								headers: await this.createHeaders(), // Re-create headers with the new token
+								body: response.headers.get("content-type")?.includes("json")
+									? await response.json().catch(() => null)
+									: undefined,
+							});
+
+							const retryResponse = await fetch(originalRequest);
+							return this.handleResponse<T>(retryResponse);
+						}
+					} catch (refreshError) {
+						// Fall through to clearAuthData and throw below
 					}
 				}
 
-				// If we get here, either there's no retry function, or token refresh failed
-			// Only clear auth data if we're sure the refresh failed
-			clearAuthData();
+				// If refresh fails or no retry function, clear auth data and throw
+				clearAuthData();
 				throw new AuthenticationError(
 					errorData.error ||
 						errorData.message ||
-						"Authorization token is required"
+						"Session expired. Please log in again."
 				);
 			}
 

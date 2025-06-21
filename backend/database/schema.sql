@@ -76,8 +76,7 @@ CREATE TABLE briefings (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	brew_id uuid NULL,
 	user_id uuid NULL,
-	subject_line varchar(500) NOT NULL,
-	html_content text NOT NULL,
+	editor_draft jsonb NULL,
 	sent_at timestamp NULL DEFAULT now(),
 	article_count int4 NOT NULL,
 	opened_at timestamp NULL,
@@ -95,7 +94,7 @@ CREATE TABLE briefings (
 	CONSTRAINT briefings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_briefings_brew_date ON time_brew.briefings USING btree (brew_id, sent_at DESC);
-CREATE INDEX idx_briefings_content_search ON time_brew.briefings USING gin (to_tsvector('english'::regconfig, (((subject_line)::text || ' '::text) || html_content)));
+CREATE INDEX idx_briefings_content_search ON time_brew.briefings USING gin (to_tsvector('english'::regconfig, ((editor_draft->>'subject')::text || ' ' || (editor_draft->>'intro')::text || ' ' || (editor_draft->>'outro')::text)));
 CREATE INDEX idx_briefings_delivery_status ON time_brew.briefings USING btree (delivery_status);
 CREATE INDEX idx_briefings_opened ON time_brew.briefings USING btree (user_id, opened_at) WHERE (opened_at IS NOT NULL);
 CREATE INDEX idx_briefings_user_date ON time_brew.briefings USING btree (user_id, sent_at DESC);
@@ -125,6 +124,7 @@ CREATE TABLE curation_cache (
 	collection_duration_ms int4 NULL,
 	created_at timestamp NULL DEFAULT now(),
 	raw_llm_response text NULL,
+	curator_notes text NULL DEFAULT ''::text,
 	CONSTRAINT curation_cache_pkey PRIMARY KEY (id),
 	CONSTRAINT curation_cache_briefing_id_fkey FOREIGN KEY (briefing_id) REFERENCES briefings(id) ON DELETE CASCADE
 );

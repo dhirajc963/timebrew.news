@@ -31,7 +31,7 @@ def lambda_handler(event, context):
         # Get briefing details with related data
         cursor.execute(
             """
-            SELECT bf.id, bf.brew_id, bf.user_id, bf.execution_status, bf.subject_line, bf.html_content,
+            SELECT bf.id, bf.brew_id, bf.user_id, bf.execution_status, bf.editor_draft,
                 bf.article_count, bf.created_at, bf.updated_at, bf.sent_at,
                 b.delivery_time, u.timezone, b.last_sent_date,
                 u.email, u.first_name, u.last_name
@@ -54,8 +54,7 @@ def lambda_handler(event, context):
             brew_id,
             user_id,
             execution_status,
-            subject_line,
-            html_content,
+            editor_draft_raw,
             article_count,
             created_at,
             updated_at,
@@ -67,6 +66,20 @@ def lambda_handler(event, context):
             first_name,
             last_name,
         ) = briefing_data
+
+        # Parse editor_draft JSON
+        editor_draft = None
+        subject_line = None
+        if editor_draft_raw:
+            try:
+                if isinstance(editor_draft_raw, str):
+                    editor_draft = json.loads(editor_draft_raw)
+                else:
+                    editor_draft = editor_draft_raw
+                subject_line = editor_draft.get("subject", "")
+            except json.JSONDecodeError:
+                editor_draft = None
+                subject_line = None
 
         # Build user name
         user_name = (
@@ -103,9 +116,9 @@ def lambda_handler(event, context):
             ),
         }
 
-        # Include HTML content if requested
-        if include_content and html_content:
-            briefing["content"] = html_content
+        # Include editor_draft content if requested
+        if include_content and editor_draft:
+            briefing["editor_draft"] = editor_draft
 
         # Include articles if requested
         if include_articles:

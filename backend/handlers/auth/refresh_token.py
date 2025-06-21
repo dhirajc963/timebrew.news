@@ -42,7 +42,7 @@ def handler(event, context):
             new_refresh_token = auth_result.get(
                 "RefreshToken", refresh_token
             )  # Cognito may not always return new refresh token
-            expires_in = auth_result.get("ExpiresIn", 3600)  # Default to 1 hour
+            expires_in = auth_result.get("ExpiresIn")
 
             if not new_access_token:
                 logger.error("Token refresh failed - no new access token")

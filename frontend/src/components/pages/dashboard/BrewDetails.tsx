@@ -157,6 +157,7 @@ const BrewDetails: React.FC = () => {
 	const [feedbackLoading, setFeedbackLoading] = useState<Set<string>>(
 		new Set()
 	);
+	const [articleFeedbackLoading, setArticleFeedbackLoading] = useState<boolean>(false);
 
 	const fetchBrew = async () => {
 		if (!id) {
@@ -232,6 +233,27 @@ const BrewDetails: React.FC = () => {
 				newSet.delete(briefingId);
 				return newSet;
 			});
+		}
+	};
+
+	const handleArticleFeedback = async (articlePosition: number, rating: number) => {
+		setArticleFeedbackLoading(true);
+		try {
+			// Find the current briefing ID - we'll use the first briefing for now
+			// In a more complex scenario, you might need to track which briefing the article belongs to
+			if (briefings.length > 0) {
+				await apiClient.submitFeedback({
+					briefing_id: briefings[0].id,
+					feedback_type: "article",
+					rating: rating,
+					article_position: articlePosition,
+				});
+			}
+			// You could show a success message here
+		} catch (err) {
+			// You could show an error message here
+		} finally {
+			setArticleFeedbackLoading(false);
 		}
 	};
 
@@ -412,18 +434,20 @@ const BrewDetails: React.FC = () => {
 									</Card>
 								) : (
 									briefings.map((briefing, index) => (
-										<BriefingCard
-											key={briefing.id}
-											briefing={briefing}
-											index={index}
-											isExpanded={expandedBriefings.has(briefing.id)}
-											onToggleExpansion={() =>
-												toggleBriefingExpansion(briefing.id)
-											}
-											onFeedback={(rating) => handleFeedback(briefing.id, rating)}
-											feedbackLoading={feedbackLoading.has(briefing.id)}
-										/>
-									))
+							<BriefingCard
+								key={briefing.id}
+								briefing={briefing}
+								index={index}
+								isExpanded={expandedBriefings.has(briefing.id)}
+								onToggleExpansion={() =>
+									toggleBriefingExpansion(briefing.id)
+								}
+								onFeedback={(rating) => handleFeedback(briefing.id, rating)}
+								feedbackLoading={feedbackLoading.has(briefing.id)}
+								onArticleFeedback={handleArticleFeedback}
+								articleFeedbackLoading={articleFeedbackLoading}
+							/>
+						))
 								)}
 							</div>
 					</motion.div>

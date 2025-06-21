@@ -118,7 +118,7 @@ def lambda_handler(event, context):
 
         # Get briefings with pagination
         briefings_query = f"""
-            SELECT bf.id, bf.brew_id, bf.execution_status, bf.subject_line, bf.html_content, bf.article_count,
+            SELECT bf.id, bf.brew_id, bf.execution_status, bf.editor_draft, bf.article_count,
                 bf.created_at, bf.updated_at, bf.sent_at, bf.opened_at, bf.click_count, bf.delivery_status,
                 b.delivery_time, u.timezone
             FROM time_brew.briefings bf
@@ -151,8 +151,7 @@ def lambda_handler(event, context):
                 briefing_id,
                 brew_id,
                 execution_status,
-                subject_line,
-                html_content,
+                editor_draft_raw,
                 article_count,
                 created_at,
                 updated_at,
@@ -164,12 +163,26 @@ def lambda_handler(event, context):
                 timezone,
             ) = row
 
+            # Parse editor_draft JSON
+            editor_draft = None
+            subject_line = None
+            if editor_draft_raw:
+                try:
+                    if isinstance(editor_draft_raw, str):
+                        editor_draft = json.loads(editor_draft_raw)
+                    else:
+                        editor_draft = editor_draft_raw
+                    subject_line = editor_draft.get("subject", "")
+                except json.JSONDecodeError:
+                    editor_draft = None
+                    subject_line = None
+
             briefing = {
                 "id": briefing_id,
                 "brew_id": brew_id,
                 "user_id": user_id,
                 "subject_line": subject_line,
-                "html_content": html_content,
+                "editor_draft": editor_draft,
                 "sent_at": sent_at.isoformat() if sent_at else None,
                 "article_count": article_count,
                 "opened_at": opened_at.isoformat() if opened_at else None,
