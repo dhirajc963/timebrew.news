@@ -63,11 +63,11 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 	const getDeliveryStatusColor = () => {
 		switch (briefing.delivery_status) {
 			case "sent":
-				return "bg-green-500/10 text-green-500";
+				return "bg-green-500/10 text-green-500 hover:bg-green-500/10";
 			case "failed":
-				return "bg-red-500/10 text-red-500";
+				return "bg-red-500/10 text-red-500 hover:bg-red-500/10";
 			default:
-				return "bg-gray-500/10 text-gray-500";
+				return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/10";
 		}
 	};
 
@@ -77,7 +77,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, delay: index * 0.1 }}
 		>
-			<Card className="overflow-hidden hover:shadow-md transition-shadow mx-1 sm:mx-0">
+			<Card className="overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-200 mx-1 sm:mx-0">
 				<CardHeader className="pb-3 px-6 py-0 relative">
 					{/* Mobile badge positioned absolutely in top right */}
 					<div className="absolute top-3 right-3 sm:hidden">
@@ -171,9 +171,9 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 											size="sm"
 											onClick={() => onFeedback(rating)}
 											disabled={feedbackLoading}
-											className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/10 touch-manipulation"
+											className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/20 hover:scale-110 transition-all duration-200 touch-manipulation"
 										>
-											<Star className="w-4 h-4 sm:w-3 sm:h-3 text-yellow-500 hover:fill-yellow-500" />
+											<Star className="w-4 h-4 sm:w-3 sm:h-3 text-yellow-500 transition-colors duration-200 hover:fill-yellow-500" />
 										</Button>
 									))}
 								</div>
@@ -185,7 +185,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 										size="sm"
 										onClick={() => onFeedback(5)}
 										disabled={feedbackLoading}
-										className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/10 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
+										className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/20 hover:text-green-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
 									>
 										<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
 										<span className="hidden sm:inline">Loved it</span>
@@ -195,7 +195,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 										size="sm"
 										onClick={() => onFeedback(2)}
 										disabled={feedbackLoading}
-										className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/10 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
+										className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/20 hover:text-red-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
 									>
 										<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
 										<span className="hidden sm:inline">Not helpful</span>
