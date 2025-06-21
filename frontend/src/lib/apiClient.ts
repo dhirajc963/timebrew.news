@@ -14,12 +14,45 @@ export class AuthenticationError extends Error {
 export interface Brew {
   id?: string;
   name: string;
-  topic: string;
   topics: string[];
   delivery_time: string;
   article_count: number;
+  briefings_sent?: number;
   created_at?: string;
+  updated_at?: string;
   is_active?: boolean;
+  last_sent_date?: string;
+  user_id?: string;
+}
+
+export interface Briefing {
+  id: string;
+  brew_id: string;
+  user_id: string;
+  subject_line: string;
+  html_content: string;
+  sent_at: string;
+  article_count: number;
+  opened_at?: string;
+  click_count: number;
+  delivery_status: 'sent' | 'bounced' | 'failed';
+  execution_status: 'failed' | 'dispatched' | 'curated' | 'edited';
+  created_at: string;
+  updated_at: string;
+  brew_info?: {
+    delivery_time: string;
+    timezone: string;
+  };
+}
+
+export interface UserFeedback {
+  id?: string;
+  briefing_id: string;
+  article_position: number;
+  feedback_type: 'like' | 'dislike';
+  article_title?: string;
+  article_source?: string;
+  created_at?: string;
 }
 
 // API client class
@@ -144,7 +177,7 @@ class ApiClient {
    * @param brewData The brew data to create
    * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
    */
-  async createBrew(brewData: Brew, timeoutMs: number = 10000): Promise<Brew> {
+  async createBrew(brewData: Brew, timeoutMs: number = 10000): Promise<{brew: Brew}> {
     try {
       this.checkAuthentication();
       
@@ -162,7 +195,7 @@ class ApiClient {
         this.createTimeoutPromise(timeoutMs)
       ]);
       
-      return this.handleResponse<Brew>(response, makeRequest);
+      return this.handleResponse<{brew: Brew}>(response, makeRequest);
     } catch (error) {
       return this.handleError('creating brew', error);
     }
@@ -200,7 +233,7 @@ class ApiClient {
    * @param id The ID of the brew to fetch
    * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
    */
-  async getBrew(id: string, timeoutMs: number = 10000): Promise<Brew> {
+  async getBrew(id: string, timeoutMs: number = 10000): Promise<{brew: Brew}> {
     try {
       this.checkAuthentication();
       
@@ -217,7 +250,7 @@ class ApiClient {
         this.createTimeoutPromise(timeoutMs)
       ]);
       
-      return this.handleResponse<Brew>(response, makeRequest);
+      return this.handleResponse<{brew: Brew}>(response, makeRequest);
     } catch (error) {
       return this.handleError(`fetching brew ${id}`, error);
     }
@@ -229,7 +262,7 @@ class ApiClient {
    * @param brewData The partial brew data to update
    * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
    */
-  async updateBrew(id: string, brewData: Partial<Brew>, timeoutMs: number = 10000): Promise<Brew> {
+  async updateBrew(id: string, brewData: Partial<Brew>, timeoutMs: number = 10000): Promise<{brew: Brew}> {
     try {
       this.checkAuthentication();
       
@@ -247,7 +280,7 @@ class ApiClient {
         this.createTimeoutPromise(timeoutMs)
       ]);
       
-      return this.handleResponse<Brew>(response, makeRequest);
+      return this.handleResponse<{brew: Brew}>(response, makeRequest);
     } catch (error) {
       return this.handleError(`updating brew ${id}`, error);
     }
@@ -308,6 +341,106 @@ class ApiClient {
       return this.handleResponse<Brew>(response, makeRequest);
     } catch (error) {
       return this.handleError(`toggling brew status for ${id}`, error);
+    }
+  }
+  /**
+   * Get briefings for a specific brew
+   * @param brewId The ID of the brew
+   * @param limit Number of briefings to fetch (default: 20)
+   * @param offset Offset for pagination (default: 0)
+   * @param userId The ID of the user
+   * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
+   */
+  async getBriefings(brewId: string, limit: number = 20, offset: number = 0, userId: string, timeoutMs: number = 10000): Promise<{ briefings: Briefing[], total_count: number }> {
+    try {
+      this.checkAuthentication();
+      
+      const queryParams = new URLSearchParams({
+        brew_id: brewId,
+        limit: limit.toString(),
+        offset: offset.toString(),
+        user_id: userId
+      });
+      
+      const makeRequest = async () => {
+        return fetch(getApiUrl(`/briefings?${queryParams}`), {
+          method: 'GET',
+          headers: await this.createHeaders(),
+        });
+      };
+      
+      // Race the request against a timeout
+      const response = await Promise.race([
+        makeRequest(),
+        this.createTimeoutPromise(timeoutMs)
+      ]);
+      
+      return this.handleResponse<{ briefings: Briefing[], total_count: number }>(response, makeRequest);
+    } catch (error) {
+      return this.handleError(`fetching briefings for brew ${brewId}`, error);
+    }
+  }
+
+  /**
+   * Get a specific briefing by ID
+   * @param briefingId The ID of the briefing
+   * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
+   */
+  async getBriefing(briefingId: string, timeoutMs: number = 10000): Promise<Briefing> {
+    try {
+      this.checkAuthentication();
+      
+      const makeRequest = async () => {
+        return fetch(getApiUrl(`/briefings/${briefingId}`), {
+          method: 'GET',
+          headers: await this.createHeaders(),
+        });
+      };
+      
+      // Race the request against a timeout
+      const response = await Promise.race([
+        makeRequest(),
+        this.createTimeoutPromise(timeoutMs)
+      ]);
+      
+      return this.handleResponse<Briefing>(response, makeRequest);
+    } catch (error) {
+      return this.handleError(`fetching briefing ${briefingId}`, error);
+    }
+  }
+
+  /**
+   * Submit feedback for a briefing
+   * @param feedbackData The feedback data to submit
+   * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
+   */
+  async submitFeedback(feedbackData: {
+    briefing_id: string;
+    feedback_type: 'overall' | 'article';
+    rating: number;
+    article_position?: number;
+    comments?: string;
+  }, timeoutMs: number = 10000): Promise<{ message: string; feedback_id: string }> {
+    try {
+      this.checkAuthentication();
+      
+      const makeRequest = async () => {
+        return fetch(getApiUrl('/feedback/submit'), {
+          method: 'POST',
+          headers: await this.createHeaders(),
+          body: JSON.stringify(feedbackData),
+        });
+      };
+      
+      // Race the request against a timeout
+      const response = await Promise.race([
+        makeRequest(),
+        this.createTimeoutPromise(timeoutMs)
+      ]);
+      
+      return this.handleResponse<{ message: string; feedback_id: string }>(response, makeRequest);
+    } catch (error) {
+      return this.handleError('submitting feedback', error);
     }
   }
 }

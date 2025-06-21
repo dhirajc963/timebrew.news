@@ -175,7 +175,6 @@ const BrewCreationForm: React.FC = () => {
 				// Create brew data object
 				const brewData: Brew = {
 					name: formData.name,
-					topic: mainTopic,
 					topics: formData.topics,
 					delivery_time: formData.delivery_time,
 					article_count: formData.article_count,
@@ -183,7 +182,7 @@ const BrewCreationForm: React.FC = () => {
 
 				// Call API to create brew
 				const response = await apiClient.createBrew(brewData);
-				console.log("Brew created:", response);
+				console.log("Brew created:", response.brew);
 				setSuccess(true);
 			} catch (error) {
 				console.error("Error creating brew:", error);

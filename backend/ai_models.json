@@ -1,0 +1,10 @@
+{
+  "curator": {
+    "provider": "perplexity",
+    "model": "sonar-pro"
+  },
+  "editor": {
+    "provider": "openai",
+    "model": "gpt-4"
+  }
+}

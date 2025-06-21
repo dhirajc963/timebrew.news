@@ -118,8 +118,8 @@ def lambda_handler(event, context):
 
         # Get briefings with pagination
         briefings_query = f"""
-            SELECT bf.id, bf.brew_id, bf.execution_status, bf.subject_line, bf.article_count,
-                bf.created_at, bf.updated_at, bf.sent_at,
+            SELECT bf.id, bf.brew_id, bf.execution_status, bf.subject_line, bf.html_content, bf.article_count,
+                bf.created_at, bf.updated_at, bf.sent_at, bf.opened_at, bf.click_count, bf.delivery_status,
                 b.delivery_time, u.timezone
             FROM time_brew.briefings bf
             LEFT JOIN time_brew.brews b ON bf.brew_id = b.id
@@ -152,10 +152,14 @@ def lambda_handler(event, context):
                 brew_id,
                 execution_status,
                 subject_line,
+                html_content,
                 article_count,
                 created_at,
                 updated_at,
                 sent_at,
+                opened_at,
+                click_count,
+                delivery_status,
                 delivery_time,
                 timezone,
             ) = row
@@ -163,12 +167,17 @@ def lambda_handler(event, context):
             briefing = {
                 "id": briefing_id,
                 "brew_id": brew_id,
-                "status": execution_status,
-                "subject": subject_line,
+                "user_id": user_id,
+                "subject_line": subject_line,
+                "html_content": html_content,
+                "sent_at": sent_at.isoformat() if sent_at else None,
                 "article_count": article_count,
+                "opened_at": opened_at.isoformat() if opened_at else None,
+                "click_count": click_count or 0,
+                "delivery_status": delivery_status,
+                "execution_status": execution_status,
                 "created_at": created_at.isoformat() if created_at else None,
                 "updated_at": updated_at.isoformat() if updated_at else None,
-                "sent_at": sent_at.isoformat() if sent_at else None,
                 "brew_info": (
                     {
                         "delivery_time": str(delivery_time) if delivery_time else None,

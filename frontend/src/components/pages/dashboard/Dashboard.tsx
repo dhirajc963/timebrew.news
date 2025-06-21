@@ -447,10 +447,10 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 						</div>
 
 						<div className="flex flex-col items-end text-right">
-							<span className="text-xs text-muted-foreground">Articles</span>
+							<span className="text-xs text-muted-foreground">Briefings</span>
 							<div className="flex items-center mt-0.5">
 								<Newspaper className="w-3.5 h-3.5 mr-1 text-primary" />
-								<span className="text-sm">{brew.article_count} per day</span>
+								<span className="text-sm">{brew.briefings_sent || 0} sent</span>
 							</div>
 						</div>
 					</div>
@@ -546,7 +546,7 @@ const BrewCompactRow: React.FC<BrewCardProps> = ({ brew, index }) => {
 
 							<div className="flex items-center gap-1">
 								<Newspaper className="w-3 h-3 text-muted-foreground" />
-								<span className="text-xs">{brew.article_count} articles</span>
+								<span className="text-xs">{brew.briefings_sent || 0} briefings</span>
 							</div>
 						</div>
 

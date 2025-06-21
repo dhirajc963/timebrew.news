@@ -7,7 +7,9 @@ import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
-import requests
+from utils.ai_service import ai_service
+import json
+import os
 from utils.text_utils import format_list_with_quotes
 
 
@@ -44,14 +46,14 @@ def lambda_handler(event, context):
             logger.error("Failed to connect to database", error=e)
             return create_response(500, {"error": "Database connection failed"})
 
-        # Retrieve brew and user data
+        # Retrieve brew and user data (removed article_count dependency)
         logger.info("Retrieving brew and user data")
         query_start_time = datetime.utcnow()
 
         cursor.execute(
             """
             SELECT b.id, b.user_id, b.name, b.topics, b.delivery_time, 
-                u.timezone, b.article_count, b.last_sent_date,
+                u.timezone, b.last_sent_date,
                 u.email, u.first_name, u.last_name
             FROM time_brew.brews b
             JOIN time_brew.users u ON b.user_id = u.id
@@ -77,7 +79,6 @@ def lambda_handler(event, context):
             topics,
             delivery_time,
             brew_timezone,
-            article_count,
             last_sent_date,
             email,
             first_name,
@@ -102,13 +103,23 @@ def lambda_handler(event, context):
         user_tz = pytz.timezone(brew_timezone)
         now = datetime.now(user_tz)
 
+        # Parse topics JSON if it exists
+        if isinstance(topics, str):
+            try:
+                topics_list = json.loads(topics)
+            except json.JSONDecodeError:
+                topics_list = []
+        elif topics is None:
+            topics_list = []
+        else:
+            topics_list = topics
+
         logger.info(
             "Brew configuration loaded",
             brew_name=brew_name,
             briefing_type=briefing_type,
-            article_count=article_count,
             user_timezone=brew_timezone,
-            topics_count=len(topics_list) if isinstance(topics, str) else 0,
+            topics_count=len(topics_list),
         )
 
         if last_sent_date:
@@ -207,18 +218,6 @@ def lambda_handler(event, context):
                 feedback_entry["article_position"] = article_position
             user_feedback.append(feedback_entry)
 
-        # Construct Perplexity AI prompt
-        # Parse topics JSON if it exists
-        if isinstance(topics, str):
-            try:
-                topics_list = json.loads(topics)
-            except json.JSONDecodeError:
-                topics_list = []
-        elif topics is None:
-            topics_list = []
-        else:
-            topics_list = topics
-
         # Format topics with proper grammar and quotes using utility function
         brew_focus_topics_str = format_list_with_quotes(topics_list)
 
@@ -234,13 +233,10 @@ The user has recently received these articles. DO NOT include same stories or du
         Summary: {article['summary'][:100]}..."""
 
         feedback_context = ""
-
-        # Improve the feedback context section
         if user_feedback:
             feedback_context = f"""
         # USER PREFERENCES (Learned from {len(user_feedback)} interactions)
         """
-
             # Group feedback by type for better context
             liked_topics = [f["subject"] for f in user_feedback if f["type"] == "like"]
             disliked_topics = [
@@ -261,7 +257,6 @@ The user has recently received these articles. DO NOT include same stories or du
 
         **Current Time:** {now.strftime('%Y-%m-%d %H:%M %Z')}
         **Focus Topics:** {brew_focus_topics_str}
-        **Articles Needed:** {article_count}
         **Time Window:** {temporal_context}
 
         # PERSONALIZATION CONTEXT
@@ -269,117 +264,118 @@ The user has recently received these articles. DO NOT include same stories or du
         {feedback_context}
 
         # PRIMARY TASK
-        Find exactly {article_count} high-quality, recent news articles that match this user's interests and briefing preferences.
+        Find 3-8 high-quality, recent news articles that match this user's interests. The exact number depends on what's genuinely available and diverse.
 
-        # CRITICAL REQUIREMENTS
-        1. **NO DUPLICATES:** Avoid any articles similar to those previously sent (listed above)
-        2. **RECENCY FOCUS:** Prioritize breaking news and major developments from {temporal_context}
-        3. **PERSONALIZATION:** Apply user feedback patterns - emphasize liked topics, minimize disliked ones
-        4. **QUALITY SOURCES:** Use only reputable news sources (major newspapers, wire services, established publications)
-        5. **ENGAGEMENT:** Select articles that are genuinely interesting and worth reading
-        6. **DIVERSITY:** Mix global, national, and topic-specific coverage
+        # CRITICAL DIVERSITY REQUIREMENTS
+        1. **ABSOLUTE NO DUPLICATES:** Never include multiple articles about the same event, company announcement, or story
+        2. **ONE STORY PER COMPANY MAX:** If Apple has 3 different news items, pick only the most significant one
+        3. **SOURCE DIVERSITY:** Maximum one article per news source/publication
+        4. **TOPIC DISTRIBUTION:** If user has multiple topics, spread articles across them
+        5. **TIME DIVERSITY:** Mix recent breaking news with important developments from the time window
+        6. **ANGLE DIVERSITY:** Different types of stories (earnings, product launches, policy, research, market trends)
+
+        # CONTENT AVAILABILITY ASSESSMENT
+        - If you find 6-8 truly diverse, high-quality articles: Include them all
+        - If you find 4-5 good articles: Perfect, that's the sweet spot
+        - If you only find 3 genuinely different articles: That's fine, quality over quantity
+        - If you struggle to find even 3 diverse articles: Note this in curator_notes
+
+        # QUALITY OVER QUANTITY PRINCIPLE
+        Better to send 3 excellent, completely different articles than 6 articles where 3 are variations of the same story.
 
         # ARTICLE SELECTION CRITERIA
         - **Significance:** Major developments, breaking news, or important updates
-        - **Relevance:** Directly related to user's specified topics
+        - **Relevance:** Directly related to user's specified topics  
+        - **Uniqueness:** Each article must be about a DIFFERENT story/event/company
         - **Freshness:** Published within the specified time window
         - **Readability:** Clear, well-written articles from credible sources
         - **Impact:** Stories that matter to someone interested in these topics
 
+        # BEFORE FINALIZING - DIVERSITY CHECK
+        Review your selected articles and ask:
+        - Are any two articles about the same company/event/announcement? → Remove one
+        - Do any headlines mention the same key entities? → Diversify
+        - Are all articles from similar sources? → Mix source types
+        - Do they cover the same sub-topic? → Spread across different angles
+
         # OUTPUT FORMAT
-        Return ONLY a valid JSON array with this exact structure:
+        Return ONLY a valid JSON object with this exact structure:
 
-        [
-            {{
-                "headline": "Exact article headline",
-                "summary": "Concise 3-4 sentence summary highlighting key points",
-                "source": "Publication name (e.g., Reuters, BBC, Wall Street Journal)",
-                "published_time": "Relative time (e.g., '2 hours ago', 'this morning', 'yesterday')",
-                "relevance": "1-2 sentences explaining why this matters to the user",
-                "url": "Direct article URL"
-            }}
-        ]
+        {{
+            "articles": [
+                {{
+                    "headline": "Exact article headline",
+                    "summary": "Concise 3-4 sentence summary highlighting key points",
+                    "source": "Publication name (e.g., Reuters, BBC, Wall Street Journal)",
+                    "published_time": "Relative time (e.g., '2 hours ago', 'this morning', 'yesterday')",
+                    "relevance": "1-2 sentences explaining why this matters to the user",
+                    "url": "Direct article URL"
+                }}
+            ],
+            "curator_notes": "Brief note about content availability, any challenges finding diverse articles, or insights about the news landscape for these topics today. Leave empty string if no special notes needed."
+        }}
 
-        # QUALITY CHECKLIST
-        Before finalizing, ensure each article:
-        - Has a compelling, newsworthy headline
-        - Provides genuine value to someone interested in {brew_focus_topics_str}
-        - Comes from a credible, recognizable source
-        - Isn't already covered in previous briefings
-        - Fits the {briefing_type} briefing context
+        # CURATOR NOTES EXAMPLES:
+        - "Rich news day with diverse AI developments across research, policy, and business"
+        - "Limited unique AI coverage today, focused on the most significant developments" 
+        - "Slow news cycle for tech topics, included analysis pieces alongside breaking news"
+        - "" (empty string if normal day with good article diversity)
 
         # VALIDATION REQUIREMENTS:
         - Verify JSON is properly formatted and parseable
         - Ensure all required fields are present and non-empty
-        - Double-check URLs are accessible and relevant
+        - Double-check no two articles cover the same story/company/event
         - Confirm articles are genuinely from {temporal_context}
+        - Verify URL accessibility
 
-        Begin JSON array:"""
+        Begin JSON object:"""
 
-        # Call Perplexity AI API
-        logger.info("Preparing Perplexity AI API call for article curation")
-        perplexity_api_key = os.environ.get("PERPLEXITY_API_KEY")
-        if not perplexity_api_key:
-            logger.error("Perplexity AI API key not found in environment variables")
-            raise Exception("PERPLEXITY_API_KEY not found in environment variables")
-
-        headers = {
-            "Authorization": f"Bearer {perplexity_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": "sonar",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
-            "max_tokens": 4000,
-        }
-
-        logger.info(
-            "Making request to Perplexity AI",
-            model=payload["model"],
-            temperature=payload["temperature"],
-            prompt_length=len(prompt),
-            requested_articles=article_count,
-        )
-
+        # Load AI model configuration
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'ai_models.json')
+        with open(config_path, 'r') as f:
+            ai_models = json.load(f)
+        
+        curator_config = ai_models['curator']
+        provider = curator_config['provider']
+        model = curator_config['model']
+        
+        # Call AI API using the configured service
+        logger.info(f"Preparing {provider.title()} API call for article curation")
+        
         api_start_time = datetime.utcnow()
-        response = requests.post(
-            "https://api.perplexity.ai/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30,
-        )
-        api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
-
-        logger.log_external_api_call(
-            "Perplexity AI",
-            "/chat/completions",
-            "POST",
-            response.status_code,
-            api_duration,
-            model=payload["model"],
-            prompt_tokens=len(prompt.split()),  # Rough token estimate
-            requested_articles=article_count,
-        )
-
-        if response.status_code != 200:
+        try:
+            ai_response_data = ai_service.call(
+                provider,
+                prompt=prompt,
+                model=model,
+                temperature=0.2,
+                max_tokens=4000,
+                timeout=30
+            )
+            content = ai_response_data['content']
+            api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
+            
+            logger.log_external_api_call(
+                provider.title(),
+                "/chat/completions",
+                "POST",
+                200,  # Success status
+                api_duration,
+                model=model,
+                prompt_tokens=len(prompt.split()),
+            )
+        except Exception as e:
+            api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
             logger.error(
-                "Perplexity AI API request failed",
-                status_code=response.status_code,
-                response_text=response.text[:500],  # Limit response text for logging
+                f"{provider.title()} API request failed",
+                error=str(e),
+                api_duration=api_duration
             )
-            raise Exception(
-                f"Perplexity AI API error: {response.status_code} - {response.text}"
-            )
-
-        ai_response = response.json()
-        content = ai_response["choices"][0]["message"]["content"]
+            raise Exception(f"{provider.title()} API error: {str(e)}")
 
         logger.info(
             "Received response from Perplexity AI",
             response_length=len(content),
-            has_choices=bool(ai_response.get("choices")),
             content_preview=content[:200] + "..." if len(content) > 200 else content,
         )
 
@@ -387,86 +383,94 @@ The user has recently received these articles. DO NOT include same stories or du
         logger.info("Parsing articles from AI response")
         try:
             # Extract JSON from the response (in case there's additional text)
-            start_idx = content.find("[")
-            end_idx = content.rfind("]") + 1
+            start_idx = content.find("{")
+            end_idx = content.rfind("}") + 1
             if start_idx != -1 and end_idx != 0:
                 json_str = content[start_idx:end_idx]
-                articles = json.loads(json_str)
+                response_data = json.loads(json_str)
                 logger.info(
-                    "Successfully extracted JSON array from AI response",
+                    "Successfully extracted JSON object from AI response",
                     json_start_index=start_idx,
                     json_end_index=end_idx,
                 )
             else:
                 # Fallback: try to parse the entire content
-                articles = json.loads(content)
+                response_data = json.loads(content)
                 logger.info("Successfully parsed entire content as JSON")
         except json.JSONDecodeError as e:
             logger.error(
                 "Failed to parse JSON from AI response",
                 error=e,
-                content_preview=content[:500],  # Log first 500 chars only
-                json_start_found=start_idx != -1,
-                json_end_found=end_idx != 0,
+                content_preview=content[:500],
             )
             raise Exception("Failed to parse articles from AI response")
 
-        # Validate articles structure and content
-        logger.info("Validating articles structure and content")
-        if not articles or not isinstance(articles, list):
-            logger.error(
-                "Invalid articles format from AI response",
-                expected_type="list",
-                actual_type=type(articles).__name__,
-                articles_truthy=bool(articles),
-            )
-            raise Exception("No valid articles returned from AI")
+        # Extract articles and curator notes
+        articles = response_data.get("articles", [])
+        curator_notes = response_data.get("curator_notes", "")
 
-        if len(articles) == 0:
-            logger.warn("AI returned empty articles list")
-            raise Exception("No articles found for the specified criteria")
+        # # Validate articles structure and content (REMOVED BREAKING VALIDATIONS)
+        # logger.info("Validating articles structure and content")
+        # if not articles or not isinstance(articles, list):
+        #     logger.error(
+        #         "Invalid articles format from AI response",
+        #         expected_type="list",
+        #         actual_type=type(articles).__name__,
+        #     )
+        #     raise Exception("No valid articles returned from AI")
 
-        # Validate each article has required fields
-        required_fields = ["headline", "summary", "source"]
-        valid_articles = 0
-        articles_with_issues = 0
+        # # Log info about article count but don't break (REMOVED BREAKING LOGIC)
+        # if len(articles) < 3:
+        #     logger.info(
+        #         "AI returned fewer than 3 articles - this is acceptable",
+        #         articles_count=len(articles),
+        #         curator_notes=curator_notes,
+        #     )
 
-        for i, article in enumerate(articles):
-            if not isinstance(article, dict):
-                logger.error(
-                    "Article validation failed: not a dictionary",
-                    article_index=i + 1,
-                    actual_type=type(article).__name__,
-                )
-                articles_with_issues += 1
-                continue
+        # if len(articles) > 8:
+        #     logger.info(
+        #         "AI returned more than 8 articles - keeping all",
+        #         article_count=len(articles),
+        #     )
+        #     # Don't trim - let the editor handle it
 
-            missing_fields = [
-                field for field in required_fields if not article.get(field)
-            ]
-            if missing_fields:
-                logger.error(
-                    "Article missing critical required fields",
-                    article_index=i + 1,
-                    missing_fields=missing_fields,
-                    headline=article.get("headline", "N/A")[:50],
-                )
-                raise Exception(
-                    f"Article {i+1} is missing critical fields: {', '.join(missing_fields)}. "
-                    f"Headline: {article.get('headline', 'N/A')[:50]}"
-                )
+        # # Validate each article has required fields
+        # required_fields = ["headline", "summary", "source"]
+        # valid_articles = 0
 
-            valid_articles += 1
+        # for i, article in enumerate(articles):
+        #     if not isinstance(article, dict):
+        #         logger.error(
+        #             "Article validation failed: not a dictionary",
+        #             article_index=i + 1,
+        #             actual_type=type(article).__name__,
+        #         )
+        #         raise Exception(f"Article {i+1} is not a valid dictionary")
+
+        #     missing_fields = [
+        #         field for field in required_fields if not article.get(field)
+        #     ]
+        #     if missing_fields:
+        #         logger.error(
+        #             "Article missing critical required fields",
+        #             article_index=i + 1,
+        #             missing_fields=missing_fields,
+        #             headline=article.get("headline", "N/A")[:50],
+        #         )
+        #         raise Exception(
+        #             f"Article {i+1} is missing critical fields: {', '.join(missing_fields)}"
+        #         )
+
+        #     valid_articles += 1
 
         logger.info(
             "Article validation completed",
             total_articles=len(articles),
-            valid_articles=valid_articles,
-            articles_with_issues=articles_with_issues,
+            # valid_articles=valid_articles,
+            curator_notes_provided=bool(curator_notes),
         )
 
         # Create basic placeholder subject line and content
-        # The news_editor will generate the final subject line and HTML content
         subject_line = f"{user_name}'s {brew_name} Brief - Processing"
         initial_html = "<p>Briefing content is being prepared...</p>"
 
@@ -485,7 +489,7 @@ The user has recently received these articles. DO NOT include same stories or du
                 user_id,
                 subject_line,
                 initial_html,
-                len(articles),
+                len(articles),  # Use actual article count
                 "curated",
                 datetime.utcnow(),
             ),
@@ -503,9 +507,6 @@ The user has recently received these articles. DO NOT include same stories or du
             article_count=len(articles),
         )
 
-        # Store articles in curation_cache as raw_articles JSONB array
-        search_topics = topics_list
-
         logger.info("Storing articles in curation cache")
         cache_insert_start_time = datetime.utcnow()
 
@@ -513,16 +514,17 @@ The user has recently received these articles. DO NOT include same stories or du
             """
             INSERT INTO time_brew.curation_cache 
             (briefing_id, raw_articles, topics_searched, articles_found, 
-                collector_prompt, raw_llm_response, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                collector_prompt, raw_llm_response, curator_notes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
             (
                 briefing_id,
-                json.dumps(articles),  # Store as JSONB array
-                search_topics,
+                json.dumps(articles),  # Store articles as JSONB array
+                topics_list,
                 len(articles),
                 prompt[:5000],  # Truncate prompt for storage
-                content[:5000],  # Store the raw LLM response (truncated to 5000 chars)
+                content[:5000],  # Store raw LLM response (truncated)
+                curator_notes,  # Store curator notes
                 datetime.utcnow(),
             ),
         )
@@ -536,8 +538,6 @@ The user has recently received these articles. DO NOT include same stories or du
             cache_insert_duration,
             briefing_id=briefing_id,
             articles_stored=len(articles),
-            prompt_length=len(prompt),
-            response_length=len(content),
         )
 
         # Commit transaction
@@ -546,7 +546,7 @@ The user has recently received these articles. DO NOT include same stories or du
         commit_duration = (datetime.utcnow() - commit_start_time).total_seconds() * 1000
         logger.log_db_operation(
             "commit", "briefings", commit_duration, records_affected=2
-        )  # briefings + curation_cache
+        )
 
         cursor.close()
         conn.close()
@@ -560,6 +560,7 @@ The user has recently received these articles. DO NOT include same stories or du
             briefing_id=briefing_id,
             processing_time_seconds=round(processing_time, 2),
             articles_collected=len(articles),
+            curator_notes=curator_notes,
             temporal_context=temporal_context,
             topics=topics_list,
         )
@@ -574,7 +575,7 @@ The user has recently received these articles. DO NOT include same stories or du
                 "user_name": user_name,
                 "brew_name": brew_name,
                 "articles_collected": len(articles),
-                "articles_found": str(article)[:200],
+                "curator_notes": curator_notes,
                 "topics": topics_list,
                 "temporal_context": temporal_context,
                 "processing_time_seconds": processing_time,

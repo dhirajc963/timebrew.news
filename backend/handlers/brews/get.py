@@ -1,5 +1,5 @@
-import json
 import boto3
+import json
 import os
 from utils.db import get_db_connection
 from utils.response import create_response
@@ -45,12 +45,15 @@ def handler(event, context):
 
                 user_id = user_result[0]
 
-                # Get brews for user
+                # Get brews for user with briefings count
                 cur.execute(
-                    """SELECT id, name, topics, delivery_time, article_count, created_at, is_active 
-                        FROM time_brew.brews 
-                        WHERE user_id = %s 
-                        ORDER BY created_at DESC""",
+                    """SELECT b.id, b.name, b.topics, b.delivery_time, b.article_count, b.created_at, b.is_active,
+                              COALESCE(COUNT(br.id) FILTER (WHERE br.delivery_status = 'sent'), 0) as briefings_sent
+                        FROM time_brew.brews b
+                        LEFT JOIN time_brew.briefings br ON b.id = br.brew_id
+                        WHERE b.user_id = %s 
+                        GROUP BY b.id, b.name, b.topics, b.delivery_time, b.article_count, b.created_at, b.is_active
+                        ORDER BY b.created_at DESC""",
                     (user_id,),
                 )
 
@@ -75,6 +78,7 @@ def handler(event, context):
                             "article_count": row[4],
                             "created_at": row[5].isoformat() + "Z" if row[5] else None,
                             "is_active": row[6],
+                            "briefings_sent": row[7],
                         }
                     )
 

@@ -1,49 +1,64 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiClient, Brew } from "@/lib/apiClient";
 import {
-	Coffee,
+	ArrowLeft,
 	Clock,
-	Calendar,
 	Newspaper,
-	ChevronLeft,
-	Loader2,
-	Settings,
+	Calendar,
 	RefreshCw,
-	Check,
-	Tag,
-	Plus,
+	Settings,
+	Edit,
+	Loader2,
+	AlertCircle,
+	ThumbsUp,
+	ThumbsDown,
+	Mail,
+	Eye,
+	MousePointer,
+	ChevronDown,
+	ChevronUp,
+	Star,
+	MessageSquare,
 } from "lucide-react";
-import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
-import { BorderBeam } from "@/components/magicui/border-beam";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShinyButton } from "@/components/magicui/shiny-button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiClient, Brew, Briefing } from "@/lib/apiClient";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
+import { format } from "date-fns";
+import BriefingCard from "./BriefingCard";
 
 const BrewDetails: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
 	const { user } = useAuth();
 	const [brew, setBrew] = useState<Brew | null>(null);
+	const [briefings, setBriefings] = useState<Briefing[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [briefingsLoading, setBriefingsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [expandedBriefings, setExpandedBriefings] = useState<Set<string>>(
+		new Set()
+	);
+	const [feedbackLoading, setFeedbackLoading] = useState<Set<string>>(
+		new Set()
+	);
 
 	const fetchBrew = async () => {
+		if (!id) {
+			setError("No brew ID provided");
+			setLoading(false);
+			return;
+		}
+
 		setLoading(true);
 		setError(null);
 		try {
-			if (!id) throw new Error("Brew ID is required");
 			const response = await apiClient.getBrew(id);
-			// The API now returns the brew object directly
-			setBrew(response);
+			console.log("🍺 Brew Data:", response);
+			console.log("🍺 Brew is_active:", response.brew?.is_active);
+			console.log("🍺 Brew delivery_time:", response.brew?.delivery_time);
+			setBrew(response.brew);
 		} catch (err) {
 			console.error("Error fetching brew:", err);
 			setError("Failed to load brew details. Please try again.");
@@ -52,12 +67,81 @@ const BrewDetails: React.FC = () => {
 		}
 	};
 
+	const fetchBriefings = async () => {
+		if (!id || !user?.id) return;
+
+		setBriefingsLoading(true);
+		try {
+			const response = await apiClient.getBriefings(id, 20, 0, user.id);
+			console.log("📰 Briefings Response:", response);
+			console.log("📰 Briefings Array:", response.briefings);
+			response.briefings.forEach((briefing, index) => {
+				console.log(`📰 Briefing ${index + 1}:`, {
+					id: briefing.id,
+					subject_line: briefing.subject_line,
+					delivery_status: briefing.delivery_status,
+					execution_status: briefing.execution_status,
+					sent_at: briefing.sent_at,
+					brew_info: briefing.brew_info,
+				});
+			});
+			setBriefings(response.briefings);
+		} catch (err) {
+			console.error("Error fetching briefings:", err);
+			// Don't set error state for briefings, just log it
+		} finally {
+			setBriefingsLoading(false);
+		}
+	};
+
 	useEffect(() => {
-		fetchBrew();
+		if (id) {
+			fetchBrew();
+		}
 	}, [id]);
+
+	useEffect(() => {
+		if (id && user?.id) {
+			fetchBriefings();
+		}
+	}, [id, user?.id]);
+
+	const toggleBriefingExpansion = (briefingId: string) => {
+		setExpandedBriefings((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(briefingId)) {
+				newSet.delete(briefingId);
+			} else {
+				newSet.add(briefingId);
+			}
+			return newSet;
+		});
+	};
+
+	const handleFeedback = async (briefingId: string, rating: number) => {
+		setFeedbackLoading((prev) => new Set(prev).add(briefingId));
+		try {
+			await apiClient.submitFeedback({
+				briefing_id: briefingId,
+				feedback_type: "overall",
+				rating: rating,
+			});
+			// You could show a success message here
+		} catch (err) {
+			console.error("Error submitting feedback:", err);
+			// You could show an error message here
+		} finally {
+			setFeedbackLoading((prev) => {
+				const newSet = new Set(prev);
+				newSet.delete(briefingId);
+				return newSet;
+			});
+		}
+	};
 
 	// Format delivery time to 12-hour format
 	const formatDeliveryTime = (time: string) => {
+		if (!time) return "--:--";
 		const [hours, minutes] = time.split(":");
 		const hour = parseInt(hours);
 		const period = hour >= 12 ? "PM" : "AM";
@@ -66,25 +150,77 @@ const BrewDetails: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen py-16 md:py-0 pt-23 md:pt-32 px-4">
-			<div className="max-w-4xl mx-auto">
-				{/* Back Button */}
-				<Link
-					to="/dashboard"
-					className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-				>
-					<ChevronLeft className="w-4 h-4 mr-1" />
-					Back to Dashboard
-				</Link>
+		<div className="min-h-[70vh] py-3 md:py-0 px-4 mt-12 md:mt-18">
+			{/* Header */}
+			<motion.div
+				initial={{ opacity: 0, y: -10 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.3 }}
+				className="bg-card/30 rounded-t-xl -mx-4 px-5 pt-7 md:pt-8 py-2.5 mb-0 max-w-7xl mx-auto"
+			>
+				<div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1.5">
+					{/* Left: Back button and title */}
+					<div className="flex items-center gap-3">
+						<Link
+							to="/dashboard"
+							className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+						>
+							<ArrowLeft className="w-4 h-4" />
+							Back to Dashboard
+						</Link>
+					</div>
 
+					{/* Center: Brew name */}
+					{brew && (
+						<div className="flex items-center gap-2">
+							<h1 className="text-xl font-bold">{brew.name}</h1>
+							<div
+								className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+									brew.is_active
+										? "bg-green-500/10 text-green-500"
+										: "bg-gray-500/10 text-gray-500"
+								}`}
+							>
+								{brew.is_active ? "Active" : "Inactive"}
+							</div>
+						</div>
+					)}
+
+					{/* Right: Actions */}
+					<div className="flex items-center gap-2">
+						<ShinyButton
+							className="w-9 h-9 p-0 md:w-auto md:h-auto md:p-2 md:px-3 whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
+							onClick={() => {
+								fetchBrew();
+								if (user?.id) {
+									fetchBriefings();
+								}
+							}}
+							disabled={loading || briefingsLoading}
+						>
+							{loading || briefingsLoading ? (
+								<Loader2 className="w-4 h-4 animate-spin" />
+							) : (
+								<RefreshCw className="w-4 h-4" />
+							)}
+							<span className="hidden md:inline">
+								{loading || briefingsLoading ? "Loading..." : "Refresh"}
+							</span>
+						</ShinyButton>
+					</div>
+				</div>
+			</motion.div>
+
+			<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl -mx-2 sm:-mx-4 px-3 sm:px-4 py-3">
 				{loading ? (
-					<div className="flex justify-center items-center py-12">
-						<Loader2 className="w-8 h-8 animate-spin text-primary mr-2" />
-						<span className="text-lg">Loading brew details...</span>
+					<div className="text-center py-12">
+						<Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+						<p className="text-muted-foreground">Loading brew details...</p>
 					</div>
 				) : error ? (
 					<div className="text-center py-12">
-						<div className="bg-red-500/10 text-red-500 p-4 rounded-lg inline-flex items-center">
+						<div className="bg-red-500/10 text-red-500 p-4 rounded-lg inline-flex items-center gap-2">
+							<AlertCircle className="w-5 h-5" />
 							<span>{error}</span>
 							<button onClick={fetchBrew} className="ml-2 underline">
 								Try again
@@ -92,217 +228,107 @@ const BrewDetails: React.FC = () => {
 						</div>
 					</div>
 				) : brew ? (
-					<>
-						{/* Brew Header */}
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5 }}
-							className="mb-8"
-						>
-							<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary mb-6">
-								<Coffee className="w-4 h-4" />
-								<span className="text-sm font-medium">Brew Details</span>
-							</AnimatedGradientText>
-
-							<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-								<div>
-									<h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
-										<span className="text-gradient-green">{brew.name}</span>
-										<div
-											className={`px-3 py-1 rounded-full text-sm font-medium ${
-												brew.is_active
-													? "bg-green-500/10 text-green-500"
-													: "bg-gray-500/10 text-gray-500"
-											}`}
-										>
-											{brew.is_active ? "Active" : "Inactive"}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5 }}
+						className="space-y-6"
+					>
+						{/* Brew Summary Card */}
+						<Card>
+							<CardHeader>
+								<div className="flex items-center justify-between">
+									<CardTitle className="flex items-center gap-2">
+										<Mail className="w-5 h-5 text-primary" />
+										{brew.name}
+									</CardTitle>
+									<ShinyButton className="whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+										<Edit className="w-4 h-4" />
+										<span className="hidden sm:inline">Edit</span>
+									</ShinyButton>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+									<div className="flex items-center gap-2">
+										<Clock className="w-4 h-4 text-muted-foreground" />
+										<div>
+											<p className="text-sm font-medium">
+												{formatDeliveryTime(brew.delivery_time)}
+											</p>
+											<p className="text-xs text-muted-foreground">
+												Daily delivery
+											</p>
 										</div>
-									</h1>
-									<p className="text-lg text-muted-foreground">
-										Your personalized news brew is ready!
-									</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<Newspaper className="w-4 h-4 text-muted-foreground" />
+										<div>
+											<p className="text-sm font-medium">
+												{brew.article_count} articles
+											</p>
+											<p className="text-xs text-muted-foreground">
+												Per briefing
+											</p>
+										</div>
+									</div>
+									<div className="flex items-center gap-2">
+										<Calendar className="w-4 h-4 text-muted-foreground" />
+										<div>
+											<p className="text-sm font-medium">
+												{briefings.length} sent
+											</p>
+											<p className="text-xs text-muted-foreground">
+												Total briefings
+											</p>
+										</div>
+									</div>
 								</div>
+							</CardContent>
+						</Card>
 
-								<div className="flex gap-3">
-									<ShinyButton
-										onClick={fetchBrew}
-										className="whitespace-nowrap flex items-center justify-center gap-2"
-									>
-										<RefreshCw className="w-4 h-4" />
-										<span>Refresh</span>
-									</ShinyButton>
-
-									<ShinyButton className="whitespace-nowrap flex items-center justify-center gap-2">
-										<Settings className="w-4 h-4" />
-										<span>Edit Brew</span>
-									</ShinyButton>
-								</div>
+						{/* Briefings List */}
+						<div className="space-y-3 sm:space-y-4">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+								<h2 className="text-lg font-semibold">Recent Briefings</h2>
+								{briefingsLoading && (
+									<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+								)}
 							</div>
-						</motion.div>
 
-						{/* Brew Details Card */}
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.2 }}
-							className="relative group mb-8"
-						>
-							<div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-xl opacity-75"></div>
-
-							<Card className="relative overflow-hidden">
-								<BorderBeam />
-
-								<div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full"></div>
-
-								<CardHeader>
-									<div className="flex items-center gap-3 mb-2">
-										<div className="bg-primary/20 p-3 rounded-full">
-											<Check className="w-6 h-6 text-primary" />
-										</div>
-										<CardTitle className="text-2xl">
-											Your <span className="text-primary">{brew.name}</span>{" "}
-											Brew is Ready!
-										</CardTitle>
-									</div>
-									<CardDescription className="text-base">
-										We'll deliver it daily at{" "}
-										<span className="text-primary font-medium">
-											{brew.delivery_time
-												? formatDeliveryTime(brew.delivery_time)
-												: "--:--"}
-										</span>
-									</CardDescription>
-								</CardHeader>
-
-								<CardContent>
-									<div className="bg-primary/10 border border-primary/20 rounded-xl p-6 mb-6">
-										<div className="flex items-center justify-between mb-6">
-											<div className="flex items-center gap-2">
-												<Coffee className="w-5 h-5 text-primary" />
-												<span className="font-medium">Brew Details</span>
-											</div>
-											<div className="bg-primary/20 text-primary text-sm px-3 py-1 rounded-full">
-												{brew.article_count || 0} articles
-											</div>
-										</div>
-
-										<div className="space-y-6">
-											<div>
-												<div className="text-sm text-muted-foreground mb-2">
-													Topics
-												</div>
-												<div className="flex flex-wrap gap-2">
-													{brew.topics && brew.topics.length > 0 ? (
-														brew.topics.map((topic, index) => (
-															<div
-																key={index}
-																className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm"
-															>
-																<Tag className="w-3 h-3" />
-																<span>{topic}</span>
-															</div>
-														))
-													) : (
-														<div className="text-muted-foreground text-sm">
-															No topics specified
-														</div>
-													)}
-												</div>
-											</div>
-
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-												<div className="bg-background/50 p-4 rounded-lg border border-border">
-													<div className="flex items-center gap-2 mb-2">
-														<Clock className="w-4 h-4 text-primary" />
-														<span className="font-medium">Delivery Time</span>
-													</div>
-													<p className="text-xl font-semibold text-primary">
-														{brew.delivery_time
-															? formatDeliveryTime(brew.delivery_time)
-															: "--:--"}
-													</p>
-													<p className="text-sm text-muted-foreground mt-1">
-														Delivered to your inbox daily
-													</p>
-												</div>
-
-												<div className="bg-background/50 p-4 rounded-lg border border-border">
-													<div className="flex items-center gap-2 mb-2">
-														<Newspaper className="w-4 h-4 text-primary" />
-														<span className="font-medium">Articles</span>
-													</div>
-													<p className="text-xl font-semibold text-primary">
-														{brew.article_count || 0} per day
-													</p>
-													<p className="text-sm text-muted-foreground mt-1">
-														Personalized to your interests
-													</p>
-												</div>
-											</div>
-										</div>
-									</div>
-
-									<div className="bg-accent/5 border border-accent/10 rounded-xl p-6">
-										<h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-											<Calendar className="w-5 h-5 text-accent" />
-											Next Delivery
+							{briefings.length === 0 ? (
+								<Card>
+									<CardContent className="text-center py-8">
+										<Mail className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+										<h3 className="text-lg font-medium mb-2">
+											No briefings yet
 										</h3>
-
-										<div className="bg-background/50 p-4 rounded-lg border border-border">
-											<p className="text-sm text-muted-foreground mb-2">
-												Your next brew will be delivered:
-											</p>
-											<p className="text-xl font-semibold">
-												Today at{" "}
-												<span className="text-accent">
-													{brew.delivery_time
-														? formatDeliveryTime(brew.delivery_time)
-														: "--:--"}
-												</span>
-											</p>
-										</div>
-									</div>
-								</CardContent>
-
-								<CardFooter className="flex justify-between border-t">
-									<div className="flex items-center text-sm text-muted-foreground">
-										<Calendar className="w-4 h-4 mr-1" />
-										{brew.created_at && (
-											<span>
-												Created {formatDistanceToNow(new Date(brew.created_at))}{" "}
-												ago
-											</span>
-										)}
-									</div>
-
-									<ShinyButton className="px-4 py-2">
-										View Latest Articles
-									</ShinyButton>
-								</CardFooter>
-							</Card>
-						</motion.div>
-
-						{/* Create Another Brew Button */}
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.3 }}
-							className="text-center"
-						>
-							<Link to="/dashboard/create-brew">
-								<ShinyButton className="mx-auto flex items-center justify-center gap-2">
-									<Plus className="w-4 h-4" />
-									CREATE ANOTHER BREW
-								</ShinyButton>
-							</Link>
-						</motion.div>
-					</>
+										<p className="text-muted-foreground mb-4">
+											Your first briefing will be delivered at{" "}
+											{formatDeliveryTime(brew.delivery_time)}
+										</p>
+									</CardContent>
+								</Card>
+							) : (
+								briefings.map((briefing, index) => (
+									<BriefingCard
+										key={briefing.id}
+										briefing={briefing}
+										index={index}
+										isExpanded={expandedBriefings.has(briefing.id)}
+										onToggleExpansion={() =>
+											toggleBriefingExpansion(briefing.id)
+										}
+										onFeedback={(rating) => handleFeedback(briefing.id, rating)}
+										feedbackLoading={feedbackLoading.has(briefing.id)}
+									/>
+								))
+							)}
+						</div>
+					</motion.div>
 				) : (
 					<div className="text-center py-12">
-						<div className="bg-amber-500/10 text-amber-500 p-4 rounded-lg inline-flex items-center">
-							<span>Brew not found. Please check the URL and try again.</span>
-						</div>
+						<p className="text-muted-foreground">No brew found</p>
 					</div>
 				)}
 			</div>

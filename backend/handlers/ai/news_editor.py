@@ -5,13 +5,16 @@ import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.text_utils import format_list_simple
-import openai
+from utils.ai_service import ai_service
+import json
+import os
 
 
 def lambda_handler(event, context):
     """
     News Editor Lambda Function
     Formats collected articles into a Morning Brew-style briefing using OpenAI
+    Now adapts strategy based on curator notes and variable article counts
     """
     start_time = datetime.utcnow()
     try:
@@ -72,10 +75,10 @@ def lambda_handler(event, context):
             else first_name or "there"
         )
 
-        # Retrieve raw articles from curation_cache
+        # Retrieve raw articles and curator notes from curation_cache
         cursor.execute(
             """
-            SELECT raw_articles
+            SELECT raw_articles, curator_notes
             FROM time_brew.curation_cache
             WHERE briefing_id = %s
         """,
@@ -88,7 +91,7 @@ def lambda_handler(event, context):
                 404, {"error": "No articles found in curation cache"}
             )
 
-        raw_articles_data = cache_result[0]
+        raw_articles_data, curator_notes = cache_result
         if isinstance(raw_articles_data, str):
             raw_articles = json.loads(raw_articles_data)
         else:
@@ -97,9 +100,6 @@ def lambda_handler(event, context):
         # Add position to each article for reference
         for i, article in enumerate(raw_articles):
             article["position"] = i + 1
-
-        if not raw_articles:
-            return create_response(400, {"error": "No articles found for briefing"})
 
         # Get user timezone for personalization
         user_tz = pytz.timezone(brew_timezone)
@@ -132,8 +132,68 @@ def lambda_handler(event, context):
 
         topics_str = format_list_simple(topics_list)
 
+        # Determine content strategy based on curator notes and article count
+        article_count_actual = len(raw_articles)
+
+        # Build curator context and strategy guidance
+        curator_context = ""
+        content_strategy = ""
+
+        if curator_notes and curator_notes.strip():
+            curator_context = f"""
+# CURATOR INSIGHTS
+Your news curator provided this context: "{curator_notes}"
+
+Use this insight to adapt your approach appropriately.
+"""
+
+            # Provide strategy guidance based on common curator note patterns
+            if "limited" in curator_notes.lower() or "slow" in curator_notes.lower():
+                content_strategy = """
+**ADAPTED STRATEGY - Limited News Day:**
+- Go deeper on each story with more analysis and context
+- Connect stories to bigger trends and implications  
+- Add "what this means" and "looking ahead" perspectives
+- Use a more analytical, thoughtful tone
+- Explain WHY the quiet news cycle might be significant
+"""
+            elif "rich" in curator_notes.lower() or "diverse" in curator_notes.lower():
+                content_strategy = """
+**ADAPTED STRATEGY - Rich News Day:**
+- Keep articles punchy and scannable
+- Focus on key takeaways and immediate impacts
+- Use dynamic, energetic pacing
+- Highlight the variety and significance of developments
+"""
+            else:
+                content_strategy = """
+**BALANCED STRATEGY:**
+- Mix quick hits with deeper insights
+- Balance breaking news with analysis
+- Maintain engaging, conversational flow
+"""
+        else:
+            content_strategy = """
+**STANDARD STRATEGY:**
+- Balance breaking news with insightful analysis
+- Keep content engaging and scannable
+- Focus on practical implications for the reader
+"""
+
+        # Article count context
+        if article_count_actual <= 3:
+            article_strategy = "With fewer articles today, dive deeper into each story and provide richer context and analysis."
+        elif article_count_actual >= 6:
+            article_strategy = "With more stories to cover, keep each article punchy while maintaining depth."
+        else:
+            article_strategy = (
+                "Perfect article count for balanced coverage with good depth."
+            )
+
         prompt = f"""
         You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're preparing {user_name}'s "{brew_name}" briefing for delivery at {delivery_hour:02d}:00 {brew_timezone}.
+
+        {curator_context}
 
         # THE MORNING BREW VOICE
         - **Like talking to your smartest friend over coffee** - conversational, witty, but never trying too hard
@@ -166,12 +226,17 @@ def lambda_handler(event, context):
         ❌ "This is important for investors"
         ✅ "Translation: your portfolio is about to get interesting"
 
+        {content_strategy}
+
+        # ARTICLE COUNT STRATEGY
+        **Today's Article Count: {article_count_actual} articles**
+        {article_strategy}
+
         # VISUAL FORMATTING REQUIREMENTS
         Use this exact CSS foundation for all emails:
 
-        **Base Email Structure:**
-        ```html
-        <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #ffffff; padding: 20px;">
+        <!-- Base Email Structure -->
+        <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px;">
             <!-- Header -->
             <div style="text-align: center; padding: 20px 0; border-bottom: 1px solid #e9ecef; margin-bottom: 24px;">
                 <h1 style="font-size: 20px; font-weight: 600; color: #1a252f; margin: 0;">Your {brew_name} • {now.strftime('%A, %B %d')}</h1>
@@ -179,29 +244,37 @@ def lambda_handler(event, context):
             
             <!-- Personal Greeting -->
             <div style="margin-bottom: 24px;">
-                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Greeting paragraph here</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Good morning, {first_name}! Here are today’s top stories in {topics_str}…</p>
             </div>
             
-            <!-- Story Cards -->
-            [Multiple story cards here]
-            
+            <!-- Repeat this block for each article -->
+            <div style="padding: 20px; margin: 16px 0; border: 1px solid #e9ecef; border-radius: 8px;">
+                <!-- SOURCE and TIME AGO -->
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 500;">
+                    [SOURCE] • [TIME AGO]
+                </div>
+                <!-- HEADLINE -->
+                <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #1a252f; line-height: 1.4;">
+                    [HEADLINE]
+                </h3>
+                <!-- SUMMARY / CONTENT -->
+                <p style="margin: 0 0 16px 0; line-height: 1.6; color: #2c3e50; font-size: 16px;">
+                    [STORY CONTENT]
+                </p>
+                <!-- READ MORE LINK -->
+                <a href="[URL]" style="color: #3498db; text-decoration: none; font-weight: 500; font-size: 15px;">
+                    Read the full story →
+                </a>
+            </div>
+            <!-- End story card -->
+
             <!-- Sign-off -->
             <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Sign-off message</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Any custom sign off message!</p>
                 <p style="font-size: 14px; color: #6c757d; margin: 8px 0 0 0;">Your TimeBrew Team</p>
             </div>
         </div>
-        ```
 
-        **Story Card Template (use for each article):**
-        ```html
-        <div style="background: #f8f9fa; padding: 20px; margin: 16px 0; border-radius: 8px; border: 1px solid #e9ecef;">
-            <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 500;">[SOURCE] • [TIME AGO]</div>
-            <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #1a252f; line-height: 1.4;">[HEADLINE]</h3>
-            <p style="margin: 0 0 16px 0; line-height: 1.6; color: #2c3e50; font-size: 16px;">[STORY CONTENT]</p>
-            <a href="[URL]" style="color: #3498db; text-decoration: none; font-weight: 500; font-size: 15px;">Read the full story →</a>
-        </div>
-        ```
 
         **Typography Rules:**
         - Body text: 16px, line-height: 1.6, color: #2c3e50
@@ -240,7 +313,10 @@ def lambda_handler(event, context):
         - Current Moment: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
 
         # YOUR MISSION
-        Transform these raw articles into a briefing that makes {user_name} think "This person gets it" while keeping them informed on {topics_str}. Use the exact HTML structure and CSS provided above.
+        Transform these {article_count_actual} articles into a briefing that makes {user_name} think "This person gets it" while keeping them informed on {topics_str}. Use the exact HTML structure and CSS provided above.
+
+        # CURATOR INSIGHTS INTEGRATION
+        {f"Your curator noted: '{curator_notes}' - weave this insight naturally into your editorial approach." if curator_notes and curator_notes.strip() else "Use standard editorial approach for today's briefing."}
 
         Raw Articles:
         {articles_text}
@@ -258,30 +334,39 @@ def lambda_handler(event, context):
         
         Do not include any other text outside these tags.
 
-        Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters. Use the visual formatting religiously - every story must be in a card, every element must use the specified styles.
+        Remember: You're not just summarizing news - you're being {user_name}'s smart friend who helps them understand what actually matters. Use the visual formatting religiously - every story must be in a card, every element must use the specified styles. Adapt your editorial approach based on the curator's insights about today's content landscape.
         """
 
-        # Call OpenAI API
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
-        if not openai_api_key:
-            raise Exception("OPENAI_API_KEY not found in environment variables")
-
-        client = openai.OpenAI(api_key=openai_api_key)
-
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings with professional visual formatting. You MUST respond using XML-like tags: <email_subject>subject here</email_subject> and <email_content>HTML content here</email_content>. Use the exact HTML structure and CSS provided in the prompt. Do not include any other text outside these tags.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.7,
-            max_tokens=3000,
+        # Load AI model configuration
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "ai_models.json",
         )
+        with open(config_path, "r") as f:
+            ai_models = json.load(f)
 
-        ai_response = response.choices[0].message.content
+        editor_config = ai_models["editor"]
+        provider = editor_config["provider"]
+        model = editor_config["model"]
+
+        # Call AI API using the configured service
+        try:
+            ai_response_data = ai_service.call(
+                provider,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings with professional visual formatting. You adapt your editorial strategy based on curator insights about content availability and news landscape. You MUST respond using XML-like tags: <email_subject>subject here</email_subject> and <email_content>Pure HTML content, without any ``` marks</email_content>. Use the exact HTML structure and CSS provided in the prompt. Do not include any other text outside these tags.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                model=model,
+                temperature=0.7,
+                max_tokens=3000,
+            )
+            ai_response = ai_response_data["content"]
+        except Exception as e:
+            raise Exception(f"{provider.title()} API error: {str(e)}")
 
         # Truncate prompt and response for storage (similar to news_collector)
         truncated_prompt = prompt[:5000] if len(prompt) > 5000 else prompt
@@ -405,7 +490,8 @@ def lambda_handler(event, context):
                 "briefing_type": briefing_type,
                 "subject_line": subject_line,
                 "content_length": len(html_content),
-                "articles_processed": article_count,
+                "articles_processed": article_count_actual,
+                "curator_notes": curator_notes,
                 "ai_response_preview": str(ai_response)[:200],
                 "processing_time_seconds": round(processing_time, 2),
             },
