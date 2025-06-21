@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -11,7 +12,6 @@ import {
 	ThumbsUp,
 	ThumbsDown,
 	Star,
-	Loader2,
 	CheckCircle,
 	XCircle,
 } from "lucide-react";
@@ -157,51 +157,65 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 								<h4 className="text-sm font-medium">How was this briefing?</h4>
 								{feedbackLoading && (
-									<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+									<Skeleton className="w-4 h-4 rounded-full" />
 								)}
 							</div>
 
-							<div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3 mt-3 sm:mt-4">
-								{/* Star Rating */}
-								<div className="flex items-center gap-2 sm:gap-1">
-									{[1, 2, 3, 4, 5].map((rating) => (
+							{feedbackLoading ? (
+								<div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3 mt-3 sm:mt-4">
+									{/* Star Rating Skeleton */}
+									<div className="flex items-center gap-2 sm:gap-1">
+										{[1, 2, 3, 4, 5].map((rating) => (
+											<Skeleton key={rating} className="h-8 w-8 sm:h-7 sm:w-7 rounded-md" />
+										))}
+									</div>
+
+									{/* Quick Feedback Buttons Skeleton */}
+									<div className="flex items-center gap-3 sm:gap-2 flex-wrap">
+										<Skeleton className="h-9 w-20 sm:w-16 rounded-md" />
+										<Skeleton className="h-9 w-24 sm:w-20 rounded-md" />
+									</div>
+								</div>
+							) : (
+								<div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3 mt-3 sm:mt-4">
+									{/* Star Rating */}
+									<div className="flex items-center gap-2 sm:gap-1">
+										{[1, 2, 3, 4, 5].map((rating) => (
+											<Button
+												key={rating}
+												variant="ghost"
+												size="sm"
+												onClick={() => onFeedback(rating)}
+												className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/20 hover:scale-110 transition-all duration-200 touch-manipulation"
+											>
+												<Star className="w-4 h-4 sm:w-3 sm:h-3 text-yellow-500 transition-colors duration-200 hover:fill-yellow-500" />
+											</Button>
+										))}
+									</div>
+
+									{/* Quick Feedback Buttons */}
+									<div className="flex items-center gap-3 sm:gap-2 flex-wrap">
 										<Button
-											key={rating}
 											variant="ghost"
 											size="sm"
-											onClick={() => onFeedback(rating)}
-											disabled={feedbackLoading}
-											className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/20 hover:scale-110 transition-all duration-200 touch-manipulation"
+											onClick={() => onFeedback(5)}
+											className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/20 hover:text-green-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
 										>
-											<Star className="w-4 h-4 sm:w-3 sm:h-3 text-yellow-500 transition-colors duration-200 hover:fill-yellow-500" />
+											<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
+											<span className="hidden sm:inline">Loved it</span>
 										</Button>
-									))}
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => onFeedback(2)}
+											className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/20 hover:text-red-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
+										>
+											<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
+											<span className="hidden sm:inline">Not helpful</span>
+										</Button>
+									</div>
 								</div>
-
-								{/* Quick Feedback Buttons */}
-								<div className="flex items-center gap-3 sm:gap-2 flex-wrap">
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => onFeedback(5)}
-										disabled={feedbackLoading}
-										className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/20 hover:text-green-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
-									>
-										<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Loved it</span>
-									</Button>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => onFeedback(2)}
-										disabled={feedbackLoading}
-										className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/20 hover:text-red-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
-									>
-										<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Not helpful</span>
-									</Button>
-								</div>
-							</div>
+							)}
 						</div>
 					</CardContent>
 				)}

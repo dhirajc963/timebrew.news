@@ -14,26 +14,26 @@ const App = () => {
 	return (
 		<Router>
 			<AuthProvider>
-				<div className="min-h-screen bg-gradient-to-br from-background via-card to-muted text-foreground">
-					<Navbar />
-					<main className="flex-1">
-						<Routes>
-							{/* Public Routes */}
-							<Route path="/" element={<LandingPage />} />
-							<Route path="/signup" element={<Signup />} />
-							<Route path="/signin" element={<Login />} />
+				<div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-card to-muted text-foreground">
+				<Navbar />
+				<main className="flex-1">
+					<Routes>
+						{/* Public Routes */}
+						<Route path="/" element={<LandingPage />} />
+						<Route path="/signup" element={<Signup />} />
+						<Route path="/signin" element={<Login />} />
 
-							{/* Protected Routes */}
-							<Route element={<ProtectedRoute />}>
-								<Route path="/dashboard" element={<Dashboard />} />
-								<Route path="/dashboard/create-brew" element={<CreateBrew />} />
-								<Route path="/dashboard/brew/:id" element={<BrewDetails />} />
-								{/* Add more protected routes here */}
-							</Route>
-						</Routes>
-					</main>
-					<Footer />
-				</div>
+						{/* Protected Routes */}
+						<Route element={<ProtectedRoute />}>
+							<Route path="/dashboard" element={<Dashboard />} />
+							<Route path="/dashboard/create-brew" element={<CreateBrew />} />
+							<Route path="/dashboard/brew/:id" element={<BrewDetails />} />
+							{/* Add more protected routes here */}
+						</Route>
+					</Routes>
+				</main>
+				<Footer />
+			</div>
 			</AuthProvider>
 		</Router>
 	);
