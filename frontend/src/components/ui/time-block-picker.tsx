@@ -86,7 +86,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
           type="button"
           onClick={() => setActiveTab("morning")}
           className={cn(
-            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all",
+            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,box-shadow]",
             activeTab === "morning"
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -98,7 +98,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
           type="button"
           onClick={() => setActiveTab("afternoon")}
           className={cn(
-            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all",
+            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,box-shadow]",
             activeTab === "afternoon"
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -110,7 +110,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
           type="button"
           onClick={() => setActiveTab("evening")}
           className={cn(
-            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all",
+            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,box-shadow]",
             activeTab === "evening"
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -129,7 +129,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
               type="button"
               onClick={() => onChange(block.value)}
               className={cn(
-                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-all",
+                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-[background-color,color,border-color]",
                 value === block.value
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:border-primary/50 hover:bg-primary/5"
@@ -146,7 +146,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
               type="button"
               onClick={() => onChange(block.value)}
               className={cn(
-                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-all",
+                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-[background-color,color,border-color]",
                 value === block.value
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:border-primary/50 hover:bg-primary/5"
@@ -163,7 +163,7 @@ const TimeBlockPicker: React.FC<TimeBlockPickerProps> = ({
               type="button"
               onClick={() => onChange(block.value)}
               className={cn(
-                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-all",
+                "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-[background-color,color,border-color]",
                 value === block.value
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border hover:border-primary/50 hover:bg-primary/5"

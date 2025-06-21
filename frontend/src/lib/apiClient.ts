@@ -3,7 +3,6 @@ import { API_ENDPOINTS, getApiUrl } from "@/config/api";
 import {
 	getAccessToken,
 	isTokenExpired,
-	isTokenExpiringSoon,
 	refreshToken,
 	clearAuthData,
 	isAuthenticated,
@@ -66,22 +65,7 @@ export interface UserFeedback {
 class ApiClient {
 	// Create headers with authorization token (reactive refresh approach)
 	private async createHeaders(): Promise<HeadersInit> {
-		let token = getAccessToken();
-
-		// Check if token is expired or expiring soon and refresh if needed
-		if (token && (isTokenExpired() || isTokenExpiringSoon())) {
-			try {
-				const newToken = await refreshToken();
-				if (newToken) {
-				token = newToken;
-			} else {
-				token = null;
-			}
-		} catch (error) {
-				// Continue with existing token - let the API call fail and handle 401
-				// This allows the handleResponse method to attempt refresh again
-			}
-		}
+		const token = getAccessToken();
 
 		if (!token) {
 			// Return headers without authorization

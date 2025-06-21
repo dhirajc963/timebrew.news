@@ -43,7 +43,7 @@ const ArticleCountPicker: React.FC<ArticleCountPickerProps> = ({
             type="button"
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex flex-col items-center justify-center rounded-xl border p-3 transition-all",
+              "flex flex-col items-center justify-center rounded-xl border p-3 transition-[background-color,border-color,transform]",
               value === option.value
                 ? "border-primary bg-primary/10 text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]"
                 : "border-border bg-card/50 hover:bg-card/80 hover:border-primary/30"

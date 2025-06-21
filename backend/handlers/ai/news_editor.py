@@ -235,20 +235,19 @@ Use this insight to adapt your approach appropriately.
         # VISUAL FORMATTING REQUIREMENTS
         Use this exact CSS foundation for all emails:
 
-        <!-- Base Email Structure -->
-        <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px;">
+        <div style="margin: 0 auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; background: transparent;">
             <!-- Header -->
-            <div style="text-align: center; padding: 20px 0; border-bottom: 1px solid #e9ecef; margin-bottom: 24px;">
+            <div style="text-align: center; padding: 20px 0; border-bottom: 1px solid #e9ecef; margin-bottom: 24px; background: transparent;">
                 <h1 style="font-size: 20px; font-weight: 600; color: #1a252f; margin: 0;">Your {brew_name} • {now.strftime('%A, %B %d')}</h1>
             </div>
             
             <!-- Personal Greeting -->
-            <div style="margin-bottom: 24px;">
-                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Good morning, {first_name}! Here are today’s top stories in {topics_str}…</p>
+            <div style="margin-bottom: 24px; background: transparent;">
+                <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Good morning, {first_name}! Here are today's top stories in {topics_str}…</p>
             </div>
             
             <!-- Repeat this block for each article -->
-            <div style="padding: 20px; margin: 16px 0; border: 1px solid #e9ecef; border-radius: 8px;">
+            <div style="padding: 20px; margin: 16px 0; border: 1px solid #e9ecef; border-radius: 8px; background: transparent;">
                 <!-- SOURCE and TIME AGO -->
                 <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 500;">
                     [SOURCE] • [TIME AGO]
@@ -269,7 +268,7 @@ Use this insight to adapt your approach appropriately.
             <!-- End story card -->
 
             <!-- Sign-off -->
-            <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e9ecef; background: transparent;">
                 <p style="font-size: 16px; line-height: 1.6; color: #2c3e50; margin: 0;">Any custom sign off message!</p>
                 <p style="font-size: 14px; color: #6c757d; margin: 8px 0 0 0;">Your TimeBrew Team</p>
             </div>
@@ -301,7 +300,7 @@ Use this insight to adapt your approach appropriately.
         - **Story Cards**: Each article MUST use the story card template with background and padding
         - **Visual Hierarchy**: Source info → Headline → Summary → Read more link
         - **Brand Feel**: Professional but friendly, like a premium newsletter
-        - **Mobile-First**: 600px max width, proper padding for mobile readability
+        - **Mobile-First**: proper padding for mobile readability
         - **Consistency**: Use the exact CSS values provided - don't deviate from colors, spacing, or sizing
 
         # PERSONALIZATION CONTEXT

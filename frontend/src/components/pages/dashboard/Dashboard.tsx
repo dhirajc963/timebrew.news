@@ -44,10 +44,10 @@ const SkeletonBrewCard: React.FC<{ index: number }> = ({ index }) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5, delay: 0.1 + index * 0.08 }}
 		>
-			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
+			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-[box-shadow,transform] duration-300 gap-2 p-3">
 				{/* Subtle shimmer effect */}
 				<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none" />
-				
+
 				<CardHeader className="pb-2 pt-3 px-4">
 					<div className="flex justify-between items-start">
 						<div className="flex-1">
@@ -98,10 +98,10 @@ const SkeletonBrewCompactRow: React.FC<{ index: number }> = ({ index }) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.4, delay: 0.05 + index * 0.06 }}
 		>
-			<div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-all duration-300">
+			<div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-[box-shadow,transform] duration-300">
 				{/* Subtle shimmer effect */}
 				<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none" />
-				
+
 				<div className="relative p-2.5 flex items-center justify-between">
 					<div className="flex items-center gap-3 flex-1 min-w-0">
 						<Skeleton className="w-2 h-2 rounded-full" />
@@ -243,7 +243,7 @@ const Dashboard: React.FC = () => {
 									placeholder="Search brews..."
 									value={searchTerm}
 									onChange={(e) => setSearchTerm(e.target.value)}
-									className="w-full pl-9 pr-3 py-2 h-9 text-sm rounded-lg border border-border bg-card/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+									className="w-full pl-9 pr-3 py-2 h-9 text-sm rounded-lg border border-border bg-card/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-[box-shadow]"
 								/>
 							</div>
 						</div>
@@ -252,7 +252,7 @@ const Dashboard: React.FC = () => {
 						<div className="flex items-center gap-2 order-2 md:order-3">
 							<button
 								onClick={toggleViewMode}
-								className="flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors"
+								className="flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-[background-color]"
 								title={
 									viewMode === "grid"
 										? "Switch to Compact View"
@@ -444,7 +444,7 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5, delay: 0.1 + index * 0.05 }}
 		>
-			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-all duration-300 gap-2 p-3">
+			<Card className="h-full relative group overflow-hidden hover:shadow-md transition-[box-shadow,transform] duration-300 gap-2 p-3">
 				{/* <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div> */}
 
 				<CardHeader className="pb-2 pt-3  px-4">
@@ -540,7 +540,7 @@ const BrewCompactRow: React.FC<BrewCardProps> = ({ brew, index }) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, delay: 0.05 + index * 0.03 }}
 		>
-			<div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-all duration-300">
+			<div className="relative group overflow-hidden bg-card/80 border border-border rounded-lg hover:shadow-md transition-[box-shadow,transform] duration-300">
 				<div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
 				<div className="relative p-2.5 flex items-center justify-between">

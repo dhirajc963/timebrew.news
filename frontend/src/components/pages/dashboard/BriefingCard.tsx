@@ -35,7 +35,6 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 	onFeedback,
 	feedbackLoading,
 }) => {
-
 	const getDeliveryStatusIcon = () => {
 		switch (briefing.delivery_status) {
 			case "sent":
@@ -71,13 +70,30 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 		}
 	};
 
+	const makeThemeAware = (htmlContent: string): string => {
+		const colorMappings = {
+			"#1a252f": "var(--foreground)", // Dark text
+			"#2c3e50": "var(--foreground)", // Body text
+			"#6c757d": "var(--muted-foreground)", // Meta text
+			"#3498db": "var(--primary)", // Links
+			"#e9ecef": "var(--border)", // Borders
+		};
+
+		let themedHtml = htmlContent;
+		Object.entries(colorMappings).forEach(([hardcoded, variable]) => {
+			themedHtml = themedHtml.replace(new RegExp(hardcoded, "gi"), variable);
+		});
+
+		return themedHtml;
+	};
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, delay: index * 0.1 }}
 		>
-			<Card className="overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-200 mx-1 sm:mx-0">
+			<Card className="overflow-hidden hover:shadow-lg hover:border-primary/20 transition-[box-shadow,border-color] duration-200 mx-1 sm:mx-0">
 				<CardHeader className="pb-3 px-6 py-0 relative">
 					{/* Mobile badge positioned absolutely in top right */}
 					<div className="absolute top-3 right-3 sm:hidden">
@@ -85,7 +101,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 							{getDeliveryStatusText()}
 						</Badge>
 					</div>
-					
+
 					{/* Mobile-first responsive header */}
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
 						<div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -103,37 +119,37 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 									{getDeliveryStatusText()}
 								</Badge>
 							</div>
+						</div>
 					</div>
-				</div>
 
-				<div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
-					<div className="flex items-center gap-1">
-						<Calendar className="w-3 h-3" />
-						<span className="text-xs sm:text-sm">
-							{briefing.sent_at
-								? formatDistanceToNow(new Date(briefing.sent_at)) + " ago"
-								: "Not sent"}
-						</span>
+					<div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
+						<div className="flex items-center gap-1">
+							<Calendar className="w-3 h-3" />
+							<span className="text-xs sm:text-sm">
+								{briefing.sent_at
+									? formatDistanceToNow(new Date(briefing.sent_at)) + " ago"
+									: "Not sent"}
+							</span>
+						</div>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={onToggleExpansion}
+							className="flex items-center gap-1 shrink-0 h-6 px-2"
+						>
+							{isExpanded ? (
+								<>
+									<ChevronUp className="w-4 h-4" />
+									<span className="hidden sm:inline">Collapse</span>
+								</>
+							) : (
+								<>
+									<ChevronDown className="w-4 h-4" />
+									<span className="hidden sm:inline">Expand</span>
+								</>
+							)}
+						</Button>
 					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={onToggleExpansion}
-						className="flex items-center gap-1 shrink-0 h-6 px-2"
-					>
-						{isExpanded ? (
-							<>
-								<ChevronUp className="w-4 h-4" />
-								<span className="hidden sm:inline">Collapse</span>
-							</>
-						) : (
-							<>
-								<ChevronDown className="w-4 h-4" />
-								<span className="hidden sm:inline">Expand</span>
-							</>
-						)}
-					</Button>
-				</div>
 				</CardHeader>
 
 				{isExpanded && (
@@ -145,7 +161,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 									<div
 										className="prose prose-xs sm:prose-sm max-w-none dark:prose-invert"
 										dangerouslySetInnerHTML={{
-											__html: briefing.html_content,
+											__html: makeThemeAware(briefing.html_content),
 										}}
 									/>
 								</div>
@@ -166,7 +182,10 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 									{/* Star Rating Skeleton */}
 									<div className="flex items-center gap-2 sm:gap-1">
 										{[1, 2, 3, 4, 5].map((rating) => (
-											<Skeleton key={rating} className="h-8 w-8 sm:h-7 sm:w-7 rounded-md" />
+											<Skeleton
+												key={rating}
+												className="h-8 w-8 sm:h-7 sm:w-7 rounded-md"
+											/>
 										))}
 									</div>
 
@@ -186,7 +205,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 												variant="ghost"
 												size="sm"
 												onClick={() => onFeedback(rating)}
-												className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/20 hover:scale-110 transition-all duration-200 touch-manipulation"
+												className="p-1 h-8 w-8 sm:h-7 sm:w-7 hover:bg-yellow-500/20 hover:scale-110 transition-[background-color,transform] duration-200 touch-manipulation"
 											>
 												<Star className="w-4 h-4 sm:w-3 sm:h-3 text-yellow-500 transition-colors duration-200 hover:fill-yellow-500" />
 											</Button>
@@ -199,7 +218,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 											variant="ghost"
 											size="sm"
 											onClick={() => onFeedback(5)}
-											className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/20 hover:text-green-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
+											className="flex items-center gap-1.5 text-green-600 hover:bg-green-500/20 hover:text-green-700 hover:scale-105 transition-[background-color,color,transform] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
 										>
 											<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
 											<span className="hidden sm:inline">Loved it</span>
@@ -208,7 +227,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 											variant="ghost"
 											size="sm"
 											onClick={() => onFeedback(2)}
-											className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/20 hover:text-red-700 hover:scale-105 transition-all duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
+											className="flex items-center gap-1.5 text-red-600 hover:bg-red-500/20 hover:text-red-700 hover:scale-105 transition-[background-color,color,transform] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation"
 										>
 											<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
 											<span className="hidden sm:inline">Not helpful</span>
