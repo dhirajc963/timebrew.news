@@ -147,7 +147,10 @@ def lambda_handler(event, context):
             limit=10,
         )
 
+        # Process previous articles and build NO-GO LIST in one pass
         previous_articles = []
+        no_go_items = []
+
         for row in cursor.fetchall():
             raw_articles, sent_at = row
             if raw_articles:
@@ -157,16 +160,23 @@ def lambda_handler(event, context):
                     articles_data = raw_articles
 
                 for article in articles_data:
+                    headline = article.get("headline", "")
+                    url = article.get("url", "")
+                    sent_date = sent_at.strftime("%Y-%m-%d") if sent_at else "Unknown"
+                    source = article.get("source", "")
+
+                    # Add to previous articles list
                     previous_articles.append(
                         {
-                            "headline": article.get("headline", ""),
-                            "url": article.get("url", ""),
-                            "sent_date": (
-                                sent_at.strftime("%Y-%m-%d") if sent_at else "Unknown"
-                            ),
-                            "source": article.get("source", ""),
+                            "headline": headline,
+                            "url": url,
+                            "sent_date": sent_date,
+                            "source": source,
                         }
                     )
+
+                    # Add to no-go items
+                    no_go_items.append(f'"{headline} ({url})"')
 
         # Get user feedback for personalization
         logger.info("Retrieving user feedback for personalization")
@@ -199,12 +209,11 @@ def lambda_handler(event, context):
         # Format topics for prompt
         brew_focus_topics_str = format_list_with_quotes(topics_list)
 
-        # Build NO-GO LIST from previous articles
-        no_go_list = ""
-        if previous_articles:
+        # Finalize NO-GO LIST
+        if no_go_items:
             no_go_list = "Do not repeat these headlines/events:\n"
-            for i, article in enumerate(previous_articles[:10], 1):
-                no_go_list += f'{i}. "{article["headline"]}"\n'
+            for i, item in enumerate(no_go_items, 1):
+                no_go_list += f"{i}. {item}\n"
         else:
             no_go_list = "No previous articles to avoid."
 
@@ -254,7 +263,7 @@ If you cannot find even **3** qualified stories:
 
 # SELF-CHECK BEFORE RESPONDING
 ✓ 3–8 articles, **or** or detailed curator_notes for SLOW-DAY RULE
-✓ Look into a wide variety of news articles and pick only ones worth nothing based on {user_name}'s interests
+✓ Look into a wide variety of news articles and pick only ones worth noting based on {user_name}'s interests
 ✓ No duplicate companies / events
 ✓ JSON parses without error
 ✓ Be sure to follow the time window- {temporal_context}
