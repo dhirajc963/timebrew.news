@@ -199,112 +199,67 @@ def lambda_handler(event, context):
         # Format topics for prompt
         brew_focus_topics_str = format_list_with_quotes(topics_list)
 
-        # Build context sections
-        previous_articles_context = ""
+        # Build NO-GO LIST from previous articles
+        no_go_list = ""
         if previous_articles:
-            previous_articles_context = """
-# PREVIOUS ARTICLES (DO NOT DUPLICATE)
-The user has recently received these articles. DO NOT include same stories or duplicate coverage:
-"""
+            no_go_list = "Do not repeat these headlines/events:\n"
             for i, article in enumerate(previous_articles[:10], 1):
-                previous_articles_context += f"""
-{i}. "{article['headline']}" (sent: {article['sent_date']})
-   Source: {article['source']} ({article['url']})"""
+                no_go_list += f'{i}. "{article["headline"]}"\n'
+        else:
+            no_go_list = "No previous articles to avoid."
 
-        feedback_context = ""
-        if user_feedback:
-            liked_count = len([f for f in user_feedback if f["type"] == "like"])
-            disliked_count = len([f for f in user_feedback if f["type"] == "dislike"])
+        # Build AI prompt using the exact tested template
+        prompt = f"""# MISSION (MUST)
+Return **3–8** distinct news stories for "{brew_name}" briefing that focuses on these topics- {brew_focus_topics_str}.
 
-            if liked_count > 0 or disliked_count > 0:
-                feedback_context = f"""
-# USER PREFERENCES (Based on {len(user_feedback)} interactions)
-"""
-                if liked_count > 0:
-                    feedback_context += (
-                        f"- User has liked {liked_count} recent articles\n"
-                    )
-                if disliked_count > 0:
-                    feedback_context += f"- User has disliked {disliked_count} recent articles - adjust content accordingly\n"
+# CONTEXT
+- Reader: {user_name}
+- Current local time: {now.strftime('%Y-%m-%d %H:%M %Z')}
+- Time window: {temporal_context}
+- Scheduled delivery: {delivery_time}
 
-        # Build AI prompt for article curation
-        prompt = f"""# ROLE & MISSION
-You are an expert news curator for TimeBrew focusing on {brew_focus_topics_str}, right now tasked with collecting raw article data for {user_name}'s "{brew_name}" briefing.
+# NO-GO LIST (MUST NOT)
+{no_go_list}
 
-**Current Time:** {now.strftime('%Y-%m-%d %H:%M %Z')}
-**User's Interest:** {brew_focus_topics_str}
-**Time Window:** {temporal_context}
-**Delivery Time:** At {delivery_time}
+# DIVERSITY RULES (MUST)
+1. Max one story per company / organization.
+2. Use at least 3 different reputable publishers.  
+3. Cover user's interests and topics.
+4. No duplicate events or announcements.
 
-{previous_articles_context}
-{feedback_context}
+# QUALITY CRITERIA (SHOULD)
+- Published within the specified window.
+- Clear real-world impact.
+- Well-known, reputable source.
+- Never news aggregators or news summarizers, NEVER.
 
-# YOUR TASK
-Find 3-8 high-quality, recent news articles that match this user's interests. Your role is CURATION ONLY - just find and organize the raw articles. The editor will handle all formatting and voice later.
+# SLOW-DAY RULE (MUST)
+If you cannot find even **3** qualified stories:
+- Use `"curator_notes"` to provide details on whats trending trending reference to past articles, landscape, what is going on, why potentially lead to no or less news! The more details you provide, the better the editor can write, and articulate.
 
-# ARTICLE DIVERSITY REQUIREMENTS
-1. **NO DUPLICATES:** Never include articles about the same event/announcement
-2. **COMPANY LIMIT:** Maximum one article per company/organization  
-3. **SOURCE DIVERSITY:** Mix different news sources and publication types
-4. **TOPIC SPREAD:** If user has multiple topics, distribute articles across them
-5. **TIME VARIETY:** Mix breaking news with important recent developments
-6. **ANGLE DIVERSITY:** Different story types (earnings, launches, policy, research, trends)
-
-# QUALITY CRITERIA
-- **Significance:** Major developments, breaking news, important updates
-- **Relevance:** Directly related to user's specified topics
-- **Freshness:** Published within the specified time window  
-- **Credibility:** From reputable news sources and publications
-- **Uniqueness:** Each article covers a DIFFERENT story/event/company
-- **Impact:** Stories that matter to someone interested in these topics
-
-# CONTENT AVAILABILITY GUIDANCE
-- **Rich news day (6-8 diverse articles):** Include them all
-- **Normal day (4-5 good articles):** Perfect sweet spot
-- **Slow day (3 quality articles):** Quality over quantity - fine to send fewer
-- **Very slow day (struggling to find even 3 articles):** Note this in curator_notes, along with details on any generic development on the user's interest so the editor can deliver something to the user.
-
-# FINAL DIVERSITY CHECK
-Before submitting, verify:
-- No two articles about the same company/event/announcement
-- Headlines don't mention the same key entities  
-- Mixed source types and angles
-- Spread across different sub-topics within user's interests
-
-# CURATOR NOTES
-- In 2-5 sentences, add any note about today's content landscape - availability, challenges, or trends you noticed. Any note, encouragement that would help the editor better write the today's briefing accurately. The more details you provide the better the editor can write. 
-
-# OUTPUT FORMAT
-Return ONLY a valid JSON object with this exact structure:
-
+# OUTPUT FORMAT (MUST)
 {{
     "articles": [
         {{
-            "headline": "Exact article headline from source",
-            "summary": "3-4 sentence summary of key points and significance",
-            "source": "Publication name (e.g., Reuters, TechCrunch, Wall Street Journal)",
-            "published_time": "Relative time (e.g., '2 hours ago', 'this morning', 'yesterday')",
-            "relevance": "1-2 sentences explaining why this matters to this user's interests",
-            "url": "Direct article URL"
+        "headline": "Article Title",
+        "summary": "3-4 sentences summary on the article covering it end-to-end",
+        "source": "Source of the original article",
+        "published_time": "Relative article published time",
+        "relevance": "Why is this story relevant for the {user_name}, and any other notes for the editor.",
+        "url": "Actual working url to the original article"
         }}
     ],
-    "curator_notes": "Brief insight about today's content landscape - availability, challenges, or trends you noticed. Use empty string if normal day."
+    "curator_notes": "Brief insight about today's content landscape - availability, challenges, or trends you noticed. Anything to provide the Editor a good writing grounds!"
 }}
 
+# SELF-CHECK BEFORE RESPONDING
+✓ 3–8 articles, **or** or detailed curator_notes for SLOW-DAY RULE
+✓ Look into a wide variety of news articles and pick only ones worth nothing based on {user_name}'s interests
+✓ No duplicate companies / events
+✓ JSON parses without error
+✓ Be sure to follow the time window- {temporal_context}
 
-# VALIDATION CHECKLIST
-✓ Valid JSON format that can be parsed
-✓ All required fields present and populated
-✓ No duplicate companies/events/stories
-✓ Articles genuinely from specified time window
-✓ URLs are accessible and direct links
-✓ 3-8 articles total (based on quality availability)
-
-**Remember:** You're the curator who finds the articles. The editor will handle all TimeBrew voice, formatting, and presentation. Focus on finding the best, most diverse raw material for them to work with.
-
-**CRITICAL:** Your response MUST start with {{ and end with }}. Output ONLY valid JSON - no explanations, no markdown, no extra text.
-
-Begin JSON object:"""
+BEGIN JSON:"""
 
         # Load AI model configuration and make API call
         config_path = os.path.join(
