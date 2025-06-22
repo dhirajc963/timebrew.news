@@ -17,7 +17,6 @@ import { AnimatedGradientText } from "@/components/magicui/animated-gradient-tex
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
-import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
 import { validateEmail } from "@/lib/utils";
 
 // Types
@@ -26,36 +25,11 @@ interface LoginFormData {
 	otpCode: string;
 }
 
-interface LoginResponse {
-	message?: string;
-	challengeName?: string;
-	session?: string;
-	email?: string;
-	nextStep?: string;
-	error?: string;
-}
-
-interface VerifyResponse {
-	message?: string;
-	accessToken?: string;
-	refreshToken?: string;
-	expiresIn?: number;
-	user?: {
-		id: string;
-		email: string;
-		firstName: string;
-		lastName: string;
-		country: string;
-		interests: string[];
-	};
-	error?: string;
-}
-
 type LoginStep = "email" | "otp";
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
-	const { login } = useAuth();
+	const { initiateLogin, verifyOTP, resendOTP } = useAuth();
 	const [formData, setFormData] = useState<LoginFormData>({
 		email: "",
 		otpCode: "",
@@ -92,62 +66,34 @@ const Login: React.FC = () => {
 		}
 
 		try {
-			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email: formData.email }),
-			});
-
-			// Try to parse the response, but handle the case where it might not be valid JSON
-			let data: LoginResponse;
-			try {
-				data = await response.json();
-			} catch (jsonError) {
-			setError("Server error. Please try again later.");
-				setLoading(false);
-				return;
-			}
-
-			if (response.ok && data.challengeName === "EMAIL_OTP") {
-				setSession(data.session || "");
+			const result = await initiateLogin(formData.email);
+			if (result.success) {
+				setSession(result.session || "");
 				setCurrentStep("otp");
-			} else if (
-				response.status === 404 ||
-				data.error?.toLowerCase().includes("not found")
-			) {
-				// User not found - suggest sign up
-				setError(
-					<>
-						Account not found.{" "}
-						<Link
-							to="/signup"
-							className="text-primary hover:underline font-medium"
-						>
-							Sign up
-						</Link>{" "}
-						to create an account.
-					</>
-				);
-			} else if (response.status === 500) {
-				// Handle server error - likely a new email that doesn't exist in the system
-				setError(
-					<>
-						This email is not registered.{" "}
-						<Link
-							to="/signup"
-							className="text-primary hover:underline font-medium"
-						>
-							Sign up
-						</Link>{" "}
-						to create an account.
-					</>
-				);
 			} else {
-				setError(
-					data.error || "Failed to send verification code. Please try again."
-				);
+				if (
+					result.error?.includes("not found") ||
+					result.error?.includes("does not exist")
+				) {
+					// User not found - suggest sign up
+					setError(
+						<>
+							Account not found.{" "}
+							<Link
+								to="/signup"
+								className="text-primary hover:underline font-medium"
+							>
+								Sign up
+							</Link>{" "}
+							to create an account.
+						</>
+					);
+				} else {
+					setError(
+						result.error ||
+							"Failed to send verification code. Please try again."
+					);
+				}
 			}
 		} catch (err) {
 			setError("Network error. Please check your connection and try again.");
@@ -162,37 +108,14 @@ const Login: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.verifyOtp), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					email: formData.email,
-					otpCode: formData.otpCode,
-					session: session,
-				}),
-			});
-
-			const data: VerifyResponse = await response.json();
-
-			if (response.ok && data.accessToken && data.user) {
-				// Use AuthContext login function to store tokens and user data
-				login(
-					{
-						accessToken: data.accessToken,
-						refreshToken: data.refreshToken || "",
-						expiresIn: data.expiresIn || 3600,
-					},
-					{
-						...data.user,
-						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-						createdAt: new Date().toISOString(),
-					}
-				);
-				// Navigation is handled by the login function in AuthContext
+			const result = await verifyOTP(formData.otpCode, session);
+			if (result.success) {
+				// Navigation is handled by the AuthContext
+				navigate("/dashboard");
 			} else {
-				setError(data.error || "Invalid verification code. Please try again.");
+				setError(
+					result.error || "Invalid verification code. Please try again."
+				);
 			}
 		} catch (err) {
 			setError("Network error. Please check your connection and try again.");
@@ -206,18 +129,9 @@ const Login: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.login), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email: formData.email }),
-			});
-
-			const data: LoginResponse = await response.json();
-
-			if (response.ok) {
-				setSession(data.session || "");
+			const result = await resendOTP(formData.email);
+			if (result.success) {
+				setSession(result.session || "");
 				// Show success message briefly
 				setError("");
 			} else {

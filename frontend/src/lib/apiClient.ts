@@ -1,12 +1,6 @@
 // API client for TimeBrew backend
 import { API_ENDPOINTS, getApiUrl } from "@/config/api";
-import {
-	getAccessToken,
-	isTokenExpired,
-	refreshToken,
-	clearAuthData,
-	isAuthenticated,
-} from "@/utils/auth";
+import { getCurrentUser, signOut, fetchAuthSession } from 'aws-amplify/auth';
 
 // Custom error class for authentication failures
 export class AuthenticationError extends Error {
@@ -77,21 +71,22 @@ export interface UserFeedback {
 
 // API client class
 class ApiClient {
-	// Create headers with authorization token (reactive refresh approach)
-	private async createHeaders(): Promise<HeadersInit> {
-		const token = getAccessToken();
+	// Create headers with authorization token (Amplify manages tokens automatically)
+	private async createHeaders(forceRefresh: boolean = false): Promise<HeadersInit> {
+		try {
+			const session = await fetchAuthSession({ forceRefresh });
+			const token = session.tokens?.accessToken?.toString();
 
-		if (!token) {
-			// Return headers without authorization
+			return {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			};
+		} catch (error) {
+			// User is not authenticated, return headers without authorization
 			return {
 				"Content-Type": "application/json",
 			};
 		}
-
-		return {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
-		};
 	}
 
 	/**
@@ -125,43 +120,38 @@ class ApiClient {
 		});
 	}
 
-	// Handle API responses with improved error handling
-	private async handleResponse<T>(
-		response: Response,
-		retryFn?: () => Promise<Response>
-	): Promise<T> {
+	// Handle API responses with token refresh support
+	private async handleResponse<T>(response: Response, isRetry: boolean = false): Promise<T> {
 		if (!response.ok) {
 			// Try to parse error data, but don't fail if it's not valid JSON
 			const errorData = await response.json().catch(() => ({
 				error: `HTTP error ${response.status} ${response.statusText}`,
 			}));
 
-			// Handle authentication errors
-			if (response.status === 401) {
-				if (retryFn) {
-					try {
-						const newToken = await refreshToken();
-
-						if (newToken) {
-							// Clone the original request to modify headers
-							const originalRequest = new Request(response.url, {
-								method: response.headers.get("method") || "GET",
-								headers: await this.createHeaders(), // Re-create headers with the new token
-								body: response.headers.get("content-type")?.includes("json")
-									? await response.json().catch(() => null)
-									: undefined,
-							});
-
-							const retryResponse = await fetch(originalRequest);
-							return this.handleResponse<T>(retryResponse);
+			// Handle authentication errors with token refresh
+			if (response.status === 401 && !isRetry) {
+				try {
+					// Try to refresh the session
+					const session = await fetchAuthSession({ forceRefresh: true });
+					if (session.tokens?.accessToken) {
+						// Token refreshed successfully, signal for retry
+						throw new Error('TOKEN_REFRESH_SUCCESS');
+					}
+				} catch (refreshError) {
+					// Only sign out if refresh actually failed
+					if (refreshError instanceof Error && refreshError.message !== 'TOKEN_REFRESH_SUCCESS') {
+						console.error('Token refresh failed:', refreshError);
+						try {
+							await signOut();
+						} catch (signOutError) {
+							// Ignore sign out errors
 						}
-					} catch (refreshError) {
-						// Fall through to clearAuthData and throw below
+					} else {
+						// Re-throw the refresh success signal
+						throw refreshError;
 					}
 				}
-
-				// If refresh fails or no retry function, clear auth data and throw
-				clearAuthData();
+				
 				throw new AuthenticationError(
 					errorData.error ||
 						errorData.message ||
@@ -189,15 +179,47 @@ class ApiClient {
 	}
 
 	/**
-	 * Check if the user is authenticated before making API calls
+	 * Check if the user is authenticated using Amplify
 	 * @throws {AuthenticationError} If the user is not authenticated
 	 */
-	private checkAuthentication(): void {
-		if (!isAuthenticated()) {
+	private async checkAuthentication(): Promise<void> {
+		try {
+			await getCurrentUser();
+		} catch (error) {
 			throw new AuthenticationError(
 				"You must be logged in to perform this action"
 			);
 		}
+	}
+
+	/**
+	 * Make a request with automatic retry on token refresh
+	 */
+	private async makeRequestWithRetry<T>(
+		url: string,
+		options: RequestInit,
+		maxRetries: number = 1
+	): Promise<T> {
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			try {
+				const response = await fetch(url, {
+					...options,
+					headers: await this.createHeaders(),
+				});
+				
+				return this.handleResponse<T>(response, attempt > 0);
+			} catch (error) {
+				if (error instanceof Error && error.message === 'TOKEN_REFRESH_SUCCESS' && attempt < maxRetries) {
+					// Token was refreshed, retry the request
+					continue;
+				}
+				if (attempt === maxRetries) {
+					throw error;
+				}
+			}
+		}
+		// This should never be reached, but TypeScript requires it
+		throw new Error('Request failed after all retry attempts');
 	}
 
 	/**
@@ -210,23 +232,17 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<{ brew: Brew }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(API_ENDPOINTS.brews.create), {
-					method: "POST",
-					headers: await this.createHeaders(),
-					body: JSON.stringify(brewData),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(API_ENDPOINTS.brews.create), {
+					method: "POST",
+					body: JSON.stringify(brewData),
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ brew: Brew }>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError("creating brew", error);
 		}
@@ -238,22 +254,16 @@ class ApiClient {
 	 */
 	async getBrews(timeoutMs: number = 10000): Promise<{ brews: Brew[] }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(API_ENDPOINTS.brews.getAll), {
-					method: "GET",
-					headers: await this.createHeaders(),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ brews: Brew[] }>(getApiUrl(API_ENDPOINTS.brews.getAll), {
+					method: "GET",
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ brews: Brew[] }>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError("fetching brews", error);
 		}
@@ -269,22 +279,16 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<{ brew: Brew }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "GET",
-					headers: await this.createHeaders(),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
+					method: "GET",
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ brew: Brew }>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`fetching brew ${id}`, error);
 		}
@@ -302,23 +306,17 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<{ brew: Brew }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "PUT",
-					headers: await this.createHeaders(),
-					body: JSON.stringify(brewData),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
+					method: "PUT",
+					body: JSON.stringify(brewData),
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ brew: Brew }>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`updating brew ${id}`, error);
 		}
@@ -331,22 +329,16 @@ class ApiClient {
 	 */
 	async deleteBrew(id: string, timeoutMs: number = 10000): Promise<void> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "DELETE",
-					headers: await this.createHeaders(),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<void>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
+					method: "DELETE",
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<void>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`deleting brew ${id}`, error);
 		}
@@ -364,23 +356,17 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<Brew> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}/status`), {
-					method: "PATCH",
-					headers: await this.createHeaders(),
-					body: JSON.stringify({ is_active: isActive }),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<Brew>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}/status`), {
+					method: "PATCH",
+					body: JSON.stringify({ is_active: isActive }),
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<Brew>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`toggling brew status for ${id}`, error);
 		}
@@ -401,7 +387,7 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<{ briefings: Briefing[]; total_count: number }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
 			const queryParams = new URLSearchParams({
 				brew_id: brewId,
@@ -410,23 +396,14 @@ class ApiClient {
 				user_id: userId,
 			});
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`/briefings?${queryParams}`), {
-					method: "GET",
-					headers: await this.createHeaders(),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ briefings: Briefing[]; total_count: number }>(getApiUrl(`/briefings?${queryParams}`), {
+					method: "GET",
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{
-				briefings: Briefing[];
-				total_count: number;
-			}>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`fetching briefings for brew ${brewId}`, error);
 		}
@@ -442,24 +419,54 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<Briefing> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl(`/briefings/${briefingId}`), {
-					method: "GET",
-					headers: await this.createHeaders(),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<Briefing>(getApiUrl(`/briefings/${briefingId}`), {
+					method: "GET",
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<Briefing>(response, makeRequest);
+			return response;
 		} catch (error) {
 			return this.handleError(`fetching briefing ${briefingId}`, error);
+		}
+	}
+
+	/**
+	 * Register a new user in the backend database
+	 * @param userData The user registration data
+	 * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
+	 */
+	async register(
+		userData: {
+			email: string;
+			firstName: string;
+			lastName: string;
+			country: string;
+			interests: string[];
+			timezone?: string;
+		},
+		timeoutMs: number = 10000
+	): Promise<{ message: string; user: any }> {
+		try {
+			const response = await Promise.race([
+				fetch(getApiUrl("/auth/register"), {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(userData),
+				}),
+				this.createTimeoutPromise(timeoutMs),
+			]);
+
+			return this.handleResponse<{ message: string; user: any }>(
+				response
+			);
+		} catch (error) {
+			return this.handleError("registering user", error);
 		}
 	}
 
@@ -479,26 +486,17 @@ class ApiClient {
 		timeoutMs: number = 10000
 	): Promise<{ message: string; feedback_id: string }> {
 		try {
-			this.checkAuthentication();
+			await this.checkAuthentication();
 
-			const makeRequest = async () => {
-				return fetch(getApiUrl("/feedback/submit"), {
-					method: "POST",
-					headers: await this.createHeaders(),
-					body: JSON.stringify(feedbackData),
-				});
-			};
-
-			// Race the request against a timeout
 			const response = await Promise.race([
-				makeRequest(),
+				this.makeRequestWithRetry<{ message: string; feedback_id: string }>(getApiUrl("/feedback/submit"), {
+					method: "POST",
+					body: JSON.stringify(feedbackData),
+				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ message: string; feedback_id: string }>(
-				response,
-				makeRequest
-			);
+			return response;
 		} catch (error) {
 			return this.handleError("submitting feedback", error);
 		}

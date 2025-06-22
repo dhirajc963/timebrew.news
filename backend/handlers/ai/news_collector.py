@@ -1,12 +1,13 @@
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
 from utils.ai_service import ai_service
 from utils.text_utils import format_list_with_quotes
+from utils.other_utils import format_time_ampm
 
 
 def lambda_handler(event, context):
@@ -14,7 +15,7 @@ def lambda_handler(event, context):
     News Collector Lambda Function
     Collects articles from AI and stores them for the editor to process into JSON format
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     logger.log_request_start(event, context, "ai/news_collector")
 
     try:
@@ -28,13 +29,13 @@ def lambda_handler(event, context):
 
         # Get database connection
         logger.info("Connecting to database for brew data retrieval")
-        db_start_time = datetime.utcnow()
+        db_start_time = datetime.now(timezone.utc)
 
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             db_connect_duration = (
-                datetime.utcnow() - db_start_time
+                datetime.now(timezone.utc) - db_start_time
             ).total_seconds() * 1000
             logger.log_db_operation("connect", "brews", db_connect_duration)
         except Exception as e:
@@ -43,7 +44,7 @@ def lambda_handler(event, context):
 
         # Retrieve brew and user data
         logger.info("Retrieving brew and user data")
-        query_start_time = datetime.utcnow()
+        query_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
             """
@@ -58,7 +59,9 @@ def lambda_handler(event, context):
         )
 
         brew_data = cursor.fetchone()
-        query_duration = (datetime.utcnow() - query_start_time).total_seconds() * 1000
+        query_duration = (
+            datetime.now(timezone.utc) - query_start_time
+        ).total_seconds() * 1000
         logger.log_db_operation("select", "brews", query_duration, table_join="users")
 
         if not brew_data:
@@ -82,16 +85,10 @@ def lambda_handler(event, context):
 
         logger.set_context(user_id=user_id, user_email=email)
 
-        # Determine briefing type and build user name
-        delivery_hour = delivery_time.hour
-        briefing_type = "morning" if delivery_hour < 12 else "evening"
-        user_name = (
-            f"{first_name} {last_name}"
-            if first_name and last_name
-            else first_name or "there"
-        )
+        delivery_time = format_time_ampm(str(delivery_time))
 
-        # Determine temporal window
+        user_name = f"{first_name} {last_name}"
+
         user_tz = pytz.timezone(brew_timezone)
         now = datetime.now(user_tz)
 
@@ -109,25 +106,23 @@ def lambda_handler(event, context):
         logger.info(
             "Brew configuration loaded",
             brew_name=brew_name,
-            briefing_type=briefing_type,
             user_timezone=brew_timezone,
             topics_count=len(topics_list),
         )
 
-        # Calculate temporal context
+        # Calculate temporal context - database dates are UTC, convert to user timezone
         if last_sent_date:
-            if last_sent_date.tzinfo is None:
-                last_sent_utc = pytz.UTC.localize(last_sent_date)
-            else:
-                last_sent_utc = last_sent_date.astimezone(pytz.UTC)
-            last_sent_user_tz = last_sent_utc.astimezone(user_tz)
+            # Database datetime is UTC, convert directly to user timezone
+            last_sent_user_tz = last_sent_date.replace(tzinfo=pytz.UTC).astimezone(
+                user_tz
+            )
             temporal_context = f"{last_sent_user_tz.strftime('%Y-%m-%d %H:%M %Z')} to {now.strftime('%Y-%m-%d %H:%M %Z')}"
         else:
             temporal_context = "past 3 days"
 
         # Get previous articles for context (avoid duplicates)
         logger.info("Retrieving previous articles for context")
-        prev_articles_start_time = datetime.utcnow()
+        prev_articles_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
             """
@@ -136,13 +131,13 @@ def lambda_handler(event, context):
             JOIN time_brew.curation_cache cc ON bf.id = cc.briefing_id
             WHERE bf.user_id = %s AND bf.execution_status = 'dispatched' AND bf.sent_at IS NOT NULL
             ORDER BY bf.sent_at DESC
-            LIMIT 10
+            LIMIT 5
             """,
             (user_id,),
         )
 
         prev_articles_duration = (
-            datetime.utcnow() - prev_articles_start_time
+            datetime.now(timezone.utc) - prev_articles_start_time
         ).total_seconds() * 1000
         logger.log_db_operation(
             "select",
@@ -165,16 +160,17 @@ def lambda_handler(event, context):
                     previous_articles.append(
                         {
                             "headline": article.get("headline", ""),
-                            "summary": article.get("summary", ""),
+                            "url": article.get("url", ""),
                             "sent_date": (
                                 sent_at.strftime("%Y-%m-%d") if sent_at else "Unknown"
                             ),
+                            "source": article.get("source", ""),
                         }
                     )
 
         # Get user feedback for personalization
         logger.info("Retrieving user feedback for personalization")
-        feedback_start_time = datetime.utcnow()
+        feedback_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
             """
@@ -188,7 +184,7 @@ def lambda_handler(event, context):
         )
 
         feedback_duration = (
-            datetime.utcnow() - feedback_start_time
+            datetime.now(timezone.utc) - feedback_start_time
         ).total_seconds() * 1000
         logger.log_db_operation("select", "user_feedback", feedback_duration, limit=10)
 
@@ -206,14 +202,14 @@ def lambda_handler(event, context):
         # Build context sections
         previous_articles_context = ""
         if previous_articles:
-            previous_articles_context = f"""
+            previous_articles_context = """
 # PREVIOUS ARTICLES (DO NOT DUPLICATE)
 The user has recently received these articles. DO NOT include same stories or duplicate coverage:
 """
             for i, article in enumerate(previous_articles[:10], 1):
                 previous_articles_context += f"""
 {i}. "{article['headline']}" (sent: {article['sent_date']})
-   Summary: {article['summary'][:100]}..."""
+   Source: {article['source']} ({article['url']})"""
 
         feedback_context = ""
         if user_feedback:
@@ -233,12 +229,12 @@ The user has recently received these articles. DO NOT include same stories or du
 
         # Build AI prompt for article curation
         prompt = f"""# ROLE & MISSION
-You are an expert news curator for TimeBrew, preparing raw article data for {user_name}'s "{brew_name}" briefing.
+You are an expert news curator for TimeBrew focusing on {brew_focus_topics_str}, right now tasked with collecting raw article data for {user_name}'s "{brew_name}" briefing.
 
 **Current Time:** {now.strftime('%Y-%m-%d %H:%M %Z')}
-**Focus Topics:** {brew_focus_topics_str}
+**User's Interest:** {brew_focus_topics_str}
 **Time Window:** {temporal_context}
-**Briefing Type:** {briefing_type} briefing (delivery at {delivery_hour:02d}:00)
+**Delivery Time:** At {delivery_time}
 
 {previous_articles_context}
 {feedback_context}
@@ -266,7 +262,7 @@ Find 3-8 high-quality, recent news articles that match this user's interests. Yo
 - **Rich news day (6-8 diverse articles):** Include them all
 - **Normal day (4-5 good articles):** Perfect sweet spot
 - **Slow day (3 quality articles):** Quality over quantity - fine to send fewer
-- **Very slow day (struggling to find 3):** Note this in curator_notes
+- **Very slow day (struggling to find even 3 articles):** Note this in curator_notes, along with details on any generic development on the user's interest so the editor can deliver something to the user.
 
 # FINAL DIVERSITY CHECK
 Before submitting, verify:
@@ -274,6 +270,9 @@ Before submitting, verify:
 - Headlines don't mention the same key entities  
 - Mixed source types and angles
 - Spread across different sub-topics within user's interests
+
+# CURATOR NOTES
+- In 2-5 sentences, add any note about today's content landscape - availability, challenges, or trends you noticed. Any note, encouragement that would help the editor better write the today's briefing accurately. The more details you provide the better the editor can write. 
 
 # OUTPUT FORMAT
 Return ONLY a valid JSON object with this exact structure:
@@ -292,12 +291,6 @@ Return ONLY a valid JSON object with this exact structure:
     "curator_notes": "Brief insight about today's content landscape - availability, challenges, or trends you noticed. Use empty string if normal day."
 }}
 
-# CURATOR NOTES EXAMPLES
-- "Rich news day with diverse developments across AI research, policy, and business applications"
-- "Limited unique coverage in tech today - focused on the most significant developments"
-- "Slower news cycle for startup topics, included analysis pieces alongside breaking news"  
-- "Major breaking story dominating coverage - balanced with other important developments"
-- "" (empty string for normal days with good article diversity)
 
 # VALIDATION CHECKLIST
 ✓ Valid JSON format that can be parsed
@@ -308,6 +301,8 @@ Return ONLY a valid JSON object with this exact structure:
 ✓ 3-8 articles total (based on quality availability)
 
 **Remember:** You're the curator who finds the articles. The editor will handle all TimeBrew voice, formatting, and presentation. Focus on finding the best, most diverse raw material for them to work with.
+
+**CRITICAL:** Your response MUST start with {{ and end with }}. Output ONLY valid JSON - no explanations, no markdown, no extra text.
 
 Begin JSON object:"""
 
@@ -324,7 +319,7 @@ Begin JSON object:"""
         model = curator_config["model"]
 
         logger.info(f"Preparing {provider.title()} API call for article curation")
-        api_start_time = datetime.utcnow()
+        api_start_time = datetime.now(timezone.utc)
 
         try:
             ai_response_data = ai_service.call(
@@ -333,10 +328,12 @@ Begin JSON object:"""
                 model=model,
                 temperature=0.2,
                 max_tokens=4000,
-                timeout=30,
+                timeout=60,
             )
             content = ai_response_data["content"]
-            api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
+            api_duration = (
+                datetime.now(timezone.utc) - api_start_time
+            ).total_seconds() * 1000
 
             logger.log_external_api_call(
                 provider.title(),
@@ -348,7 +345,9 @@ Begin JSON object:"""
                 prompt_tokens=len(prompt.split()),
             )
         except Exception as e:
-            api_duration = (datetime.utcnow() - api_start_time).total_seconds() * 1000
+            api_duration = (
+                datetime.now(timezone.utc) - api_start_time
+            ).total_seconds() * 1000
             logger.error(
                 f"{provider.title()} API request failed",
                 error=str(e),
@@ -362,26 +361,50 @@ Begin JSON object:"""
             content_preview=content[:200] + "..." if len(content) > 200 else content,
         )
 
+        # Log raw LLM response immediately to ensure we have it even if parsing fails
+        logger.info("Logging raw LLM response to curation cache")
+        cache_id = None
+        try:
+            cursor.execute(
+                """
+                INSERT INTO time_brew.curation_cache 
+                (briefing_id, raw_articles, topics_searched, articles_found, 
+                 collector_prompt, raw_llm_response, curator_notes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """,
+                (
+                    None,  # briefing_id will be null initially
+                    json.dumps([]),  # empty articles array initially
+                    topics_list,
+                    0,  # articles_found will be 0 initially
+                    prompt,
+                    content,  # raw_llm_response logged immediately
+                    "Raw response logged before parsing",  # curator_notes
+                    datetime.now(timezone.utc),
+                ),
+            )
+            cache_id = cursor.fetchone()[0]
+            conn.commit()  # Commit immediately to ensure it's saved
+            logger.info(
+                "Raw LLM response successfully logged to curation cache",
+                cache_id=cache_id,
+            )
+        except Exception as cache_error:
+            logger.error(
+                "Failed to log raw LLM response to cache", error=str(cache_error)
+            )
+            raise Exception(
+                f"Critical failure: Unable to log raw LLM response to database: {str(cache_error)}"
+            )
+
         # Parse AI response
         logger.info("Parsing articles from AI response")
         try:
-            # Extract JSON from response
-            start_idx = content.find("{")
-            end_idx = content.rfind("}") + 1
-            if start_idx != -1 and end_idx != 0:
-                json_str = content[start_idx:end_idx]
-                response_data = json.loads(json_str)
-                logger.info("Successfully extracted JSON from AI response")
-            else:
-                response_data = json.loads(content)
-                logger.info("Successfully parsed entire content as JSON")
-        except json.JSONDecodeError as e:
-            logger.error(
-                "Failed to parse JSON from AI response",
-                error=e,
-                content_preview=content[:500],
-            )
-            raise Exception("Failed to parse articles from AI response")
+            response_data = ai_service.parse_json_from_response(content)
+        except ValueError as e:
+            logger.error("Failed to parse JSON from AI response", error=e)
+            raise Exception(str(e))
 
         # Extract articles and curator notes
         articles = response_data.get("articles", [])
@@ -395,7 +418,7 @@ Begin JSON object:"""
 
         # Create briefing record - clean approach without old fields
         logger.info("Creating briefing record in database")
-        briefing_insert_start_time = datetime.utcnow()
+        briefing_insert_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
             """
@@ -409,13 +432,13 @@ Begin JSON object:"""
                 user_id,
                 len(articles),
                 "curated",
-                datetime.utcnow(),
+                datetime.now(timezone.utc),
             ),
         )
 
         briefing_id = cursor.fetchone()[0]
         briefing_insert_duration = (
-            datetime.utcnow() - briefing_insert_start_time
+            datetime.now(timezone.utc) - briefing_insert_start_time
         ).total_seconds() * 1000
         logger.log_db_operation(
             "insert",
@@ -425,44 +448,43 @@ Begin JSON object:"""
             article_count=len(articles),
         )
 
-        # Store articles in curation cache
-        logger.info("Storing curated articles in cache")
-        cache_insert_start_time = datetime.utcnow()
+        # Update curation cache with parsed articles and briefing_id
+        logger.info("Updating curation cache with parsed articles", cache_id=cache_id)
+        cache_update_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
             """
-            INSERT INTO time_brew.curation_cache 
-            (briefing_id, raw_articles, topics_searched, articles_found, 
-             collector_prompt, raw_llm_response, curator_notes, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            UPDATE time_brew.curation_cache 
+            SET briefing_id = %s, raw_articles = %s, articles_found = %s, curator_notes = %s
+            WHERE id = %s
         """,
             (
                 briefing_id,
                 json.dumps(articles),
-                topics_list,
                 len(articles),
-                prompt[:5000],  # Truncate for storage
-                content[:5000],  # Truncate for storage
                 curator_notes,
-                datetime.utcnow(),
+                cache_id,
             ),
         )
 
-        cache_insert_duration = (
-            datetime.utcnow() - cache_insert_start_time
+        cache_update_duration = (
+            datetime.now(timezone.utc) - cache_update_start_time
         ).total_seconds() * 1000
         logger.log_db_operation(
-            "insert",
+            "update",
             "curation_cache",
-            cache_insert_duration,
+            cache_update_duration,
             briefing_id=briefing_id,
+            cache_id=cache_id,
             articles_stored=len(articles),
         )
 
         # Commit transaction
-        commit_start_time = datetime.utcnow()
+        commit_start_time = datetime.now(timezone.utc)
         conn.commit()
-        commit_duration = (datetime.utcnow() - commit_start_time).total_seconds() * 1000
+        commit_duration = (
+            datetime.now(timezone.utc) - commit_start_time
+        ).total_seconds() * 1000
         logger.log_db_operation(
             "commit", "briefings", commit_duration, records_affected=2
         )
@@ -471,7 +493,7 @@ Begin JSON object:"""
         conn.close()
 
         # Calculate processing time
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
 
         logger.info(
@@ -514,7 +536,7 @@ Begin JSON object:"""
             logger.error("Failed to cleanup database connection", error=cleanup_error)
 
         # Calculate processing time for failed request
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
         logger.log_request_end("ai/news_collector", 500, processing_time * 1000)
 

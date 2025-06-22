@@ -8,17 +8,13 @@
 SERVICE_NAME="timebrew-backend"
 STAGE="${1:-prod}"  # Default to 'dev' if no stage provided
 REGION="us-east-1"
-SINCE="13h"  # Get logs from last 5 minutes
+SINCE="120m"  # Get logs from last 5 minutes
 LOGS_DIR="./logs"  # Directory to save log files
 
 # Lambda functions from serverless.yml
 FUNCTIONS=(
     "health"
     "register"
-    "login"
-    "verifyOTP"
-    "resendVerification"
-    "refreshToken"
     "getBrews"
     "getBrew"
     "createBrew"

@@ -7,14 +7,15 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-	refreshToken as refreshAuthToken,
-	clearAuthData,
-	setAuthData,
-	subscribeToAuthEvent,
-	unsubscribeFromAuthEvent,
-	AuthTokens,
-	isAuthenticated as checkIsAuthenticated,
-} from "@/utils/auth";
+	signIn,
+	signOut,
+	confirmSignIn,
+	confirmSignUp,
+	getCurrentUser,
+	fetchUserAttributes,
+	fetchAuthSession,
+} from "aws-amplify/auth";
+import "@/config/amplify"; // Initialize Amplify configuration
 
 // Define types for our context
 interface User {
@@ -32,11 +33,33 @@ interface AuthContextType {
 	user: User | null;
 	isAuthenticated: boolean;
 	isLoading: boolean;
-	login: (tokens: AuthTokens, userData: User) => void;
 	logout: () => void;
 	updateUser: (userData: Partial<User>) => void;
-	getAccessToken: () => string | null;
+	getAccessToken: () => Promise<string | null>;
 	refreshToken: () => Promise<string | null>;
+	// OTP flow methods
+	initiateLogin: (
+		email: string
+	) => Promise<{ success: boolean; error?: string; session?: string }>;
+	verifyOTP: (
+		otp: string,
+		session?: any
+	) => Promise<{ success: boolean; error?: string }>;
+	register: (
+		email: string,
+		firstName: string,
+		lastName: string,
+		country?: string,
+		interests?: string[],
+		timezone?: string
+	) => Promise<{ success: boolean; error?: string }>;
+	verifyRegistration: (
+		email: string,
+		otp: string
+	) => Promise<{ success: boolean; error?: string }>;
+	resendOTP: (
+		email: string
+	) => Promise<{ success: boolean; error?: string; session?: string }>;
 }
 
 interface AuthProviderProps {
@@ -59,115 +82,295 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const [user, setUser] = useState<User | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
+
 	const navigate = useNavigate();
 
-	// Check if user is authenticated on initial load and subscribe to auth events
+	// Check if user is authenticated on initial load
 	useEffect(() => {
 		const initializeAuth = async () => {
 			try {
-				const storedUser = localStorage.getItem("user");
+				// Try to get current authenticated user from Amplify
+				const currentUser = await getCurrentUser();
 
-				// Only set user if we have valid authentication
-				if (storedUser && checkIsAuthenticated()) {
-					setUser(JSON.parse(storedUser));
+				if (currentUser) {
+					// Get user attributes from Amplify
+					const userAttributes = await fetchUserAttributes();
+
+					// Build user object from Amplify attributes
+					const userData: User = {
+						id: userAttributes.email || "",
+						email: userAttributes.email || "",
+						firstName: userAttributes.given_name || "",
+						lastName: userAttributes.family_name || "",
+						country: userAttributes["custom:country"] || "",
+						interests: JSON.parse(userAttributes["custom:interests"] || "[]"),
+						timezone: userAttributes["custom:timezone"] || "",
+						createdAt: userAttributes["custom:created_at"] || "",
+					};
+
+					setUser(userData);
 				} else {
-					// Clear potentially invalid auth data
-					clearAuthData();
+					setUser(null);
 				}
 			} catch (error) {
-				setIsLoading(false); // Clear potentially corrupted data
-				clearAuthData();
+				// User is not authenticated
+				setUser(null);
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
 		initializeAuth();
+	}, []);
 
-		// Subscribe to auth events
-		const handleLogout = () => {
-			setUser(null);
-			// Only navigate if we're not already on the home page
-			if (window.location.pathname !== "/") {
-				navigate("/");
+	// Add session monitoring to prevent unexpected logouts
+	// Session management is handled reactively by apiClient.ts
+	// No need for proactive checking - AWS Amplify + reactive refresh handles token lifecycle
+
+	// Check if user is authenticated (Amplify handles token management)
+	const isAuthenticated = user !== null;
+
+	// Initiate login with email (starts OTP flow)
+	const initiateLogin = async (
+		email: string
+	): Promise<{ success: boolean; error?: string; session?: string }> => {
+		try {
+			// Ensure clean state before starting new login
+			try {
+				await signOut();
+			} catch {
+				// Ignore errors if no user is signed in
 			}
-		};
 
-		const handleLogin = () => {
-			const storedUser = localStorage.getItem("user");
-			if (storedUser) {
-				setUser(JSON.parse(storedUser));
+			// Use signIn without password for EMAIL_OTP flow
+			const result = await signIn({
+				username: email,
+				options: {
+					authFlowType: "USER_AUTH",
+					preferredChallenge: "EMAIL_OTP",
+				},
+			});
+
+			if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_EMAIL_CODE") {
+				return {
+					success: true,
+					session: email,
+				};
 			}
-		};
 
-		subscribeToAuthEvent("logout", handleLogout);
-		subscribeToAuthEvent("login", handleLogin);
-		subscribeToAuthEvent("tokenRefreshed", handleLogin);
-
-		// Cleanup subscriptions on unmount
-		return () => {
-			unsubscribeFromAuthEvent("logout", handleLogout);
-			unsubscribeFromAuthEvent("login", handleLogin);
-			unsubscribeFromAuthEvent("tokenRefreshed", handleLogin);
-		};
-	}, [navigate]);
-
-	// Removed proactive token refresh - now using reactive approach
-	// Token refresh will happen automatically when API calls detect expired tokens
-
-	// Computed property to check if user is authenticated
-	const isAuthenticated = user !== null && checkIsAuthenticated();
-
-	// Login function - store user data and tokens
-	const login = (tokens: AuthTokens, userData: User) => {
-		// Use the centralized setAuthData function
-		setAuthData(tokens, userData);
-
-		// The user state will be updated by the event listener
-		// but we still set it directly for immediate UI update
-		setUser(userData);
-		navigate("/dashboard");
-	};
-
-	// Logout function - clear user data and tokens
-	const logout = () => {
-		clearAuthData();
-		setUser(null);
-		navigate("/");
-	};
-
-	// Update user data
-	const updateUser = (userData: Partial<User>) => {
-		if (user) {
-			const updatedUser = { ...user, ...userData };
-			localStorage.setItem("user", JSON.stringify(updatedUser));
-			setUser(updatedUser);
+			return {
+				success: false,
+				error: "Unexpected authentication flow",
+			};
+		} catch (error: any) {
+			console.error("Login initiation failed:", error);
+			return {
+				success: false,
+				error: error.message || "Login initiation failed",
+			};
 		}
 	};
 
-	// Get access token
-	const getAccessToken = (): string | null => {
-		return localStorage.getItem("accessToken");
+	// Verify OTP and complete login
+	const verifyOTP = async (
+		otp: string,
+		session?: any
+	): Promise<{ success: boolean; error?: string }> => {
+		try {
+			const result = await confirmSignIn({ challengeResponse: otp });
+
+			// Get user attributes from Amplify
+			const userAttributes = await fetchUserAttributes();
+
+			// Create user object from Amplify attributes
+			const userData: User = {
+				id: userAttributes.email || "",
+				email: userAttributes.email || "",
+				firstName: userAttributes.given_name || "",
+				lastName: userAttributes.family_name || "",
+				country: userAttributes["custom:country"] || "",
+				interests: JSON.parse(userAttributes["custom:interests"] || "[]"),
+				timezone: userAttributes["custom:timezone"] || "",
+				createdAt: userAttributes["custom:created_at"] || "",
+			};
+
+			// Update React state (Amplify handles token storage)
+			setUser(userData);
+			navigate("/dashboard");
+			return { success: true };
+		} catch (error: any) {
+			console.error("OTP verification failed:", error);
+			return {
+				success: false,
+				error: error.message || "OTP verification failed",
+			};
+		}
 	};
 
-	// Refresh token function - uses the shared utility (reactive approach)
+	// Register new user
+	const register = async (
+		email: string,
+		firstName: string,
+		lastName: string,
+		country?: string,
+		interests?: string[],
+		timezone?: string
+	): Promise<{ success: boolean; error?: string }> => {
+		try {
+			// Call backend API which handles both Cognito user creation and database storage
+			if (!country || !interests) {
+				return { success: false, error: "Country and interests are required" };
+			}
+
+			const { apiClient } = await import("@/lib/apiClient");
+			await apiClient.register({
+				email,
+				firstName,
+				lastName,
+				country,
+				interests,
+				timezone,
+			});
+
+			return { success: true };
+		} catch (error: any) {
+			console.error("Registration failed:", error);
+			return { success: false, error: error.message || "Registration failed" };
+		}
+	};
+
+	// Verify registration OTP
+	const verifyRegistration = async (
+		email: string,
+		otp: string
+	): Promise<{ success: boolean; error?: string }> => {
+		try {
+			await confirmSignUp({ username: email, confirmationCode: otp });
+			// After successful registration, initiate login
+			const loginResult = await initiateLogin(email);
+			return loginResult;
+		} catch (error: any) {
+			console.error("Registration verification failed:", error);
+			return {
+				success: false,
+				error: error.message || "Registration verification failed",
+			};
+		}
+	};
+
+	// Resend OTP (restart sign-in flow for EMAIL_OTP)
+	const resendOTP = async (
+		email: string
+	): Promise<{ success: boolean; error?: string; session?: string }> => {
+		try {
+			// For EMAIL_OTP sign-in flow, we need to restart the sign-in process
+			// as AWS Amplify doesn't have a direct resend function for sign-in OTP
+			const result = await signIn({
+				username: email,
+				options: {
+					authFlowType: "USER_AUTH",
+					preferredChallenge: "EMAIL_OTP",
+				},
+			});
+
+			if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_EMAIL_CODE") {
+				return { success: true, session: email };
+			}
+
+			return { success: false, error: "Failed to resend OTP" };
+		} catch (error: any) {
+			console.error("Resend OTP failed:", error);
+			return { success: false, error: error.message || "Resend OTP failed" };
+		}
+	};
+
+	// Logout function
+	const logout = async () => {
+		try {
+			await signOut();
+		} catch (error) {
+			console.error("Logout error:", error);
+		} finally {
+			// Clear React state (Amplify handles token cleanup)
+			setUser(null);
+			navigate("/");
+		}
+	};
+
+	// Update user data (updates both Amplify attributes and local state)
+	const updateUser = async (userData: Partial<User>) => {
+		if (user) {
+			try {
+				// Update Amplify user attributes
+				const attributesToUpdate: Record<string, string> = {};
+
+				if (userData.firstName !== undefined)
+					attributesToUpdate.given_name = userData.firstName;
+				if (userData.lastName !== undefined)
+					attributesToUpdate.family_name = userData.lastName;
+				if (userData.country !== undefined)
+					attributesToUpdate["custom:country"] = userData.country;
+				if (userData.interests !== undefined)
+					attributesToUpdate["custom:interests"] = JSON.stringify(
+						userData.interests
+					);
+				if (userData.timezone !== undefined)
+					attributesToUpdate["custom:timezone"] = userData.timezone;
+
+				if (Object.keys(attributesToUpdate).length > 0) {
+					const { updateUserAttributes } = await import("aws-amplify/auth");
+					await updateUserAttributes({ userAttributes: attributesToUpdate });
+				}
+
+				// Update local state
+				const updatedUser = { ...user, ...userData };
+				setUser(updatedUser);
+			} catch (error) {
+				console.error("Failed to update user attributes:", error);
+				// Still update local state even if Amplify update fails
+				const updatedUser = { ...user, ...userData };
+				setUser(updatedUser);
+			}
+		}
+	};
+
+	// Get access token (Amplify manages this automatically)
+	const getAccessToken = async (): Promise<string | null> => {
+		try {
+			const session = await fetchAuthSession();
+			return session.tokens?.accessToken?.toString() || null;
+		} catch (error) {
+			return null;
+		}
+	};
+
+	// Refresh token (force refresh the session)
 	const refreshToken = async (): Promise<string | null> => {
-		// Simply delegate to the auth utility without aggressive logout
-		// The auth utility will handle clearing data for permanent failures
-		// Temporary failures (network issues) won't trigger logout
-		return await refreshAuthToken();
+		try {
+			// Force refresh the session
+			const session = await fetchAuthSession({ forceRefresh: true });
+			return session.tokens?.accessToken?.toString() || null;
+		} catch (error) {
+			console.error("Token refresh failed:", error);
+			// Don't automatically sign out here, let the caller decide
+			return null;
+		}
 	};
 
 	// Create the value object that will be provided to consumers
-	const value = {
+	const value: AuthContextType = {
 		user,
 		isAuthenticated,
 		isLoading,
-		login,
 		logout,
 		updateUser,
 		getAccessToken,
 		refreshToken,
+		initiateLogin,
+		verifyOTP,
+		register,
+		verifyRegistration,
+		resendOTP,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

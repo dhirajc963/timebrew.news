@@ -1,10 +1,19 @@
 service: timebrew-backend
 
+custom:
+  validatedStage: ${self:custom.stages.${opt:stage, 'dev'}, 'dev'}
+  stages:
+    dev: dev
+    prod: prod
+  pythonRequirements:
+    dockerizePip: true
+    pythonBin: python3
+
 provider:
   name: aws
   runtime: python3.9
   region: us-east-1
-  stage: ${opt:stage, 'dev'}
+  stage: ${self:custom.validatedStage}
   httpApi:
     cors:
       allowedOrigins:
@@ -57,11 +66,6 @@ provider:
 plugins:
   - serverless-python-requirements
 
-custom:
-  pythonRequirements:
-    dockerizePip: true
-    pythonBin: python3
-
 functions:
   # Health check function
   health:
@@ -91,57 +95,8 @@ functions:
               - Authorization
               - X-Requested-With
 
-  login:
-    handler: handlers/auth/login.handler
-    events:
-      - http:
-          path: auth/login
-          method: post
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
-
-  verifyOTP:
-    handler: handlers/auth/verify_otp.handler
-    events:
-      - http:
-          path: auth/verify-otp
-          method: post
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
-
-  resendVerification:
-    handler: handlers/auth/resend_verification.handler
-    events:
-      - http:
-          path: auth/resend-verification
-          method: post
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
-
-  refreshToken:
-    handler: handlers/auth/refresh_token.handler
-    events:
-      - http:
-          path: auth/refresh-token
-          method: post
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
+  # Removed login, verifyOTP, resendVerification, and refreshToken functions
+  # Frontend now uses AWS Amplify directly for authentication
 
   # Brew functions
   getBrews:

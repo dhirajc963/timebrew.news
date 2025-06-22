@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
@@ -16,7 +16,7 @@ def lambda_handler(event, context):
     Creates structured JSON content for TimeBrew briefings using AI
     Focuses purely on editorial voice and content creation
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     try:
         # Extract briefing_id from event
         briefing_id = event.get("briefing_id")
@@ -68,7 +68,6 @@ def lambda_handler(event, context):
 
         # Determine briefing type and build user name
         delivery_hour = delivery_time.hour
-        briefing_type = "morning" if delivery_hour < 12 else "evening"
         user_name = (
             f"{first_name} {last_name}"
             if first_name and last_name
@@ -263,8 +262,8 @@ Arrange all articles by:
 3. **Industry-specific** developments for this user
 4. **Interesting/educational** content that adds value
 
-# {briefing_type.upper()} BRIEFING SPECIFICS
-{"Morning briefings: Set the tone for the day ahead. Focus on 'Here's what you need to know before your first meeting' energy." if briefing_type == "morning" else "Evening briefings: Wrap up the day's chaos. Focus on 'Here's what actually mattered today' energy."}
+# BRIEFING SPECIFICS
+{"Morning briefings: Set the tone for the day ahead. Focus on 'Here's what you need to know before your first meeting' energy."  "Evening briefings: Wrap up the day's chaos. Focus on 'Here's what actually mattered today' energy."}
 
 # PERSONALIZATION CONTEXT
 User Profile:
@@ -324,7 +323,7 @@ Return ONLY the JSON object, no other text.
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings. You MUST respond with ONLY a valid JSON object using the exact structure provided. Do not include any other text, explanations, or formatting outside the JSON.",
+                        "content": "You are an expert newsletter editor who creates engaging, Morning Brew-style briefings. You MUST respond with ONLY a valid JSON object using the exact structure provided. CRITICAL: Your response MUST start with { and end with }. Output ONLY valid JSON - no explanations, no markdown, no extra text.",
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -338,21 +337,7 @@ Return ONLY the JSON object, no other text.
 
         # Parse the JSON response
         try:
-            # Clean the response to ensure it's valid JSON
-            ai_response_clean = ai_response.strip()
-
-            # Remove any potential markdown code blocks
-            if ai_response_clean.startswith("```json"):
-                ai_response_clean = ai_response_clean[7:]
-            if ai_response_clean.startswith("```"):
-                ai_response_clean = ai_response_clean[3:]
-            if ai_response_clean.endswith("```"):
-                ai_response_clean = ai_response_clean[:-3]
-
-            ai_response_clean = ai_response_clean.strip()
-
-            # Parse JSON
-            editor_draft = json.loads(ai_response_clean)
+            editor_draft = ai_service.parse_json_from_response(ai_response)
 
             # Validate required keys
             required_keys = ["intro", "articles", "outro"]
@@ -370,20 +355,13 @@ Return ONLY the JSON object, no other text.
                     if key not in article:
                         raise Exception(f"Article {i+1} missing required key: {key}")
 
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"Raw AI response: {ai_response}")
-            raise Exception(f"Invalid JSON from AI: {str(e)}")
-        except Exception as e:
-            print(f"Content validation error: {e}")
-            print(f"Parsed content: {editor_draft}")
-            raise
-
-        # Truncate prompt and response for storage
-        truncated_prompt = prompt[:5000] if len(prompt) > 5000 else prompt
-        truncated_ai_response = (
-            ai_response[:5000] if len(ai_response) > 5000 else ai_response
-        )
+        except (ValueError, Exception) as e:
+            logger.error(
+                "Failed to parse or validate AI response",
+                error=e,
+                content_preview=ai_response[:500],
+            )
+            raise Exception(f"Failed to process AI response: {str(e)}")
 
         # Update briefing with the structured content
         cursor.execute(
@@ -393,13 +371,14 @@ Return ONLY the JSON object, no other text.
                 editor_draft = %s,
                 editor_prompt = %s,
                 raw_ai_response = %s,
-                updated_at = now()
+                updated_at = %s
             WHERE id = %s
         """,
             (
                 json.dumps(editor_draft),
-                truncated_prompt,
-                truncated_ai_response,
+                prompt,
+                ai_response,
+                datetime.now(timezone.utc),
                 briefing_id,
             ),
         )
@@ -409,7 +388,7 @@ Return ONLY the JSON object, no other text.
         conn.close()
 
         # Calculate processing time
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
 
         return {
@@ -419,7 +398,6 @@ Return ONLY the JSON object, no other text.
                 "briefing_id": briefing_id,
                 "user_name": user_name,
                 "brew_name": brew_name,
-                "briefing_type": briefing_type,
                 "articles_created": len(editor_draft["articles"]),
                 "articles_requested": article_count,
                 "source_articles_available": article_count_actual,
@@ -435,6 +413,6 @@ Return ONLY the JSON object, no other text.
         }
 
     except Exception as e:
-        print(f"Error in news_editor: {str(e)}")
+        logger.error("An unexpected error occurred in news_editor", error=str(e))
         # Re-raise the exception to ensure Step Functions marks this as failed
         raise e

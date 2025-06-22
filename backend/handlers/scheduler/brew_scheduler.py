@@ -1,7 +1,7 @@
 import os
 import json
 import boto3
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
@@ -18,7 +18,7 @@ def lambda_handler(event, context):
         cursor = conn.cursor()
 
         # Get current UTC time
-        utc_now = datetime.utcnow()
+        utc_now = datetime.now(timezone.utc)
 
         # Query active brews with user timezone information
         cursor.execute(
@@ -202,13 +202,13 @@ def trigger_ai_pipeline(brew_id):
         execution_input = {
             "brew_id": brew_id,
             "triggered_by": "scheduler",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Start execution
         response = stepfunctions.start_execution(
             stateMachineArn=state_machine_arn,
-            name=f"brew-{brew_id}-{int(datetime.utcnow().timestamp())}",
+            name=f"brew-{brew_id}-{int(datetime.now(timezone.utc).timestamp())}",
             input=json.dumps(execution_input),
         )
 

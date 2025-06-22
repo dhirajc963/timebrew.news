@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
 
@@ -201,7 +201,7 @@ def lambda_handler(event, context):
                     article_position or 0,
                     article_title,
                     article_source,
-                    datetime.utcnow(),
+                    datetime.now(timezone.utc),
                 ),
             )
             feedback_id = cursor.fetchone()[0]

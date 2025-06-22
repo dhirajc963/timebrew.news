@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
 	Coffee,
 	Mail,
@@ -18,7 +19,6 @@ import { AnimatedGradientText } from "@/components/magicui/animated-gradient-tex
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
-import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from "@/config/api";
 import { validateEmail } from "@/lib/utils";
 
 // Types
@@ -38,6 +38,7 @@ interface ApiResponse {
 }
 
 const Signup: React.FC = () => {
+	const { register } = useAuth();
 	const [formData, setFormData] = useState<SignupFormData>({
 		email: "",
 		firstName: "",
@@ -173,37 +174,34 @@ const Signup: React.FC = () => {
 		}
 
 		try {
-			const response = await fetch(getApiUrl(API_ENDPOINTS.auth.register), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(formData),
-			});
-
-			const data: ApiResponse = await response.json();
-
-			if (response.ok) {
+			const result = await register(
+				formData.email, 
+				formData.firstName, 
+				formData.lastName, 
+				formData.country, 
+				formData.interests, 
+				formData.timezone
+			);
+			if (result.success) {
 				setSuccess(true);
-			} else if (
-				data.error?.toLowerCase().includes("already exists") ||
-				data.error?.toLowerCase().includes("already registered")
-			) {
-				// Email already registered - suggest sign in
-				setError(
-					<>
-						This email is already registered.{" "}
-						<Link
-							to="/signin"
-							className="text-primary hover:underline font-medium"
-						>
-							Sign in
-						</Link>{" "}
-						to your account.
-					</>
-				);
 			} else {
-				setError(data.error || "Registration failed. Please try again.");
+				if (result.error?.includes("already exists") || result.error?.includes("already registered")) {
+					// Email already registered - suggest sign in
+					setError(
+						<>
+							This email is already registered.{" "}
+							<Link
+								to="/signin"
+								className="text-primary hover:underline font-medium"
+							>
+								Sign in
+							</Link>{" "}
+							to your account.
+						</>
+					);
+				} else {
+					setError(result.error || "Registration failed. Please try again.");
+				}
 			}
 		} catch (err) {
 			setError("Network error. Please check your connection and try again.");

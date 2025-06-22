@@ -17,14 +17,6 @@ export const API_BASE_URL =
 
 // API endpoints
 export const API_ENDPOINTS = {
-	// Auth endpoints
-	auth: {
-		register: "/auth/register",
-		login: "/auth/login",
-		verifyOtp: "/auth/verify-otp",
-		resendVerification: "/auth/resend-verification",
-		refreshToken: "/auth/refresh-token",
-	},
 	// Brew endpoints
 	brews: {
 		getAll: "/brews",

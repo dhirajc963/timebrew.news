@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     Get Briefings Lambda Function
     Retrieves briefings for a user with pagination and filtering
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     logger.log_request_start(event, context, "briefings/get")
 
     try:
@@ -26,7 +26,7 @@ def lambda_handler(event, context):
             logger.log_request_end(
                 "briefings/get",
                 400,
-                (datetime.utcnow() - start_time).total_seconds() * 1000,
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
             )
             return create_response(400, {"error": "user_id is required"})
 
@@ -56,31 +56,38 @@ def lambda_handler(event, context):
             limit = 20
 
         # Get database connection
-        db_start_time = datetime.utcnow()
+        db_start_time = datetime.now(timezone.utc)
         conn = get_db_connection()
         cursor = conn.cursor()
-        db_connection_time = (datetime.utcnow() - db_start_time).total_seconds() * 1000
+        db_connection_time = (
+            datetime.now(timezone.utc) - db_start_time
+        ).total_seconds() * 1000
         logger.log_db_operation("briefings", "connection", db_connection_time)
 
-        # Verify user exists
-        user_check_start = datetime.utcnow()
-        cursor.execute("SELECT id FROM time_brew.users WHERE id = %s", (user_id,))
-        user_exists = cursor.fetchone()
-        user_check_time = (datetime.utcnow() - user_check_start).total_seconds() * 1000
-
-        if not user_exists:
+        # Verify user exists and get user UUID
+        user_check_start = datetime.now(timezone.utc)
+        cursor.execute("SELECT id FROM time_brew.users WHERE email = %s", (user_id,))
+        user_result = cursor.fetchone()
+        
+        if not user_result:
             logger.error("User not found in database", user_id=user_id)
             logger.log_db_operation(
-                "briefings", "user_verification", user_check_time, status="not_found"
+                "briefings", "user_verification", (datetime.now(timezone.utc) - user_check_start).total_seconds() * 1000, status="not_found"
             )
             cursor.close()
             conn.close()
             logger.log_request_end(
                 "briefings/get",
                 404,
-                (datetime.utcnow() - start_time).total_seconds() * 1000,
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
             )
             return create_response(404, {"error": "User not found"})
+        
+        # Get the actual user UUID for database queries
+        actual_user_id = user_result[0]
+        user_check_time = (
+            datetime.now(timezone.utc) - user_check_start
+        ).total_seconds() * 1000
 
         logger.log_db_operation(
             "briefings", "user_verification", user_check_time, status="success"
@@ -88,7 +95,7 @@ def lambda_handler(event, context):
 
         # Build query with filters
         where_conditions = ["bf.user_id = %s"]
-        query_params_list = [user_id]
+        query_params_list = [actual_user_id]
 
         if status:
             where_conditions.append("bf.execution_status = %s")
@@ -101,7 +108,7 @@ def lambda_handler(event, context):
         where_clause = " AND ".join(where_conditions)
 
         # Get total count
-        count_start_time = datetime.utcnow()
+        count_start_time = datetime.now(timezone.utc)
         count_query = f"""
             SELECT COUNT(*)
             FROM time_brew.briefings bf
@@ -111,7 +118,9 @@ def lambda_handler(event, context):
 
         cursor.execute(count_query, query_params_list)
         total_count = cursor.fetchone()[0]
-        count_query_time = (datetime.utcnow() - count_start_time).total_seconds() * 1000
+        count_query_time = (
+            datetime.now(timezone.utc) - count_start_time
+        ).total_seconds() * 1000
         logger.log_db_operation(
             "briefings", "count_query", count_query_time, total_count=total_count
         )
@@ -132,11 +141,11 @@ def lambda_handler(event, context):
         query_params_list.extend([limit, offset])
 
         # Execute main briefings query
-        briefings_start_time = datetime.utcnow()
+        briefings_start_time = datetime.now(timezone.utc)
         cursor.execute(briefings_query, query_params_list)
         rows = cursor.fetchall()
         briefings_query_time = (
-            datetime.utcnow() - briefings_start_time
+            datetime.now(timezone.utc) - briefings_start_time
         ).total_seconds() * 1000
         logger.log_db_operation(
             "briefings",
@@ -160,7 +169,7 @@ def lambda_handler(event, context):
                 click_count,
                 delivery_status,
                 delivery_time,
-                timezone,
+                user_timezone,
             ) = row
 
             # Parse editor_draft JSON
@@ -194,7 +203,7 @@ def lambda_handler(event, context):
                 "brew_info": (
                     {
                         "delivery_time": str(delivery_time) if delivery_time else None,
-                        "timezone": timezone,
+                        "timezone": user_timezone,
                     }
                     if brew_id
                     else None
@@ -209,7 +218,7 @@ def lambda_handler(event, context):
         has_next = (offset + limit) < total_count
         has_prev = offset > 0
 
-        total_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+        total_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(
             "Briefings retrieval completed successfully",
             briefings_count=len(briefings),
@@ -240,7 +249,7 @@ def lambda_handler(event, context):
         logger.log_request_end(
             "briefings/get",
             400,
-            (datetime.utcnow() - start_time).total_seconds() * 1000,
+            (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
         )
         return create_response(400, {"error": f"Invalid parameter: {str(e)}"})
     except Exception as e:
@@ -248,6 +257,6 @@ def lambda_handler(event, context):
         logger.log_request_end(
             "briefings/get",
             500,
-            (datetime.utcnow() - start_time).total_seconds() * 1000,
+            (datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
         )
         return create_response(500, {"error": "Internal server error"})

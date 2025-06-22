@@ -2,6 +2,8 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 interface ProtectedRouteProps {
   redirectPath?: string;
@@ -10,9 +12,26 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   redirectPath = '/signin'
 }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [amplifyAuthCheck, setAmplifyAuthCheck] = useState<boolean | null>(null);
 
-  if (isLoading) {
+  // Double-check authentication with Amplify directly
+  useEffect(() => {
+    const verifyAmplifyAuth = async () => {
+      try {
+        await getCurrentUser();
+        setAmplifyAuthCheck(true);
+      } catch {
+        setAmplifyAuthCheck(false);
+      }
+    };
+    
+    if (!isLoading) {
+      verifyAmplifyAuth();
+    }
+  }, [isLoading, user]);
+
+  if (isLoading || amplifyAuthCheck === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -23,7 +42,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
   
-  return isAuthenticated ? <Outlet /> : <Navigate to={redirectPath} replace />;
+  // Both context and Amplify must agree that user is authenticated
+  const isFullyAuthenticated = isAuthenticated && amplifyAuthCheck && user;
+  
+  return isFullyAuthenticated ? <Outlet /> : <Navigate to={redirectPath} replace />;
 };
 
 export default ProtectedRoute;

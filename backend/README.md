@@ -129,11 +129,8 @@ serverless deploy --stage prod
 ## 🔧 API Endpoints
 
 ### Authentication
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/verify-otp` - OTP verification
-- `POST /auth/resend-verification` - Resend verification
-- `POST /auth/refresh-token` - Refresh JWT token
+- `POST /auth/register` - User registration (creates user profile in database)
+- **Note**: Login, OTP verification, and token management are now handled directly by AWS Amplify on the frontend
 
 ### Brew Management
 - `GET /brews` - List user's brews

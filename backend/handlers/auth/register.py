@@ -115,7 +115,7 @@ def handler(event, context):
                         first_name,
                         last_name,
                         country,
-                        json.dumps(interests),
+                        interests,
                         timezone,
                     ),
                 )

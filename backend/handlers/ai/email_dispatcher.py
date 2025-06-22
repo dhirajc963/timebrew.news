@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 import json
 import re
@@ -145,7 +145,7 @@ def lambda_handler(event, context):
     Email Dispatcher Lambda Function
     Reads JSON editor draft, formats to HTML, and sends email
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     logger = Logger("email_dispatcher")
 
     try:
@@ -375,12 +375,13 @@ Note: For the best experience, please view this email in HTML format.
             UPDATE time_brew.briefings 
             SET execution_status = %s,
                 sent_at = %s,
-                updated_at = CURRENT_TIMESTAMP
+                updated_at = %s
             WHERE id = %s
         """,
             (
                 "dispatched" if delivery_status == "dispatched" else "failed",
                 sent_at_utc,
+                datetime.now(timezone.utc),
                 briefing_id,
             ),
         )
@@ -401,7 +402,7 @@ Note: For the best experience, please view this email in HTML format.
         conn.close()
 
         # Calculate processing time
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
 
         logger.info(
@@ -438,7 +439,7 @@ Note: For the best experience, please view this email in HTML format.
 
     except Exception as e:
         # Calculate processing time for failed request
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
 
         logger.error(
@@ -456,10 +457,10 @@ Note: For the best experience, please view this email in HTML format.
                 cursor.execute(
                     """
                     UPDATE time_brew.briefings 
-                    SET execution_status = 'failed', updated_at = CURRENT_TIMESTAMP
+                    SET execution_status = 'failed', updated_at = %s
                     WHERE id = %s
                 """,
-                    (briefing_id,),
+                    (datetime.now(timezone.utc), briefing_id),
                 )
                 conn.commit()
                 cursor.close()

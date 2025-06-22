@@ -14,8 +14,8 @@ CREATE TABLE users (
 	interests _text NULL,
 	timezone varchar(50) NULL DEFAULT 'UTC'::character varying,
 	is_active bool NULL DEFAULT true,
-	created_at timestamp NULL DEFAULT now(),
-	updated_at timestamp NULL DEFAULT now(),
+	created_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
+	updated_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
 	CONSTRAINT users_cognito_id_key UNIQUE (cognito_id),
 	CONSTRAINT users_email_key UNIQUE (email),
 	CONSTRAINT users_pkey PRIMARY KEY (id)
@@ -47,8 +47,8 @@ CREATE TABLE brews (
 	article_count int4 NULL DEFAULT 5,
 	is_active bool NULL DEFAULT true,
 	last_sent_date timestamp NULL,
-	created_at timestamp NULL DEFAULT now(),
-	updated_at timestamp NULL DEFAULT now(),
+	created_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
+	updated_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
 	CONSTRAINT brews_article_count_check CHECK (((article_count >= 1) AND (article_count <= 10))),
 	CONSTRAINT brews_pkey PRIMARY KEY (id),
 	CONSTRAINT brews_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -76,17 +76,17 @@ CREATE TABLE briefings (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	brew_id uuid NULL,
 	user_id uuid NULL,
-	editor_draft jsonb NULL,
-	sent_at timestamp NULL DEFAULT now(),
+	sent_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
 	article_count int4 NOT NULL,
 	opened_at timestamp NULL,
 	click_count int4 NULL DEFAULT 0,
 	delivery_status varchar(20) NULL DEFAULT 'sent'::character varying,
 	execution_status varchar(20) NULL DEFAULT 'completed'::character varying,
-	created_at timestamp NULL DEFAULT now(),
+	created_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
 	editor_prompt text NULL,
 	raw_ai_response text NULL,
-	updated_at timestamp NULL DEFAULT now(),
+	updated_at timestamp NULL DEFAULT (now() AT TIME ZONE 'UTC'::text),
+	editor_draft jsonb NULL,
 	CONSTRAINT briefings_delivery_status_check CHECK (((delivery_status)::text = ANY ((ARRAY['sent'::character varying, 'bounced'::character varying, 'failed'::character varying])::text[]))),
 	CONSTRAINT briefings_execution_status_check CHECK (((execution_status)::text = ANY ((ARRAY['failed'::character varying, 'dispatched'::character varying, 'curated'::character varying, 'edited'::character varying])::text[]))),
 	CONSTRAINT briefings_pkey PRIMARY KEY (id),
@@ -94,8 +94,9 @@ CREATE TABLE briefings (
 	CONSTRAINT briefings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_briefings_brew_date ON time_brew.briefings USING btree (brew_id, sent_at DESC);
-CREATE INDEX idx_briefings_content_search ON time_brew.briefings USING gin (to_tsvector('english'::regconfig, ((editor_draft->>'subject')::text || ' ' || (editor_draft->>'intro')::text || ' ' || (editor_draft->>'outro')::text)));
 CREATE INDEX idx_briefings_delivery_status ON time_brew.briefings USING btree (delivery_status);
+CREATE INDEX idx_briefings_editor_draft_search ON time_brew.briefings USING gin (editor_draft);
+CREATE INDEX idx_briefings_json_content_search ON time_brew.briefings USING gin (to_tsvector('english'::regconfig, ((((COALESCE((editor_draft ->> 'intro'::text), ''::text) || ' '::text) || COALESCE((editor_draft ->> 'outro'::text), ''::text)) || ' '::text) || COALESCE(((editor_draft -> 'articles'::text))::text, ''::text))));
 CREATE INDEX idx_briefings_opened ON time_brew.briefings USING btree (user_id, opened_at) WHERE (opened_at IS NOT NULL);
 CREATE INDEX idx_briefings_user_date ON time_brew.briefings USING btree (user_id, sent_at DESC);
 

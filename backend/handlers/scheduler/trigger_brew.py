@@ -1,7 +1,7 @@
 import os
 import json
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
 
@@ -33,7 +33,7 @@ def lambda_handler(event, context):
         cursor.execute(
             """
             SELECT b.id, b.user_id, b.delivery_time, u.timezone, b.is_active,
-                   u.email, u.first_name, u.last_name
+                u.email, u.first_name, u.last_name
             FROM time_brew.brews b
             JOIN time_brew.users u ON b.user_id = u.id
             WHERE b.id = %s
@@ -51,7 +51,7 @@ def lambda_handler(event, context):
             brew_id,
             user_id,
             delivery_time,
-            timezone,
+            user_timezone,
             is_active,
             email,
             first_name,
@@ -112,7 +112,7 @@ def lambda_handler(event, context):
                     "user_email": email,
                     "user_name": user_name,
                     "execution_arn": execution_arn,
-                    "triggered_at": datetime.utcnow().isoformat(),
+                    "triggered_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
         else:
@@ -146,13 +146,13 @@ def trigger_ai_pipeline(brew_id, triggered_by="manual"):
         execution_input = {
             "brew_id": brew_id,
             "triggered_by": triggered_by,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Start execution
         response = stepfunctions.start_execution(
             stateMachineArn=state_machine_arn,
-            name=f"brew-{brew_id}-{triggered_by}-{int(datetime.utcnow().timestamp())}",
+            name=f"brew-{brew_id}-{triggered_by}-{int(datetime.now(timezone.utc).timestamp())}",
             input=json.dumps(execution_input),
         )
 

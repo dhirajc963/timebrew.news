@@ -1,7 +1,9 @@
-import os
 import json
+import os
+import re
 import requests
 import openai
+import time
 from typing import Dict, List, Optional, Any
 from utils.logger import logger
 
@@ -52,21 +54,23 @@ class AIService:
             logger.error(f"AI API call failed for {provider}", provider=provider, error=str(e))
             raise AIServiceError(f"Failed to call {provider}: {str(e)}")
 
-    def _call_perplexity(self, 
+    def _call_perplexity(self,
                         prompt: str, 
                         model: str = "sonar-pro", 
                         temperature: float = 0.2, 
                         max_tokens: int = 4000,
-                        timeout: int = 30) -> Dict[str, Any]:
+                        timeout: int = 60,
+                        max_retries: int = 3) -> Dict[str, Any]:
         """
-        Call Perplexity AI API
+        Call Perplexity AI API with retry logic
         
         Args:
             prompt: The prompt to send
             model: Perplexity model to use
             temperature: Sampling temperature
             max_tokens: Maximum tokens in response
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (increased to 60)
+            max_retries: Maximum number of retry attempts
             
         Returns:
             Dict containing the response content and metadata
@@ -91,37 +95,78 @@ class AIService:
             "Calling Perplexity AI",
             model=model,
             temperature=temperature,
-            prompt_length=len(prompt)
-        )
-
-        response = requests.post(
-            "https://api.perplexity.ai/chat/completions",
-            headers=headers,
-            json=payload,
+            prompt_length=len(prompt),
             timeout=timeout,
+            max_retries=max_retries
         )
 
-        if response.status_code != 200:
-            raise AIServiceError(
-                f"Perplexity AI API error: {response.status_code} - {response.text}"
-            )
-
-        response_data = response.json()
-        content = response_data["choices"][0]["message"]["content"]
+        last_exception = None
         
-        logger.info(
-            "Perplexity AI response received",
-            response_length=len(content),
-            status_code=response.status_code
-        )
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    # Exponential backoff: 2^attempt seconds (2, 4, 8 seconds)
+                    delay = 2 ** attempt
+                    logger.info(f"Retrying Perplexity API call (attempt {attempt + 1}/{max_retries + 1}) after {delay}s delay")
+                    time.sleep(delay)
+                
+                response = requests.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout,
+                )
 
-        return {
-            "content": content,
-            "model": model,
-            "provider": "perplexity",
-            "usage": response_data.get("usage", {}),
-            "raw_response": response_data
-        }
+                if response.status_code != 200:
+                    raise AIServiceError(
+                        f"Perplexity AI API error: {response.status_code} - {response.text}"
+                    )
+
+                response_data = response.json()
+                content = response_data["choices"][0]["message"]["content"]
+                
+                logger.info(
+                    "Perplexity AI response received",
+                    response_length=len(content),
+                    status_code=response.status_code,
+                    attempt=attempt + 1
+                )
+
+                return {
+                    "content": content,
+                    "model": model,
+                    "provider": "perplexity",
+                    "usage": response_data.get("usage", {}),
+                    "raw_response": response_data
+                }
+                
+            except (requests.exceptions.Timeout, 
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.ReadTimeout) as e:
+                last_exception = e
+                logger.warning(
+                    f"Perplexity API timeout/connection error on attempt {attempt + 1}/{max_retries + 1}",
+                    error=str(e),
+                    attempt=attempt + 1
+                )
+                if attempt == max_retries:
+                    logger.error(
+                        "Perplexity API failed after all retry attempts",
+                        error=str(e),
+                        total_attempts=max_retries + 1
+                    )
+                    raise AIServiceError(f"Failed to call perplexity: {str(e)}")
+            except Exception as e:
+                # For non-timeout errors, don't retry
+                logger.error(
+                    "Perplexity API non-retryable error",
+                    error=str(e),
+                    attempt=attempt + 1
+                )
+                raise AIServiceError(f"Perplexity AI API error: {str(e)}")
+        
+        # This should never be reached due to the exception handling above
+        raise AIServiceError(f"Failed to call perplexity after {max_retries + 1} attempts: {str(last_exception)}")
 
     def _call_openai(self, 
                     messages: List[Dict[str, str]], 
@@ -266,6 +311,63 @@ class AIService:
             List of provider names
         """
         return list(self.providers.keys())
+
+    def parse_json_from_response(self, content: str) -> Dict[str, Any]:
+        """
+        Parses a JSON object from a string, handling common AI response issues.
+
+        Args:
+            content: The string content which may contain a JSON object.
+
+        Returns:
+            A dictionary parsed from the JSON content.
+
+        Raises:
+            ValueError: If JSON parsing fails.
+        """
+        logger.info("Attempting to parse JSON from AI response")
+        try:
+            # Remove <think> blocks
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+
+            # Clean the response to ensure it's valid JSON
+            content_clean = content.strip()
+
+            # Remove any potential markdown code blocks
+            if content_clean.startswith("```json"):
+                content_clean = content_clean[7:]
+            if content_clean.startswith("```"):
+                content_clean = content_clean[3:]
+            if content_clean.endswith("```"):
+                content_clean = content_clean[:-3]
+
+            content_clean = content_clean.strip()
+
+            # Fallback to extracting the first and last curly brace
+            start_idx = content_clean.find("{")
+            end_idx = content_clean.rfind("}") + 1
+
+            if start_idx != -1 and end_idx != 0:
+                json_str = content_clean[start_idx:end_idx]
+                response_data = json.loads(json_str)
+                logger.info("Successfully extracted and parsed JSON from AI response")
+                return response_data
+            else:
+                # Try parsing the whole string directly if no braces found
+                response_data = json.loads(content_clean)
+                logger.info("Successfully parsed entire content as JSON")
+                return response_data
+
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Failed to parse JSON from AI response",
+                error=str(e),
+                content_preview=content[:500],
+            )
+            raise ValueError(f"Failed to parse JSON from AI response: {str(e)}")
+        except Exception as e:
+            logger.error("An unexpected error occurred during JSON parsing", error=str(e))
+            raise
 
 
 # Global instance for easy importing

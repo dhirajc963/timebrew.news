@@ -1,6 +1,6 @@
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 
@@ -26,7 +26,7 @@ class Logger:
         self, level: str, message: str, extra_context: Optional[Dict] = None
     ) -> str:
         """Format log message as simple plain text with timestamp and level."""
-        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
         # Start with basic format
         formatted_msg = f"[{timestamp}] {level}: {message}"
