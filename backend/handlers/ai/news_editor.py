@@ -6,8 +6,7 @@ from utils.db import get_db_connection
 from utils.response import create_response
 from utils.text_utils import format_list_simple
 from utils.ai_service import ai_service
-import json
-import os
+from utils.other_utils import format_time_ampm
 
 
 def lambda_handler(event, context):
@@ -30,7 +29,7 @@ def lambda_handler(event, context):
         # Retrieve briefing and associated data
         cursor.execute(
             """
-            SELECT bf.id, bf.brew_id, bf.user_id, bf.article_count, bf.execution_status,
+            SELECT bf.id, bf.brew_id, bf.user_id, bf.execution_status,
                 b.name, b.topics, b.delivery_time, u.timezone,
                 u.email, u.first_name, u.last_name
             FROM time_brew.briefings bf
@@ -49,7 +48,6 @@ def lambda_handler(event, context):
             briefing_id,
             brew_id,
             user_id,
-            article_count,
             execution_status,
             brew_name,
             topics,
@@ -66,13 +64,8 @@ def lambda_handler(event, context):
                 {"error": f"Briefing status is {execution_status}, expected curated"},
             )
 
-        # Determine briefing type and build user name
-        delivery_hour = delivery_time.hour
-        user_name = (
-            f"{first_name} {last_name}"
-            if first_name and last_name
-            else first_name or "there"
-        )
+        user_name = f"{first_name} {last_name}"
+        delivery_time = format_time_ampm(str(delivery_time))
 
         # Retrieve raw articles and curator notes from curation_cache
         cursor.execute(
@@ -87,8 +80,35 @@ def lambda_handler(event, context):
         cache_result = cursor.fetchone()
         if not cache_result:
             return create_response(
-                404, {"error": "No articles found in curation cache"}
+                404,
+                {
+                    "error": f"No articles found in curation cache, was looking for {briefing_id}"
+                },
             )
+
+        # Fetch past editorial drafts for this brew to maintain consistency
+        cursor.execute(
+            """
+            SELECT editor_draft, sent_at
+            FROM time_brew.briefings
+            WHERE brew_id = %s AND editor_draft IS NOT NULL
+            ORDER BY sent_at DESC
+            LIMIT 1
+        """,
+            (brew_id,),
+        )
+
+        # Fetch and format past editorial draft for context
+        past_context_str = ""
+        if result := cursor.fetchone():
+            prior_draft, sent_at = result
+            if prior_draft:
+                past_context_str = f"""
+                Following was delivered on {sent_at.strftime('%Y-%m-%d %H:%M')}:
+                {prior_draft}
+
+                Use this to ensure freshness and avoid repetition.
+                """.strip()
 
         raw_articles_data, curator_notes = cache_result
         if isinstance(raw_articles_data, str):
@@ -96,70 +116,17 @@ def lambda_handler(event, context):
         else:
             raw_articles = raw_articles_data
 
-        # Add position to each article for reference
-        for i, article in enumerate(raw_articles):
-            article["position"] = i + 1
-
         # Get user timezone for personalization
         user_tz = pytz.timezone(brew_timezone)
         now = datetime.now(user_tz)
 
         # Parse topics JSON if it exists
         if isinstance(topics, str):
-            try:
-                topics_list = json.loads(topics)
-            except json.JSONDecodeError:
-                topics_list = []
-        elif topics is None:
-            topics_list = []
+            topics_list = json.loads(topics)
         else:
             topics_list = topics
 
         topics_str = format_list_simple(topics_list)
-
-        # Determine content strategy based on curator notes and article count
-        article_count_actual = len(raw_articles)
-
-        # Build curator context and strategy guidance
-        curator_context = ""
-        content_strategy = ""
-
-        if curator_notes and curator_notes.strip():
-            curator_context = f"""
-# CURATOR INSIGHTS
-Your news curator provided this context: "{curator_notes}"
-
-Use this insight to adapt your approach appropriately.
-"""
-
-            # Provide strategy guidance based on common curator note patterns
-            if "limited" in curator_notes.lower() or "slow" in curator_notes.lower():
-                content_strategy = """
-**ADAPTED STRATEGY - Limited News Day:**
-- Fill remaining slots with trend analysis, deeper dives, or educational content
-- Connect quieter stories to bigger implications
-- Use "what this quiet cycle means" type insights
-- Create value even when external news is light
-"""
-            elif "rich" in curator_notes.lower() or "diverse" in curator_notes.lower():
-                content_strategy = """
-**ADAPTED STRATEGY - Rich News Day:**
-- Curate the most impactful stories first
-- Keep each story punchy to cover more ground
-- Focus on immediate impacts and key takeaways
-"""
-            else:
-                content_strategy = """
-**BALANCED STRATEGY:**
-- Mix breaking news with deeper insights
-- Order stories by impact and relevance
-"""
-        else:
-            content_strategy = """
-**STANDARD STRATEGY:**
-- Order stories by importance and user relevance
-- Balance immediate news with broader context
-"""
 
         # Prepare articles text for AI processing
         if raw_articles:
@@ -180,44 +147,7 @@ Use this insight to adapt your approach appropriately.
                 "No articles found by curator - create valuable content anyway"
             )
 
-        # Article count context and instructions
-        if article_count_actual == 0:
-            article_strategy = f"""
-**NO ARTICLES SCENARIO - Target: {article_count} articles**
-Since no external articles were found, create {article_count} valuable content pieces:
-- Trend analysis on {topics_str}
-- Educational explainers 
-- Market insights or "what this silence means"
-- Relevant industry commentary
-- Previous story follow-ups
-
-Each should feel like a real TimeBrew story with the same voice and value.
-"""
-        elif article_count_actual < article_count:
-            missing_count = article_count - article_count_actual
-            article_strategy = f"""
-**MIXED SCENARIO - Target: {article_count} articles**
-You have {article_count_actual} real articles but need {missing_count} more.
-Fill the gaps with:
-- Deeper analysis of current trends in {topics_str}
-- "What we're watching" type content
-- Educational or explainer content
-- Follow-ups on previous stories
-
-Order all {article_count} pieces by importance and impact.
-"""
-        elif article_count_actual >= article_count:
-            article_strategy = f"""
-**RICH CONTENT SCENARIO - Target: {article_count} articles**
-You have {article_count_actual} articles to choose from.
-Select and order the {article_count} most important/relevant ones.
-Prioritize by: breaking news > high impact > user relevance > interesting insights.
-"""
-
-        prompt = f"""
-You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're creating the content for {user_name}'s "{brew_name}" briefing.
-
-{curator_context}
+        prompt = f"""You are the lead editor for TimeBrew, channeling the exact voice and style of Morning Brew's newsletter. You're creating content for {user_name}'s "{brew_name}" briefing, delivering at {delivery_time}.
 
 # THE MORNING BREW VOICE
 - **Like talking to your smartest friend over coffee** - conversational, witty, but never trying too hard
@@ -250,28 +180,31 @@ You are the lead editor for TimeBrew, channeling the exact voice and style of Mo
 ❌ "This is important for investors"
 ✅ "Translation: your portfolio is about to get interesting"
 
-{content_strategy}
-
-# ARTICLE REQUIREMENTS
-{article_strategy}
-
-# CONTENT ORDERING
-Arrange all articles by:
+# CONTENT STRATEGY
+Arrange articles by priority:
 1. **Breaking/urgent news** that affects everyone
 2. **High-impact stories** with broad implications  
 3. **Industry-specific** developments for this user
 4. **Interesting/educational** content that adds value
 
-# BRIEFING SPECIFICS
-{"Morning briefings: Set the tone for the day ahead. Focus on 'Here's what you need to know before your first meeting' energy."  "Evening briefings: Wrap up the day's chaos. Focus on 'Here's what actually mattered today' energy."}
+# BRIEFING CONTEXT
+- **Delivery time**: {delivery_time} (set tone accordingly - morning = energizing, evening = wrap-up)
+- **User**: {user_name}
+- **Focus areas**: {topics_str}
+- **Location**: {brew_timezone}
+- **Current moment**: {now.strftime('%Y-%m-%d %H:%M %Z')}
 
-# PERSONALIZATION CONTEXT
-User Profile:
-- Name: {user_name}
-- Briefing Name: {brew_name}
-- Focus Areas: {topics_str}
-- Location Context: {brew_timezone}
-- Current Moment: {now.strftime('%A, %B %d, %Y at %I:%M %p %Z')}
+# EDITORIAL GUIDANCE
+Adapt your approach based on the source material:
+
+- **5-8 articles**: Focus on ordering and relevance - curate the best stories
+- **3-4 articles**: Create a more educational briefing, extracting deeper value from each piece
+- **1-2 articles**: Write analytically, using your expertise to provide broader context
+- **No articles**: Write an original TimeBrew analysis piece about market trends, what a slow news day means, or connect to previous events
+
+{f"**Curator insight**: {curator_notes}" if curator_notes and curator_notes.strip() else ""}
+
+{past_context_str}
 
 # OUTPUT FORMAT
 Return ONLY a valid JSON object with this exact structure:
@@ -293,16 +226,12 @@ Return ONLY a valid JSON object with this exact structure:
     "outro": "Engaging sign-off that feels personal and on-brand"
 }}
 
-# CURATOR INSIGHTS INTEGRATION  
-{f"Your curator noted: '{curator_notes}' - weave this insight naturally into your editorial approach." if curator_notes and curator_notes.strip() else "Use standard editorial approach for today's briefing."}
-
-# SOURCE MATERIAL
+# SOURCE MATERIAL FROM CURATOR
 {articles_text}
 
-Remember: Focus purely on content and voice. No HTML, no formatting - just amazing editorial content that makes {user_name} think "This person gets it." Fill all {article_count} article slots with valuable content, ordering by importance and relevance.
+Create engaging editorial content that makes {user_name} think "This person gets it." Order by importance and relevance.
 
-Return ONLY the JSON object, no other text.
-"""
+Return ONLY the JSON object, no other text."""
 
         # Load AI model configuration
         config_path = os.path.join(
@@ -332,6 +261,23 @@ Return ONLY the JSON object, no other text.
                 max_tokens=3000,
             )
             ai_response = ai_response_data["content"]
+
+            # Store raw AI response immediately for debugging purposes
+            cursor.execute(
+                """
+                UPDATE time_brew.briefings 
+                SET raw_ai_response = %s,
+                    updated_at = %s
+                WHERE id = %s
+            """,
+                (
+                    ai_response,
+                    datetime.now(timezone.utc),
+                    briefing_id,
+                ),
+            )
+            conn.commit()
+
         except Exception as e:
             raise Exception(f"{provider.title()} API error: {str(e)}")
 
@@ -370,14 +316,12 @@ Return ONLY the JSON object, no other text.
             SET execution_status = 'edited',
                 editor_draft = %s,
                 editor_prompt = %s,
-                raw_ai_response = %s,
                 updated_at = %s
             WHERE id = %s
         """,
             (
                 json.dumps(editor_draft),
                 prompt,
-                ai_response,
                 datetime.now(timezone.utc),
                 briefing_id,
             ),
@@ -399,8 +343,6 @@ Return ONLY the JSON object, no other text.
                 "user_name": user_name,
                 "brew_name": brew_name,
                 "articles_created": len(editor_draft["articles"]),
-                "articles_requested": article_count,
-                "source_articles_available": article_count_actual,
                 "curator_notes": curator_notes,
                 "intro_preview": (
                     editor_draft["intro"][:100] + "..."
