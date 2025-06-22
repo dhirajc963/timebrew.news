@@ -159,6 +159,8 @@ functions:
     handler: handlers/scheduler/brew_scheduler.lambda_handler
     timeout: 300
     memorySize: 256
+    environment:
+      AI_PIPELINE_STATE_MACHINE_ARN: !Ref AIPipelineStateMachine
     events:
       - schedule: rate(15 minutes)
 
@@ -210,7 +212,7 @@ functions:
               - Authorization
               - X-Requested-With
 
-  # Feedback Function
+  # Feedback Functions
   submitFeedback:
     handler: handlers/feedback/submit.lambda_handler
     timeout: 29
@@ -219,6 +221,21 @@ functions:
       - http:
           path: feedback
           method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
+  getFeedbackStatus:
+    handler: handlers/feedback/get_status.lambda_handler
+    timeout: 29
+    memorySize: 256
+    events:
+      - http:
+          path: feedback/status/{id}
+          method: get
           cors:
             origin: "*"
             headers:

@@ -60,13 +60,16 @@ export interface Briefing {
 }
 
 export interface UserFeedback {
-	id?: string;
 	briefing_id: string;
-	article_position: number;
-	feedback_type: "like" | "dislike";
-	article_title?: string;
-	article_source?: string;
-	created_at?: string;
+	overall_feedback?: {
+		type: "like" | "dislike";
+	};
+	article_feedback?: Array<{
+		article_position: number;
+		type: "like" | "dislike";
+		article_title?: string;
+		article_source?: string;
+	}>;
 }
 
 // API client class
@@ -471,7 +474,52 @@ class ApiClient {
 	}
 
 	/**
-	 * Submit feedback for a briefing
+	 * Get feedback status for a briefing
+	 * @param briefingId The briefing ID
+	 * @param userId The user ID
+	 * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
+	 */
+	async getFeedbackStatus(
+		briefingId: string,
+		userId: string,
+		timeoutMs: number = 10000
+	): Promise<{
+		briefing_id: string;
+		briefing_feedback: "like" | "dislike" | null;
+		articles: Array<{
+			position: number;
+			feedback: "like" | "dislike" | null;
+			title?: string;
+			source?: string;
+		}>;
+	}> {
+		try {
+			await this.checkAuthentication();
+
+			const response = await Promise.race([
+				this.makeRequestWithRetry<{
+					briefing_id: string;
+					briefing_feedback: "like" | "dislike" | null;
+					articles: Array<{
+						position: number;
+						feedback: "like" | "dislike" | null;
+						title?: string;
+						source?: string;
+					}>;
+				}>(getApiUrl(`/feedback/status/${briefingId}?user_id=${userId}`), {
+					method: "GET",
+				}),
+				this.createTimeoutPromise(timeoutMs),
+			]);
+
+			return response;
+		} catch (error) {
+			return this.handleError("getting feedback status", error);
+		}
+	}
+
+	/**
+	 * Submit feedback for a briefing (with toggle functionality)
 	 * @param feedbackData The feedback data to submit
 	 * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
 	 */
@@ -484,12 +532,28 @@ class ApiClient {
 			comments?: string;
 		},
 		timeoutMs: number = 10000
-	): Promise<{ message: string; feedback_id: string }> {
+	): Promise<{ 
+		message: string; 
+		feedback_id: string | null; 
+		action: "submitted" | "updated" | "removed";
+		briefing_id: string;
+		feedback_type: string;
+		rating: number;
+		article_position?: number;
+	}> {
 		try {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ message: string; feedback_id: string }>(getApiUrl("/feedback/submit"), {
+				this.makeRequestWithRetry<{ 
+					message: string; 
+					feedback_id: string | null; 
+					action: "submitted" | "updated" | "removed";
+					briefing_id: string;
+					feedback_type: string;
+					rating: number;
+					article_position?: number;
+				}>(getApiUrl("/feedback"), {
 					method: "POST",
 					body: JSON.stringify(feedbackData),
 				}),

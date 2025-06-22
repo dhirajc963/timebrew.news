@@ -13,13 +13,13 @@ from utils.logger import Logger
 from utils.text_utils import format_list_simple
 
 
-def format_email_html(editor_draft, brew_name, topics_str, user_name, current_time):
+def format_email_html(editor_draft, brew_name, current_time):
     """
     Convert JSON editor draft into HTML email using TimeBrew template
     """
-    intro = editor_draft.get("intro", "")
-    articles = editor_draft.get("articles", [])
-    outro = editor_draft.get("outro", "")
+    intro = editor_draft.get("intro")
+    articles = editor_draft.get("articles")
+    outro = editor_draft.get("outro")
 
     # Format current date for header
     date_str = current_time.strftime("%A, %B %d")
@@ -46,42 +46,11 @@ def format_email_html(editor_draft, brew_name, topics_str, user_name, current_ti
         original_url = article.get("original_url")
         published_time = article.get("published_time", "")
 
-        # Format time ago if we have published_time
-        time_ago = ""
-        if published_time:
-            try:
-                if isinstance(published_time, str):
-                    # Try parsing different formats
-                    try:
-                        pub_time = datetime.fromisoformat(
-                            published_time.replace("Z", "+00:00")
-                        )
-                    except:
-                        pub_time = datetime.strptime(
-                            published_time, "%Y-%m-%d %H:%M:%S"
-                        )
-                else:
-                    pub_time = published_time
-
-                time_diff = current_time.replace(tzinfo=None) - pub_time.replace(
-                    tzinfo=None
-                )
-                hours = int(time_diff.total_seconds() // 3600)
-
-                if hours < 1:
-                    time_ago = "Just now"
-                elif hours < 24:
-                    time_ago = f"{hours}h ago"
-                elif hours < 48:
-                    time_ago = "Yesterday"
-                else:
-                    days = hours // 24
-                    time_ago = f"{days}d ago"
-            except:
-                time_ago = ""
+        # Use published_time directly as it's already formatted (e.g., '3 days ago', 'hours ago')
+        time_ago = published_time if published_time else ""
 
         # Source and time display
-        source_time = source
+        source_time = source if source else "Unknown Source"
         if time_ago:
             source_time += f" • {time_ago}"
 
@@ -125,19 +94,6 @@ def format_email_html(editor_draft, brew_name, topics_str, user_name, current_ti
     """
 
     return html
-
-
-def get_subject_line(editor_draft, brew_name):
-    """
-    Extract subject line from editor draft JSON, with fallback
-    """
-    subject = editor_draft.get("subject", "")
-
-    if subject and subject.strip():
-        return subject.strip()
-    else:
-        # Fallback if subject is missing from JSON
-        return f"Your {brew_name} briefing is ready"
 
 
 def lambda_handler(event, context):
@@ -260,10 +216,9 @@ def lambda_handler(event, context):
 
         # Generate HTML content and extract subject from JSON
         try:
-            html_content = format_email_html(
-                editor_draft, brew_name, topics_str, user_name, current_time
-            )
-            subject_line = get_subject_line(editor_draft, brew_name)
+            html_content = format_email_html(editor_draft, brew_name, current_time)
+            subject_line = editor_draft.get("subject")
+
         except Exception as e:
             logger.error(f"Error formatting email content: {str(e)}")
             cursor.close()
@@ -293,46 +248,8 @@ def lambda_handler(event, context):
         msg["From"] = formataddr(FROM_ADDRESS)
         msg["To"] = email
 
-        # Create plain text version by stripping HTML tags and formatting nicely
-        intro = editor_draft.get("intro", "")
-        articles = editor_draft.get("articles", [])
-        outro = editor_draft.get("outro", "")
-
-        text_content = f"""Hi {user_name},
-
-{intro}
-
-"""
-
-        # Add articles in text format
-        for i, article in enumerate(articles, 1):
-            headline = article.get("headline", "")
-            story_content = article.get("story_content", "")
-            source = article.get("source", "")
-            original_url = article.get("original_url")
-
-            text_content += f"""{i}. {headline}
-{story_content}
-Source: {source}"""
-
-            if original_url and original_url != "null" and original_url.strip():
-                text_content += f"\nRead more: {original_url}"
-
-            text_content += "\n\n"
-
-        text_content += f"""{outro}
-
-Best regards,
-The TimeBrew Team
-
-Note: For the best experience, please view this email in HTML format.
-"""
-
-        # Attach both text and HTML versions
-        text_part = MIMEText(text_content, "plain")
         html_part = MIMEText(html_content, "html")
 
-        msg.attach(text_part)
         msg.attach(html_part)
 
         # Send email
@@ -420,7 +337,6 @@ Note: For the best experience, please view this email in HTML format.
                     "user_name": user_name,
                     "email": email,
                     "subject_line": subject_line,
-                    "articles_count": len(articles),
                     "sent_at": sent_at.isoformat(),
                     "content_length": len(html_content),
                     "processing_time_seconds": round(processing_time, 2),

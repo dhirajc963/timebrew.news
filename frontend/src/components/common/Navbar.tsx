@@ -1,15 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, X, LogOut, User, Coffee, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Menu, LogOut, User, Coffee, Settings, Zap, Workflow, LogIn, Rocket } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "./ThemeToggle";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
 	const { isAuthenticated, user, logout } = useAuth();
+	const location = useLocation();
+	const navigate = useNavigate();
 	const [scrolled, setScrolled] = useState(false);
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const mobileMenuRef = useRef<HTMLDivElement>(null);
-	const mobileButtonRef = useRef<HTMLButtonElement>(null);
+	const buttonRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
 		// Handle scroll for navbar effect
@@ -24,25 +34,61 @@ const Navbar = () => {
 		};
 	}, []);
 
+	// Close mobile menu when clicking outside
 	useEffect(() => {
-		// Handle clicks outside of mobile menu
 		const handleClickOutside = (event: MouseEvent) => {
 			if (
-				mobileMenuOpen &&
 				mobileMenuRef.current &&
-				mobileButtonRef.current &&
+				buttonRef.current &&
 				!mobileMenuRef.current.contains(event.target as Node) &&
-				!mobileButtonRef.current.contains(event.target as Node)
+				!buttonRef.current.contains(event.target as Node)
 			) {
-				setMobileMenuOpen(false);
+				setIsMobileMenuOpen(false);
 			}
 		};
 
-		document.addEventListener("mousedown", handleClickOutside);
+		if (isMobileMenuOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
 		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
+			document.removeEventListener('mousedown', handleClickOutside);
 		};
-	}, [mobileMenuOpen]);
+	}, [isMobileMenuOpen]);
+
+	// Close mobile menu when route changes
+	useEffect(() => {
+		setIsMobileMenuOpen(false);
+	}, [location.pathname]);
+
+	// Function to close mobile menu when clicking on menu items
+	const handleMenuItemClick = () => {
+		setIsMobileMenuOpen(false);
+	};
+
+	// Function to handle anchor navigation
+	const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+		e.preventDefault();
+		handleMenuItemClick(); // Close mobile menu
+		
+		// If we're not on the home page, navigate to home first
+		if (location.pathname !== '/') {
+			navigate('/');
+			// Wait for navigation to complete, then scroll to section
+			setTimeout(() => {
+				const element = document.getElementById(sectionId);
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth' });
+				}
+			}, 100);
+		} else {
+			// We're already on home page, just scroll to section
+			const element = document.getElementById(sectionId);
+			if (element) {
+				element.scrollIntoView({ behavior: 'smooth' });
+			}
+		}
+	};
 
 	return (
 		<header className="fixed top-3 md:top-6 left-1/2 transform -translate-x-1/2 z-50 px-2 md:px-3 w-full max-w-7xl">
@@ -79,19 +125,23 @@ const Navbar = () => {
 							{!isAuthenticated ? (
 								<>
 									<a
-										href="#features"
-										className="text-muted-foreground hover:text-foreground font-medium transition-all duration-300 relative group"
-									>
-										<span>Features</span>
-										<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
-									</a>
-									<a
-										href="#how-it-works"
-										className="text-muted-foreground hover:text-foreground font-medium transition-all duration-300 relative group"
-									>
-										<span>How It Works</span>
-										<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
-									</a>
+									href="#features"
+									onClick={(e) => handleAnchorClick(e, 'features')}
+									className="text-muted-foreground hover:text-foreground font-medium transition-all duration-300 relative group flex items-center gap-2"
+								>
+									<Zap className="w-4 h-4" />
+									<span>Features</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</a>
+								<a
+									href="#how-it-works"
+									onClick={(e) => handleAnchorClick(e, 'how-it-works')}
+									className="text-muted-foreground hover:text-foreground font-medium transition-all duration-300 relative group flex items-center gap-2"
+								>
+									<Workflow className="w-4 h-4" />
+									<span>How It Works</span>
+									<div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
+								</a>
 
 									{/* Vertical divider */}
 									<div className="h-6 w-px bg-border"></div>
@@ -159,88 +209,82 @@ const Navbar = () => {
 							)}
 						</nav>
 
-						{/* Mobile menu button */}
-						<button
-							ref={mobileButtonRef}
-							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-							className="md:hidden text-foreground p-1.5"
-						>
-							<Menu className="w-5 h-5" />
-						</button>
-					</div>
-				</div>
-
-				{/* Mobile dropdown */}
-				<div
-					ref={mobileMenuRef}
-					className={`md:hidden absolute top-full left-0 right-0 mt-2 transition-all duration-300 ${
-						mobileMenuOpen
-							? "opacity-100 translate-y-0"
-							: "opacity-0 -translate-y-4 pointer-events-none"
-					}`}
-				>
-					<div className="mx-8 p-4 bg-card/90 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl">
-						<div className="space-y-3">
-							{!isAuthenticated ? (
-								<>
-									<a
-										href="#features"
-										className="block px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										Features
-									</a>
-									<a
-										href="#how-it-works"
-										className="block px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										How It Works
-									</a>
-									<Link
-										to="/signin"
-										className="block px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										Login
-									</Link>
-
-									{/* Theme Toggle */}
-									<ThemeToggle variant="button" />
-									<Link to="/signup" className="block w-full">
-										<div className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg font-medium">
-											Get Started
+						{/* Mobile menu - simple test */}
+						<div className="md:hidden relative">
+							<button 
+								ref={buttonRef}
+								className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/20 hover:bg-accent/50 transition-colors"
+								onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+							>
+								<Menu className="w-5 h-5 text-foreground" />
+							</button>
+							{isMobileMenuOpen && (
+								<div 
+									ref={mobileMenuRef}
+									className="absolute top-full right-0 mt-2 w-56 bg-card/95 backdrop-blur-xl border border-border/50 rounded-lg shadow-xl z-[9999]"
+								>
+								{!isAuthenticated ? (
+									<>
+										<div className="mx-2 my-1">
+											<a href="#features" onClick={(e) => handleAnchorClick(e, 'features')} className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<Zap className="w-4 h-4 mr-2" />
+												Features
+											</a>
 										</div>
-									</Link>
-								</>
-							) : (
-								<>
-									<div className="flex items-center gap-2 px-4 py-2 text-primary font-medium">
-										<User className="w-4 h-4" />
-										{user?.firstName || "User"}
+										<div className="mx-2 my-1">
+											<a href="#how-it-works" onClick={(e) => handleAnchorClick(e, 'how-it-works')} className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<Workflow className="w-4 h-4 mr-2" />
+												How It Works
+											</a>
+										</div>
+										<div className="h-px bg-border/50 mx-2 my-2"></div>
+										<div className="mx-2 my-1">
+											<Link to="/signin" onClick={handleMenuItemClick} className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<LogIn className="w-4 h-4 mr-2" />
+												Login
+											</Link>
+										</div>
+										<div className="mx-2 my-1">
+											<Link to="/signup" onClick={handleMenuItemClick} className="block px-4 py-3 text-foreground font-medium bg-gradient-to-r from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 transition-colors rounded-md flex items-center">
+												<Rocket className="w-4 h-4 mr-2" />
+												Get Started
+											</Link>
+										</div>
+									</>
+								) : (
+									<>
+										<div className="px-4 py-3 font-medium text-foreground flex items-center mx-2 my-1">
+											<User className="w-4 h-4 mr-2 text-primary" />
+											{user?.firstName || "User"}
+										</div>
+										<div className="h-px bg-border/50 mx-2 my-2"></div>
+										<div className="mx-2 my-1">
+											<Link to="/dashboard" onClick={handleMenuItemClick} className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<Coffee className="w-4 h-4 mr-2" />
+												My Brews
+											</Link>
+										</div>
+										<div className="mx-2 my-1">
+											<Link to="/settings" onClick={handleMenuItemClick} className="block px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<Settings className="w-4 h-4 mr-2" />
+												Settings
+											</Link>
+										</div>
+										<div className="h-px bg-border/50 mx-2 my-2"></div>
+										<div className="mx-2 my-1">
+											<button onClick={() => { logout(); handleMenuItemClick(); }} className="block w-full text-left px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md flex items-center">
+												<LogOut className="w-4 h-4 mr-2" />
+												Logout
+											</button>
+										</div>
+									</>
+								)}
+								{/* Theme Toggle in dropdown */}
+								<div className="h-px bg-border/50 mx-2 my-2"></div>
+								<div className="px-4 py-3 mx-2 my-1">
+										<ThemeToggle />
 									</div>
-									<Link
-										to="/dashboard"
-										className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										<Coffee className="w-4 h-4" />
-										My Brews
-									</Link>
-									<Link
-										to="/settings"
-										className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										<Settings className="w-4 h-4" />
-										Settings
-									</Link>
-									{/* Theme Toggle */}
-									<ThemeToggle variant="button" />
-
-									<button
-										onClick={logout}
-										className="flex items-center gap-2 w-full px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-									>
-										<LogOut className="w-4 h-4" />
-										Logout
-									</button>
-								</>
+								</div>
 							)}
 						</div>
 					</div>

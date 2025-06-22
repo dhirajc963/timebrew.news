@@ -1,40 +1,82 @@
 import os
 import json
 import boto3
-from datetime import datetime, time, timezone
-import pytz
+from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
+from utils.logger import Logger
 
 
 def lambda_handler(event, context):
     """
     Brew Scheduler Lambda Function
-    Runs every 15 minutes to check for due brews and trigger the AI pipeline
+    Runs every 15 minutes to check for brews due in the next 30 minutes
+    Uses database-heavy approach for efficient timezone-aware filtering
     """
+    start_time = datetime.now(timezone.utc)
+    logger = Logger("brew_scheduler")
+
     try:
+        logger.info("Brew scheduler started", triggered_at=start_time.isoformat())
+
         # Get database connection
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get current UTC time
-        utc_now = datetime.now(timezone.utc)
+        # Query brews due in the next 30 minutes with timezone-aware filtering
+        logger.info("Querying for brews due in next 30 minutes")
+        query_start_time = datetime.now(timezone.utc)
 
-        # Query active brews with user timezone information
         cursor.execute(
             """
             SELECT b.id, b.user_id, b.delivery_time, u.timezone, b.last_sent_date,
-                   u.email, u.first_name, u.last_name
-            FROM time_brew.brews b
-            JOIN time_brew.users u ON b.user_id = u.id
+                   u.email, u.first_name, u.last_name, b.name as brew_name,
+                   -- Calculate today's delivery datetime in UTC for reference
+                   (date_trunc('day', NOW() AT TIME ZONE u.timezone) + b.delivery_time) 
+                   AT TIME ZONE u.timezone AT TIME ZONE 'UTC' as delivery_datetime_utc
+            FROM time_brew.brews b 
+            JOIN time_brew.users u ON b.user_id = u.id 
             WHERE b.is_active = true
+            AND (
+                -- Check if delivery time is within next 30 minutes
+                (date_trunc('day', NOW() AT TIME ZONE u.timezone) + b.delivery_time) 
+                AT TIME ZONE u.timezone AT TIME ZONE 'UTC'
+                BETWEEN NOW() 
+                AND NOW() + INTERVAL '30 minutes'
+            )
+            AND (
+                -- Haven't sent today in user's timezone  
+                b.last_sent_date IS NULL
+                OR (b.last_sent_date AT TIME ZONE 'UTC' AT TIME ZONE u.timezone)::date 
+                   < (NOW() AT TIME ZONE u.timezone)::date
+            )
+            AND NOT EXISTS (
+                -- Not currently processing (no briefing in progress in last 2 hours)
+                SELECT 1 FROM time_brew.briefings bf 
+                WHERE bf.brew_id = b.id 
+                AND bf.execution_status IN ('curated', 'edited')
+                AND bf.created_at > NOW() - INTERVAL '2 hours'
+            )
+            ORDER BY delivery_datetime_utc ASC
         """
         )
 
-        brews = cursor.fetchall()
-        triggered_brews = []
+        brews_to_trigger = cursor.fetchall()
+        query_duration = (
+            datetime.now(timezone.utc) - query_start_time
+        ).total_seconds() * 1000
 
-        for brew_data in brews:
+        logger.info(
+            "Query completed",
+            brews_found=len(brews_to_trigger),
+            query_duration_ms=round(query_duration, 2),
+        )
+
+        # Process each brew that needs triggering
+        triggered_brews = []
+        failed_triggers = []
+
+        for brew_data in brews_to_trigger:
             (
                 brew_id,
                 user_id,
@@ -44,6 +86,8 @@ def lambda_handler(event, context):
                 email,
                 first_name,
                 last_name,
+                brew_name,
+                delivery_datetime_utc,
             ) = brew_data
 
             # Build user name
@@ -53,140 +97,134 @@ def lambda_handler(event, context):
                 else first_name or "User"
             )
 
+            logger.set_context(brew_id=brew_id, user_id=user_id, user_email=email)
+
             try:
-                # Convert delivery time to user's timezone
-                user_tz = pytz.timezone(timezone_str)
-                utc_now_in_user_tz = utc_now.replace(tzinfo=pytz.UTC).astimezone(
-                    user_tz
+                # Trigger Step Functions workflow
+                logger.info(
+                    "Triggering AI pipeline",
+                    brew_name=brew_name,
+                    user_timezone=timezone_str,
+                    delivery_time=str(delivery_time),
+                    scheduled_delivery_utc=delivery_datetime_utc.isoformat(),
                 )
 
-                # Parse delivery time (stored as TIME)
-                if isinstance(delivery_time, time):
-                    delivery_hour = delivery_time.hour
-                    delivery_minute = delivery_time.minute
+                success, execution_arn = trigger_ai_pipeline(
+                    brew_id, "scheduler", logger
+                )
+
+                if success:
+                    triggered_brews.append(
+                        {
+                            "brew_id": brew_id,
+                            "user_name": user_name,
+                            "user_email": email,
+                            "brew_name": brew_name,
+                            "timezone": timezone_str,
+                            "delivery_time": str(delivery_time),
+                            "execution_arn": execution_arn,
+                            "triggered_at": start_time.isoformat(),
+                            "scheduled_delivery_utc": delivery_datetime_utc.isoformat(),
+                        }
+                    )
+
+                    logger.info(
+                        "Successfully triggered AI pipeline",
+                        execution_arn=execution_arn,
+                    )
                 else:
-                    # Handle string format if needed
-                    delivery_time_obj = datetime.strptime(
-                        str(delivery_time), "%H:%M:%S"
-                    ).time()
-                    delivery_hour = delivery_time_obj.hour
-                    delivery_minute = delivery_time_obj.minute
-
-                # Create today's delivery datetime in user's timezone
-                today_delivery = user_tz.localize(
-                    datetime.combine(
-                        utc_now_in_user_tz.date(), time(delivery_hour, delivery_minute)
-                    )
-                )
-
-                # Convert to UTC for comparison
-                today_delivery_utc = today_delivery.astimezone(pytz.UTC).replace(
-                    tzinfo=None
-                )
-
-                # Check if brew is due
-                is_due = False
-
-                if last_sent_date is None:
-                    # Never sent before - check if delivery time has passed today
-                    is_due = utc_now >= today_delivery_utc
-                else:
-                    # Convert last_sent_date to user timezone for comparison
-                    if last_sent_date.tzinfo is None:
-                        last_sent_utc = pytz.UTC.localize(last_sent_date)
-                    else:
-                        last_sent_utc = last_sent_date.astimezone(pytz.UTC)
-
-                    last_sent_user_tz = last_sent_utc.astimezone(user_tz)
-
-                    # Check if:
-                    # 1. Today's delivery time has passed
-                    # 2. Last sent was not today (different date)
-                    # 3. Or last sent was more than 20 hours ago (safety check)
-
-                    hours_since_last = (
-                        utc_now - last_sent_utc.replace(tzinfo=None)
-                    ).total_seconds() / 3600
-
-                    is_due = utc_now >= today_delivery_utc and (
-                        last_sent_user_tz.date() < utc_now_in_user_tz.date()
-                        or hours_since_last > 20
+                    failed_triggers.append(
+                        {
+                            "brew_id": brew_id,
+                            "user_email": email,
+                            "error": "Failed to start Step Functions execution",
+                        }
                     )
 
-                if is_due:
-                    # Check if there's already a recent briefing in progress
-                    cursor.execute(
-                        """
-                        SELECT id, execution_status, created_at
-                        FROM time_brew.briefings
-                        WHERE brew_id = %s
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    """,
-                        (brew_id,),
-                    )
-
-                    recent_briefing = cursor.fetchone()
-
-                    should_trigger = True
-                    if recent_briefing:
-                        briefing_id, execution_status, created_at = recent_briefing
-
-                        # If there's a briefing from today that's not failed, skip
-                        if (
-                            created_at.date() == utc_now.date()
-                            and execution_status != "failed"
-                        ):
-                            should_trigger = False
-                            print(
-                                f"Skipping brew {brew_id} - recent briefing exists with status: {execution_status}"
-                            )
-
-                    if should_trigger:
-                        # Trigger Step Functions workflow
-                        success = trigger_ai_pipeline(brew_id)
-
-                        if success:
-                            triggered_brews.append(
-                                {
-                                    "brew_id": brew_id,
-                                    "user_name": user_name,
-                                    "timezone": timezone_str,
-                                    "delivery_time": str(delivery_time),
-                                    "triggered_at": utc_now.isoformat(),
-                                }
-                            )
-                            print(
-                                f"Triggered AI pipeline for brew {brew_id} (user: {email})"
-                            )
-                        else:
-                            print(f"Failed to trigger AI pipeline for brew {brew_id}")
+                    logger.error("Failed to trigger AI pipeline", brew_id=brew_id)
 
             except Exception as brew_error:
-                print(f"Error processing brew {brew_id}: {str(brew_error)}")
+                failed_triggers.append(
+                    {"brew_id": brew_id, "user_email": email, "error": str(brew_error)}
+                )
+
+                logger.error(
+                    "Error processing brew", error=str(brew_error), brew_id=brew_id
+                )
                 continue
+
+            finally:
+                # Clear context for next iteration
+                logger.set_context()
 
         cursor.close()
         conn.close()
 
-        return {
-            "statusCode": 200,
-            "body": {
-                "triggered_brews": len(triggered_brews),
-                "brews": triggered_brews,
-                "checked_at": utc_now.isoformat(),
-                "message": f"Scheduler completed - triggered {len(triggered_brews)} brews",
+        # Calculate processing time
+        end_time = datetime.now(timezone.utc)
+        processing_time = (end_time - start_time).total_seconds()
+
+        # Log summary
+        logger.info(
+            "Brew scheduler completed",
+            total_brews_checked=len(brews_to_trigger),
+            successful_triggers=len(triggered_brews),
+            failed_triggers=len(failed_triggers),
+            processing_time_seconds=round(processing_time, 2),
+        )
+
+        # Return comprehensive response
+        response_body = {
+            "message": f"Scheduler completed - triggered {len(triggered_brews)} brews",
+            "summary": {
+                "total_brews_eligible": len(brews_to_trigger),
+                "successful_triggers": len(triggered_brews),
+                "failed_triggers": len(failed_triggers),
+                "processing_time_seconds": round(processing_time, 2),
             },
+            "triggered_brews": triggered_brews,
+            "failed_triggers": failed_triggers,
+            "checked_at": start_time.isoformat(),
         }
 
+        return create_response(200, response_body)
+
     except Exception as e:
-        print(f"Error in brew_scheduler: {str(e)}")
-        return create_response(500, {"error": str(e)})
+        # Calculate processing time for failed request
+        end_time = datetime.now(timezone.utc)
+        processing_time = (end_time - start_time).total_seconds()
+
+        logger.error(
+            "Brew scheduler failed with unexpected error",
+            error=str(e),
+            error_type=type(e).__name__,
+            processing_time_seconds=round(processing_time, 2),
+        )
+
+        # Cleanup database connection on error
+        try:
+            if "conn" in locals() and conn:
+                conn.close()
+                logger.info("Database connection closed due to error")
+        except Exception as cleanup_error:
+            logger.error(
+                "Failed to cleanup database connection", error=str(cleanup_error)
+            )
+
+        return create_response(
+            500,
+            {
+                "error": str(e),
+                "processing_time_seconds": round(processing_time, 2),
+                "failed_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
 
-def trigger_ai_pipeline(brew_id):
+def trigger_ai_pipeline(brew_id, triggered_by="scheduler", logger=None):
     """
     Trigger the Step Functions AI pipeline for a specific brew
+    Returns (success: bool, execution_arn: str)
     """
     try:
         # Get Step Functions client
@@ -195,26 +233,46 @@ def trigger_ai_pipeline(brew_id):
         # Get the state machine ARN from environment
         state_machine_arn = os.environ.get("AI_PIPELINE_STATE_MACHINE_ARN")
         if not state_machine_arn:
-            print("AI_PIPELINE_STATE_MACHINE_ARN not found in environment")
-            return False
+            error_msg = "AI_PIPELINE_STATE_MACHINE_ARN not found in environment"
+            if logger:
+                logger.error(error_msg)
+            else:
+                print(error_msg)
+            return False, None
 
         # Create execution input
         execution_input = {
             "brew_id": brew_id,
-            "triggered_by": "scheduler",
+            "triggered_by": triggered_by,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+        # Generate unique execution name
+        execution_name = f"brew-{brew_id}-{triggered_by}-{int(datetime.now(timezone.utc).timestamp())}"
 
         # Start execution
         response = stepfunctions.start_execution(
             stateMachineArn=state_machine_arn,
-            name=f"brew-{brew_id}-{int(datetime.now(timezone.utc).timestamp())}",
+            name=execution_name,
             input=json.dumps(execution_input),
         )
 
-        print(f"Started Step Functions execution: {response['executionArn']}")
-        return True
+        execution_arn = response["executionArn"]
+        success_msg = f"Started Step Functions execution: {execution_arn}"
+
+        if logger:
+            logger.info("Step Functions execution started", execution_arn=execution_arn)
+        else:
+            print(success_msg)
+
+        return True, execution_arn
 
     except Exception as e:
-        print(f"Error triggering AI pipeline for brew {brew_id}: {str(e)}")
-        return False
+        error_msg = f"Error triggering AI pipeline for brew {brew_id}: {str(e)}"
+        if logger:
+            logger.error(
+                "Failed to trigger Step Functions", error=str(e), brew_id=brew_id
+            )
+        else:
+            print(error_msg)
+        return False, None

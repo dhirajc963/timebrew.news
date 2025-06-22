@@ -200,7 +200,7 @@ Adapt your approach based on the source material:
 - **5-8 articles**: Focus on ordering and relevance - curate the best stories
 - **3-4 articles**: Create a more educational briefing, extracting deeper value from each piece
 - **1-2 articles**: Write analytically, using your expertise to provide broader context
-- **No articles**: Write an original TimeBrew analysis piece about market trends, what a slow news day means, or connect to previous events
+- **No articles**: Write an original TimeBrew opinion piece about market trends, what a slow news day means, or connect to previous events
 
 {f"**Curator insight**: {curator_notes}" if curator_notes and curator_notes.strip() else ""}
 
@@ -218,8 +218,7 @@ Return ONLY a valid JSON object with this exact structure:
         "story_content": "2-3 paragraph story in Morning Brew voice. Include the hook, what happened, bigger picture, and bottom line.", 
         "original_url": "source URL if from real article, or null if original content",
         "source": "Publication name or 'TimeBrew Analysis' for original content",
-        "published_time": "Original publish time or current time for original content",
-        "relevance_score": 8.5,
+        "published_time": "Original relative published time or current time for original content",
         "type": "news or analysis or trend or education"
         }}
     ],

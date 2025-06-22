@@ -2,6 +2,7 @@ import json
 import uuid
 import boto3
 import os
+import json
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
@@ -43,7 +44,9 @@ def handler(event, context):
         article_count = body.get("article_count", 5)
 
         if not name or not topics or not delivery_time:
-            logger.warn(f"Brew creation attempt with missing fields for user {cognito_id}")
+            logger.warn(
+                f"Brew creation attempt with missing fields for user {cognito_id}"
+            )
             return create_response(
                 400, {"error": "Name, topics, and delivery time are required"}
             )
@@ -60,7 +63,9 @@ def handler(event, context):
                 user_result = cur.fetchone()
 
                 if not user_result:
-                    logger.error(f"User not found in database for cognito_id: {cognito_id}")
+                    logger.error(
+                        f"User not found in database for cognito_id: {cognito_id}"
+                    )
                     return create_response(404, {"error": "User not found"})
 
                 user_id = user_result[0]
@@ -70,7 +75,7 @@ def handler(event, context):
                     """INSERT INTO time_brew.brews 
                        (user_id, name, topics, delivery_time, article_count) 
                        VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at""",
-                    (user_id, name, json.dumps(topics), delivery_time, article_count),
+                    (user_id, name, topics, delivery_time, article_count),
                 )
 
                 brew_result = cur.fetchone()
@@ -97,7 +102,9 @@ def handler(event, context):
 
         except Exception as e:
             conn.rollback()
-            logger.error(f"Database error during brew creation for user {cognito_id}: {e}")
+            logger.error(
+                f"Database error during brew creation for user {cognito_id}: {e}"
+            )
             return create_response(500, {"error": f"Database error: {str(e)}"})
         finally:
             conn.close()

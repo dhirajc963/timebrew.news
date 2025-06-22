@@ -1,4 +1,5 @@
 import json
+import json
 from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
@@ -134,15 +135,14 @@ def lambda_handler(event, context):
                 ),
             }
 
-        # Check for existing feedback (prevent duplicates)
+        # Check for existing feedback (any type) for toggle functionality
         existing_feedback_query = """
-            SELECT id FROM time_brew.user_feedback
-            WHERE briefing_id = %s AND user_id = %s AND feedback_type = %s AND article_position = %s
+            SELECT id, feedback_type FROM time_brew.user_feedback
+            WHERE briefing_id = %s AND user_id = %s AND article_position = %s
         """
         existing_params = [
             briefing_id,
             user_id,
-            simple_feedback_type,
             article_position or 0,
         ]
 
@@ -150,8 +150,45 @@ def lambda_handler(event, context):
         existing_feedback = cursor.fetchone()
 
         if existing_feedback:
-            feedback_id = existing_feedback[0]
-            action = "updated (existing)"
+            existing_id, existing_type = existing_feedback
+            
+            if existing_type == simple_feedback_type:
+                # Same feedback type - toggle off (delete)
+                cursor.execute(
+                    "DELETE FROM time_brew.user_feedback WHERE id = %s",
+                    (existing_id,)
+                )
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                return create_response(
+                    200,
+                    {
+                        "message": "Feedback removed (toggled off)",
+                        "feedback_id": None,
+                        "briefing_id": briefing_id,
+                        "feedback_type": feedback_type,
+                        "rating": rating,
+                        "article_position": (
+                            article_position if feedback_type == "article" else None
+                        ),
+                        "action": "removed",
+                    },
+                )
+            else:
+                # Different feedback type - update existing
+                cursor.execute(
+                    """
+                    UPDATE time_brew.user_feedback 
+                    SET feedback_type = %s, created_at = %s
+                    WHERE id = %s
+                    RETURNING id
+                """,
+                    (simple_feedback_type, datetime.now(timezone.utc), existing_id)
+                )
+                feedback_id = cursor.fetchone()[0]
+                action = "updated"
         else:
             # Get article information for feedback storage
             article_title = None

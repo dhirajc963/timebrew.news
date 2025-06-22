@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiClient, Brew, Briefing } from "@/lib/apiClient";
+import { apiClient, Brew, Briefing, UserFeedback } from "@/lib/apiClient";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 import { format } from "date-fns";
 import BriefingCard from "./BriefingCard";
@@ -36,10 +36,10 @@ const BrewHeaderSkeleton: React.FC = () => (
 		initial={{ opacity: 0, y: -10 }}
 		animate={{ opacity: 1, y: 0 }}
 		transition={{ duration: 0.3 }}
-		className="bg-card/30 rounded-t-xl -mx-4 px-5 pt-7 md:pt-8 py-2.5 mb-0 max-w-7xl mx-auto"
+		className="bg-card/30 rounded-t-xl -mx-3 sm:-mx-4 px-3 sm:px-5 pt-5 sm:pt-7 md:pt-8 py-2 sm:py-2.5 mb-0 max-w-7xl mx-auto"
 	>
 		<div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1.5">
-			<div className="flex items-center gap-3">
+			<div className="flex items-center gap-2 sm:gap-3">
 				<Link
 					to="/dashboard"
 					className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -48,11 +48,11 @@ const BrewHeaderSkeleton: React.FC = () => (
 					Back to Dashboard
 				</Link>
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-1 sm:gap-2">
 				<Skeleton className="h-6 w-32" />
 				<Skeleton className="h-5 w-16 rounded-full" />
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-1 sm:gap-2">
 				<Skeleton className="h-9 w-9 md:w-20 md:h-9 rounded-md" />
 			</div>
 		</div>
@@ -64,13 +64,13 @@ const BrewDetailsSkeleton: React.FC = () => (
 		initial={{ opacity: 0, y: 20 }}
 		animate={{ opacity: 1, y: 0 }}
 		transition={{ duration: 0.5 }}
-		className="space-y-6"
+		className="space-y-4 sm:space-y-6"
 	>
 		{/* Brew Summary Card Skeleton */}
 		<Card>
 			<CardHeader>
 				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-1 sm:gap-2">
 						<Skeleton className="w-5 h-5 rounded" />
 						<Skeleton className="h-6 w-32" />
 					</div>
@@ -78,9 +78,9 @@ const BrewDetailsSkeleton: React.FC = () => (
 				</div>
 			</CardHeader>
 			<CardContent>
-				<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+				<div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
 					{[...Array(3)].map((_, i) => (
-						<div key={i} className="flex items-center gap-2">
+						<div key={i} className="flex items-center gap-1 sm:gap-2">
 							<Skeleton className="w-4 h-4 rounded" />
 							<div>
 								<Skeleton className="h-4 w-20 mb-1" />
@@ -93,7 +93,7 @@ const BrewDetailsSkeleton: React.FC = () => (
 		</Card>
 
 		{/* Briefings List Skeleton */}
-		<div className="space-y-3 sm:space-y-4">
+		<div className="space-y-2 sm:space-y-3 md:space-y-4">
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 				<Skeleton className="h-6 w-40" />
 			</div>
@@ -114,14 +114,14 @@ const BriefingSkeleton: React.FC<{ index: number }> = ({ index }) => (
 			<CardHeader>
 				<div className="flex items-start justify-between">
 					<div className="flex-1">
-						<div className="flex items-center gap-2 mb-2">
+						<div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
 							<Skeleton className="w-4 h-4 rounded" />
 							<Skeleton className="h-4 w-24" />
 						</div>
 						<Skeleton className="h-6 w-3/4 mb-2" />
 						<Skeleton className="h-4 w-1/2" />
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-1 sm:gap-2">
 						<Skeleton className="w-8 h-8 rounded" />
 						<Skeleton className="w-8 h-8 rounded" />
 						<Skeleton className="w-8 h-8 rounded" />
@@ -129,7 +129,7 @@ const BriefingSkeleton: React.FC<{ index: number }> = ({ index }) => (
 				</div>
 			</CardHeader>
 			<CardContent>
-				<div className="space-y-3">
+				<div className="space-y-2 sm:space-y-3">
 					{[...Array(3)].map((_, i) => (
 						<div key={i} className="space-y-2">
 							<Skeleton className="h-5 w-3/4" />
@@ -157,7 +157,11 @@ const BrewDetails: React.FC = () => {
 	const [feedbackLoading, setFeedbackLoading] = useState<Set<string>>(
 		new Set()
 	);
-	const [articleFeedbackLoading, setArticleFeedbackLoading] = useState<boolean>(false);
+	const [articleFeedbackLoading, setArticleFeedbackLoading] =
+		useState<boolean>(false);
+	const [userFeedback, setUserFeedback] = useState<
+		Record<string, UserFeedback>
+	>({});
 
 	const fetchBrew = async () => {
 		if (!id) {
@@ -185,6 +189,39 @@ const BrewDetails: React.FC = () => {
 		try {
 			const response = await apiClient.getBriefings(id, 20, 0, user.id);
 			setBriefings(response.briefings);
+
+			// Fetch feedback status for each briefing
+			for (const briefing of response.briefings) {
+				try {
+					const feedbackResponse = await apiClient.getFeedbackStatus(
+						briefing.id,
+						user.id
+					);
+					// Transform the response to match UserFeedback interface
+					const userFeedbackData: UserFeedback = {
+						briefing_id: feedbackResponse.briefing_id,
+						overall_feedback: feedbackResponse.briefing_feedback
+							? {
+									type: feedbackResponse.briefing_feedback,
+							  }
+							: undefined,
+						article_feedback: feedbackResponse.articles
+							.map((article) => ({
+								article_position: article.position,
+								type: article.feedback!,
+								article_title: article.title,
+								article_source: article.source,
+							}))
+							.filter((article) => article.type !== null),
+					};
+					setUserFeedback((prev) => ({
+						...prev,
+						[briefing.id]: userFeedbackData,
+					}));
+				} catch (err) {
+					// Silently handle feedback fetch errors
+				}
+			}
 		} catch (err) {
 			// Don't set error state for briefings, just handle silently
 		} finally {
@@ -219,12 +256,33 @@ const BrewDetails: React.FC = () => {
 	const handleFeedback = async (briefingId: string, rating: number) => {
 		setFeedbackLoading((prev) => new Set(prev).add(briefingId));
 		try {
-			await apiClient.submitFeedback({
+			const response = await apiClient.submitFeedback({
 				briefing_id: briefingId,
 				feedback_type: "overall",
 				rating: rating,
 			});
-			// You could show a success message here
+
+			// Update local feedback state based on response
+			if (response.action === "removed") {
+				// Remove overall feedback
+				setUserFeedback((prev) => ({
+					...prev,
+					[briefingId]: {
+						...prev[briefingId],
+						overall_feedback: undefined,
+					},
+				}));
+			} else {
+				// Update or add overall feedback
+				const feedbackType = rating >= 4 ? "like" : "dislike";
+				setUserFeedback((prev) => ({
+					...prev,
+					[briefingId]: {
+						...prev[briefingId],
+						overall_feedback: { type: feedbackType },
+					},
+				}));
+			}
 		} catch (err) {
 			// You could show an error message here
 		} finally {
@@ -236,20 +294,62 @@ const BrewDetails: React.FC = () => {
 		}
 	};
 
-	const handleArticleFeedback = async (articlePosition: number, rating: number) => {
+	const handleArticleFeedback = async (
+		briefingId: string,
+		articlePosition: number,
+		rating: number
+	) => {
 		setArticleFeedbackLoading(true);
 		try {
-			// Find the current briefing ID - we'll use the first briefing for now
-			// In a more complex scenario, you might need to track which briefing the article belongs to
-			if (briefings.length > 0) {
-				await apiClient.submitFeedback({
-					briefing_id: briefings[0].id,
-					feedback_type: "article",
-					rating: rating,
-					article_position: articlePosition,
-				});
+			const response = await apiClient.submitFeedback({
+				briefing_id: briefingId,
+				feedback_type: "article",
+				rating: rating,
+				article_position: articlePosition,
+			});
+
+			// Update local feedback state based on response
+			const currentFeedback = userFeedback[briefingId] || {
+				article_feedback: [],
+			};
+			let updatedArticleFeedback = [
+				...(currentFeedback.article_feedback || []),
+			];
+
+			if (response.action === "removed") {
+				// Remove article feedback
+				updatedArticleFeedback = updatedArticleFeedback.filter(
+					(f) => f.article_position !== articlePosition
+				);
+			} else {
+				// Update or add article feedback
+				const feedbackType = rating >= 4 ? "like" : "dislike";
+				const existingIndex = updatedArticleFeedback.findIndex(
+					(f) => f.article_position === articlePosition
+				);
+
+				if (existingIndex >= 0) {
+					updatedArticleFeedback[existingIndex] = {
+						...updatedArticleFeedback[existingIndex],
+						type: feedbackType,
+					};
+				} else {
+					updatedArticleFeedback.push({
+						article_position: articlePosition,
+						type: feedbackType,
+						article_title: "", // Will be populated by backend
+						article_source: "", // Will be populated by backend
+					});
+				}
 			}
-			// You could show a success message here
+
+			setUserFeedback((prev) => ({
+				...prev,
+				[briefingId]: {
+					...currentFeedback,
+					article_feedback: updatedArticleFeedback,
+				},
+			}));
 		} catch (err) {
 			// You could show an error message here
 		} finally {
@@ -268,76 +368,76 @@ const BrewDetails: React.FC = () => {
 	};
 
 	return (
-			<div className="min-h-[70vh] py-3 md:py-0 px-4 mt-12 md:mt-18">
-				{/* Header */}
-				{loading ? (
-					<BrewHeaderSkeleton />
-				) : (
-					<motion.div
-						initial={{ opacity: 0, y: -10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.3 }}
-						className="bg-card/30 rounded-t-xl -mx-4 px-5 pt-7 md:pt-8 py-2.5 mb-0 max-w-7xl mx-auto"
-					>
-						<div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1.5">
-							{/* Left: Back button and title */}
-							<div className="flex items-center gap-3">
-								<Link
-									to="/dashboard"
-									className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-								>
-									<ArrowLeft className="w-4 h-4" />
-									Back to Dashboard
-								</Link>
-							</div>
-
-							{/* Center: Brew name */}
-							{brew && (
-								<div className="flex items-center gap-2">
-									<h1 className="text-xl font-bold">{brew.name}</h1>
-									<div
-										className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-											brew.is_active
-												? "bg-green-500/10 text-green-500"
-												: "bg-gray-500/10 text-gray-500"
-										}`}
-									>
-										{brew.is_active ? "Active" : "Inactive"}
-									</div>
-								</div>
-							)}
-
-							{/* Right: Actions */}
-							<div className="flex items-center gap-2">
-								<ShinyButton
-									className="w-9 h-9 p-0 md:w-auto md:h-auto md:p-2 md:px-3 whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2"
-									onClick={() => {
-										fetchBrew();
-										if (user?.id) {
-											fetchBriefings();
-										}
-									}}
-									disabled={loading || briefingsLoading}
-								>
-									{loading || briefingsLoading ? (
-										<Loader2 className="w-4 h-4 animate-spin" />
-									) : (
-										<RefreshCw className="w-4 h-4" />
-									)}
-									<span className="hidden md:inline">
-										{loading || briefingsLoading ? "Loading..." : "Refresh"}
-									</span>
-								</ShinyButton>
-							</div>
+		<div className="min-h-[70vh] py-2 md:py-3 px-2 md:px-4 mt-10 md:mt-12 lg:mt-18">
+			{/* Header */}
+			{loading ? (
+				<BrewHeaderSkeleton />
+			) : (
+				<motion.div
+					initial={{ opacity: 0, y: -10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3 }}
+					className="bg-card/30 rounded-t-xl -mx-3 sm:-mx-4 px-3 sm:px-5 pt-5 sm:pt-7 md:pt-8 py-2 sm:py-2.5 mb-0 max-w-7xl mx-auto"
+				>
+					<div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1.5">
+						{/* Left: Back button and title */}
+						<div className="flex items-center gap-2 sm:gap-3">
+							<Link
+								to="/dashboard"
+								className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<ArrowLeft className="w-4 h-4" />
+								Back to Dashboard
+							</Link>
 						</div>
-					</motion.div>
-				)}
 
-				<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl -mx-2 sm:-mx-4 px-3 sm:px-4 py-3">
-					{loading ? (
-						<BrewDetailsSkeleton />
+						{/* Center: Brew name */}
+						{brew && (
+							<div className="flex items-center gap-1 sm:gap-2">
+								<h1 className="text-xl font-bold">{brew.name}</h1>
+								<div
+									className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+										brew.is_active
+											? "bg-green-500/10 text-green-500"
+											: "bg-gray-500/10 text-gray-500"
+									}`}
+								>
+									{brew.is_active ? "Active" : "Inactive"}
+								</div>
+							</div>
+						)}
+
+						{/* Right: Actions */}
+						<div className="flex items-center gap-2">
+							<ShinyButton
+								className="w-8 h-8 sm:w-9 sm:h-9 p-0 md:w-auto md:h-auto md:p-2 md:px-3 whitespace-nowrap flex items-center justify-center gap-1 sm:gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-1 [&>span]:!sm:gap-2"
+								onClick={() => {
+									fetchBrew();
+									if (user?.id) {
+										fetchBriefings();
+									}
+								}}
+								disabled={loading || briefingsLoading}
+							>
+								{loading || briefingsLoading ? (
+									<Loader2 className="w-4 h-4 animate-spin" />
+								) : (
+									<RefreshCw className="w-4 h-4" />
+								)}
+								<span className="hidden md:inline">
+									{loading || briefingsLoading ? "Loading..." : "Refresh"}
+								</span>
+							</ShinyButton>
+						</div>
+					</div>
+				</motion.div>
+			)}
+
+			<div className="max-w-7xl mx-auto bg-card/30 rounded-b-xl -mx-3 sm:-mx-4 px-2 sm:px-3 md:px-4 py-2 sm:py-3">
+				{loading ? (
+					<BrewDetailsSkeleton />
 				) : error ? (
-					<div className="text-center py-12">
+					<div className="text-center py-8 sm:py-12">
 						<div className="bg-red-500/10 text-red-500 p-4 rounded-lg inline-flex items-center gap-2">
 							<AlertCircle className="w-5 h-5" />
 							<span>{error}</span>
@@ -351,7 +451,7 @@ const BrewDetails: React.FC = () => {
 						initial={{ opacity: 0, y: 20 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.5 }}
-						className="space-y-6"
+						className="space-y-4 sm:space-y-6"
 					>
 						{/* Brew Summary Card */}
 						<Card>
@@ -361,14 +461,14 @@ const BrewDetails: React.FC = () => {
 										<Mail className="w-5 h-5 text-primary" />
 										{brew.name}
 									</CardTitle>
-									<ShinyButton className="whitespace-nowrap flex items-center justify-center gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+									<ShinyButton className="whitespace-nowrap flex items-center justify-center gap-1 sm:gap-2 [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-1 [&>span]:!sm:gap-2">
 										<Edit className="w-4 h-4" />
 										<span className="hidden sm:inline">Edit</span>
 									</ShinyButton>
 								</div>
 							</CardHeader>
 							<CardContent>
-								<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+								<div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
 									<div className="flex items-center gap-2">
 										<Clock className="w-4 h-4 text-muted-foreground" />
 										<div>
@@ -407,52 +507,59 @@ const BrewDetails: React.FC = () => {
 						</Card>
 
 						{/* Briefings List */}
-							<div className="space-y-3 sm:space-y-4">
-								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-									<h2 className="text-lg font-semibold">Recent Briefings</h2>
-									{briefingsLoading && (
-										<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-									)}
-								</div>
-
-								{briefingsLoading ? (
-									[...Array(3)].map((_, i) => (
-										<BriefingSkeleton key={i} index={i} />
-									))
-								) : briefings.length === 0 ? (
-									<Card>
-										<CardContent className="text-center py-8">
-											<Mail className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-											<h3 className="text-lg font-medium mb-2">
-												No briefings yet
-											</h3>
-											<p className="text-muted-foreground mb-4">
-												Your first briefing will be delivered at{" "}
-												{formatDeliveryTime(brew.delivery_time)}
-											</p>
-										</CardContent>
-									</Card>
-								) : (
-									briefings.map((briefing, index) => (
-							<BriefingCard
-								key={briefing.id}
-								briefing={briefing}
-								index={index}
-								isExpanded={expandedBriefings.has(briefing.id)}
-								onToggleExpansion={() =>
-									toggleBriefingExpansion(briefing.id)
-								}
-								onFeedback={(rating) => handleFeedback(briefing.id, rating)}
-								feedbackLoading={feedbackLoading.has(briefing.id)}
-								onArticleFeedback={handleArticleFeedback}
-								articleFeedbackLoading={articleFeedbackLoading}
-							/>
-						))
+						<div className="space-y-2 sm:space-y-3 md:space-y-4">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+								<h2 className="text-lg font-semibold">Recent Briefings</h2>
+								{briefingsLoading && (
+									<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
 								)}
 							</div>
+
+							{briefingsLoading ? (
+								[...Array(3)].map((_, i) => (
+									<BriefingSkeleton key={i} index={i} />
+								))
+							) : briefings.length === 0 ? (
+								<Card>
+									<CardContent className="text-center py-6 sm:py-8">
+										<Mail className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
+										<h3 className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
+											No briefings yet
+										</h3>
+										<p className="text-muted-foreground mb-3 sm:mb-4 text-sm sm:text-base">
+											Your first briefing will be delivered at{" "}
+											{formatDeliveryTime(brew.delivery_time)}
+										</p>
+									</CardContent>
+								</Card>
+							) : (
+								briefings.map((briefing, index) => (
+									<BriefingCard
+										key={briefing.id}
+										briefing={briefing}
+										index={index}
+										isExpanded={expandedBriefings.has(briefing.id)}
+										onToggleExpansion={() =>
+											toggleBriefingExpansion(briefing.id)
+										}
+										onFeedback={(rating) => handleFeedback(briefing.id, rating)}
+										feedbackLoading={feedbackLoading.has(briefing.id)}
+										onArticleFeedback={(articlePosition, rating) =>
+											handleArticleFeedback(
+												briefing.id,
+												articlePosition,
+												rating
+											)
+										}
+										articleFeedbackLoading={articleFeedbackLoading}
+										userFeedback={userFeedback[briefing.id]}
+									/>
+								))
+							)}
+						</div>
 					</motion.div>
 				) : (
-					<div className="text-center py-12">
+					<div className="text-center py-8 sm:py-12">
 						<p className="text-muted-foreground">No brew found</p>
 					</div>
 				)}
