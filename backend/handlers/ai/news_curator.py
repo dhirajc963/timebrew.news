@@ -12,11 +12,11 @@ from utils.other_utils import format_time_ampm
 
 def lambda_handler(event, context):
     """
-    News Collector Lambda Function
+    News Curator Lambda Function
     Collects articles from AI and stores them for the editor to process into JSON format
     """
     start_time = datetime.now(timezone.utc)
-    logger.log_request_start(event, context, "ai/news_collector")
+    logger.log_request_start(event, context, "ai/news_curator")
 
     try:
         # Extract and validate brew_id from event
@@ -333,7 +333,7 @@ BEGIN JSON:"""
                 """
                 INSERT INTO time_brew.curation_cache 
                 (briefing_id, raw_articles, topics_searched, articles_found, 
-                 collector_prompt, raw_llm_response, curator_notes, created_at)
+                 curator_prompt, raw_llm_response, curator_notes, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """,
@@ -470,7 +470,7 @@ BEGIN JSON:"""
             topics=topics_list,
         )
 
-        logger.log_request_end("ai/news_collector", 200, processing_time * 1000)
+        logger.log_request_end("ai/news_curator", 200, processing_time * 1000)
 
         return {
             "statusCode": 200,
@@ -502,6 +502,6 @@ BEGIN JSON:"""
         # Calculate processing time for failed request
         end_time = datetime.now(timezone.utc)
         processing_time = (end_time - start_time).total_seconds()
-        logger.log_request_end("ai/news_collector", 500, processing_time * 1000)
+        logger.log_request_end("ai/news_curator", 500, processing_time * 1000)
 
         raise e

@@ -18,7 +18,7 @@ FUNCTIONS=(
     "getBrews"
     "getBrew"
     "createBrew"
-    "newsCollector"
+    "newsCurator"
     "newsEditor"
     "emailDispatcher"
     "brewScheduler"

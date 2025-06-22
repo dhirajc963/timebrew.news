@@ -7,7 +7,7 @@ A serverless AI-powered news curation system that delivers personalized Morning 
 The system consists of three main components:
 
 ### 1. **AI Pipeline (Step Functions)**
-- **News Collector**: Gathers fresh articles using Perplexity AI
+- **News Curator**: Gathers fresh articles using Perplexity AI
 - **News Editor**: Formats articles into Morning Brew-style briefings using OpenAI
 - **Email Dispatcher**: Sends formatted briefings via SMTP
 
@@ -26,7 +26,7 @@ The system consists of three main components:
 backend/
 ├── handlers/
 │   ├── ai/                    # AI Pipeline Lambda functions
-│   │   ├── news_collector.py  # Perplexity AI article collection
+│   │   ├── news_curator.py  # Perplexity AI article collection
 │   │   ├── news_editor.py     # OpenAI briefing formatting
 │   │   └── email_dispatcher.py # SMTP email delivery
 │   ├── scheduler/             # Scheduling system
@@ -151,7 +151,7 @@ serverless deploy --stage prod
 
 ### Step Functions Workflow
 
-1. **News Collection** (`newsCollector`)
+1. **News Collection** (`newsCurator`)
    - Uses Perplexity AI to find fresh articles
    - Filters based on user interests and last sent date
    - Stores raw articles in `curation_cache`

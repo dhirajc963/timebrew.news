@@ -139,8 +139,8 @@ functions:
               - X-Requested-With
 
   # AI Pipeline Functions
-  newsCollector:
-    handler: handlers/ai/news_collector.lambda_handler
+  newsCurator:
+    handler: handlers/ai/news_curator.lambda_handler
     timeout: 300
     memorySize: 512
 
@@ -254,16 +254,16 @@ resources:
         DefinitionString: |
           {
             "Comment": "TimeBrew AI Pipeline - News Collection, Editing, and Email Dispatch",
-            "StartAt": "NewsCollector",
+            "StartAt": "NewsCurator",
             "States": {
-              "NewsCollector": {
+              "NewsCurator": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::lambda:invoke",
                 "Parameters": {
-                  "FunctionName": "${self:service}-${self:provider.stage}-newsCollector",
+                  "FunctionName": "${self:service}-${self:provider.stage}-newsCurator",
                   "Payload.$": "$"
                 },
-                "ResultPath": "$.collectorResult",
+                "ResultPath": "$.curatorResult",
                 "Next": "NewsEditor",
                 "Catch": [
                   {
@@ -279,7 +279,7 @@ resources:
                 "Parameters": {
                   "FunctionName": "${self:service}-${self:provider.stage}-newsEditor",
                   "Payload": {
-                    "briefing_id.$": "$.collectorResult.Payload.body.briefing_id"
+                    "briefing_id.$": "$.curatorResult.Payload.body.briefing_id"
                   }
                 },
                 "ResultPath": "$.editorResult",
@@ -298,7 +298,7 @@ resources:
                 "Parameters": {
                   "FunctionName": "${self:service}-${self:provider.stage}-emailDispatcher",
                   "Payload": {
-                    "briefing_id.$": "$.collectorResult.Payload.body.briefing_id"
+                    "briefing_id.$": "$.curatorResult.Payload.body.briefing_id"
                   }
                 },
                 "ResultPath": "$.dispatcherResult",
@@ -351,7 +351,7 @@ resources:
                   Action:
                     - lambda:InvokeFunction
                   Resource:
-                    - !GetAtt NewsCollectorLambdaFunction.Arn
+                    - !GetAtt NewsCuratorLambdaFunction.Arn
                     - !GetAtt NewsEditorLambdaFunction.Arn
                     - !GetAtt EmailDispatcherLambdaFunction.Arn
 

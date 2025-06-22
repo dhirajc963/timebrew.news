@@ -121,7 +121,7 @@ CREATE TABLE curation_cache (
 	topics_searched _text NOT NULL,
 	search_timeframe tsrange NULL,
 	articles_found int4 NOT NULL,
-	collector_prompt text NULL,
+	curator_prompt text NULL,
 	collection_duration_ms int4 NULL,
 	created_at timestamp NULL DEFAULT now(),
 	raw_llm_response text NULL,
