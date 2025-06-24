@@ -2,11 +2,12 @@
 
 # TimeBrew Backend - AWS Lambda Logs Collector Script
 # This script collects logs for all Lambda functions defined in serverless.yml
-# Downloads logs and saves them to individual files in the current directory
+# Downloads logs in parallel and saves them to individual files in the logs directory
+# Automatically cleans up existing log files before collecting new ones
 
 # Configuration
 SERVICE_NAME="timebrew-backend"
-STAGE="${1:-prod}"  # Default to 'dev' if no stage provided
+STAGE="${1:-dev}"  # Default to 'dev' if no stage provided
 REGION="us-east-1"
 SINCE="15m"  # Get logs from last 5 minutes
 LOGS_DIR="./logs"  # Directory to save log files
@@ -24,20 +25,26 @@ FUNCTIONS=(
     "brewScheduler"
     "triggerBrew"
     "getBriefings"
-    "getBriefing"
     "submitFeedback"
 )
 
-# Function to collect logs for a specific Lambda function
+# Function to clean up existing log files
+cleanup_logs() {
+    if [[ -d "${LOGS_DIR}" ]]; then
+        echo "Cleaning up existing log files..."
+        rm -f "${LOGS_DIR}"/*.log 2>/dev/null
+        echo "✓ Cleaned up existing log files"
+        echo ""
+    fi
+}
+
+# Function to collect logs for a specific Lambda function (parallel version)
 collect_function_logs() {
     local function_name="$1"
     local log_group_name="/aws/lambda/${SERVICE_NAME}-${STAGE}-${function_name}"
     local output_file="${LOGS_DIR}/${function_name}-${STAGE}.log"
     
     echo "Collecting logs for ${function_name}..."
-    
-    # Create logs directory if it doesn't exist
-    mkdir -p "${LOGS_DIR}"
     
     # Get logs and save to file
     aws logs tail "${log_group_name}" \
@@ -56,7 +63,7 @@ collect_function_logs() {
     fi
 }
 
-# Function to collect logs for all functions
+# Function to collect logs for all functions (parallel version)
 collect_all_logs() {
     echo "Collecting logs for all TimeBrew Lambda functions..."
     echo "Service: ${SERVICE_NAME}"
@@ -66,18 +73,39 @@ collect_all_logs() {
     echo "Output Directory: ${LOGS_DIR}"
     echo ""
     
+    # Clean up existing log files
+    cleanup_logs
+    
     # Create logs directory
     mkdir -p "${LOGS_DIR}"
     
-    local success_count=0
     local total_count=${#FUNCTIONS[@]}
+    echo "Starting parallel collection of ${total_count} functions..."
+    echo ""
     
+    # Start all log collection jobs in parallel
+    local pids=()
     for function_name in "${FUNCTIONS[@]}"; do
-        collect_function_logs "${function_name}"
+        collect_function_logs "${function_name}" &
+        pids+=("$!")
+    done
+    
+    # Wait for all background jobs to complete
+    echo "Waiting for all log collection jobs to complete..."
+    for pid in "${pids[@]}"; do
+        wait "$pid"
+    done
+    
+    echo ""
+    echo "All parallel jobs completed!"
+    echo ""
+    
+    # Count successful collections
+    local success_count=0
+    for function_name in "${FUNCTIONS[@]}"; do
         if [[ -f "${LOGS_DIR}/${function_name}-${STAGE}.log" ]]; then
             ((success_count++))
         fi
-        echo ""
     done
     
     echo "Collection Summary:"
@@ -137,6 +165,12 @@ if [[ -n "$2" ]]; then
     
     # Check if function exists in our list
     if [[ " ${FUNCTIONS[*]} " =~ " ${FUNCTION_NAME} " ]]; then
+        # Clean up existing log files
+        cleanup_logs
+        
+        # Create logs directory
+        mkdir -p "${LOGS_DIR}"
+        
         collect_function_logs "${FUNCTION_NAME}"
         echo ""
         echo "Log file saved: ${LOGS_DIR}/${FUNCTION_NAME}-${STAGE}.log"

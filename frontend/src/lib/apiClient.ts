@@ -1,6 +1,6 @@
 // API client for TimeBrew backend
 import { API_ENDPOINTS, getApiUrl } from "@/config/api";
-import { getCurrentUser, signOut, fetchAuthSession } from 'aws-amplify/auth';
+import { getCurrentUser, signOut, fetchAuthSession } from "aws-amplify/auth";
 
 // Custom error class for authentication failures
 export class AuthenticationError extends Error {
@@ -19,7 +19,6 @@ export interface Brew {
 	article_count: number;
 	briefings_sent?: number;
 	created_at?: string;
-	updated_at?: string;
 	is_active?: boolean;
 	last_sent_date?: string;
 	user_id?: string;
@@ -45,18 +44,11 @@ export interface Briefing {
 	brew_id: string;
 	user_id: string;
 	editor_draft: EditorDraft;
-	sent_at: string;
+	sent_at: string | null;
 	article_count: number;
-	opened_at?: string;
-	click_count: number;
-	delivery_status: "sent" | "bounced" | "failed";
-	execution_status: "failed" | "dispatched" | "curated" | "edited";
+	delivery_status: "sent" | "pending";
+	execution_status: "sent" | "processing";
 	created_at: string;
-	updated_at: string;
-	brew_info?: {
-		delivery_time: string;
-		timezone: string;
-	};
 }
 
 export interface UserFeedback {
@@ -75,7 +67,9 @@ export interface UserFeedback {
 // API client class
 class ApiClient {
 	// Create headers with authorization token (Amplify manages tokens automatically)
-	private async createHeaders(forceRefresh: boolean = false): Promise<HeadersInit> {
+	private async createHeaders(
+		forceRefresh: boolean = false
+	): Promise<HeadersInit> {
 		try {
 			const session = await fetchAuthSession({ forceRefresh });
 			const token = session.tokens?.accessToken?.toString();
@@ -124,7 +118,10 @@ class ApiClient {
 	}
 
 	// Handle API responses with token refresh support
-	private async handleResponse<T>(response: Response, isRetry: boolean = false): Promise<T> {
+	private async handleResponse<T>(
+		response: Response,
+		isRetry: boolean = false
+	): Promise<T> {
 		if (!response.ok) {
 			// Try to parse error data, but don't fail if it's not valid JSON
 			const errorData = await response.json().catch(() => ({
@@ -138,12 +135,15 @@ class ApiClient {
 					const session = await fetchAuthSession({ forceRefresh: true });
 					if (session.tokens?.accessToken) {
 						// Token refreshed successfully, signal for retry
-						throw new Error('TOKEN_REFRESH_SUCCESS');
+						throw new Error("TOKEN_REFRESH_SUCCESS");
 					}
 				} catch (refreshError) {
 					// Only sign out if refresh actually failed
-					if (refreshError instanceof Error && refreshError.message !== 'TOKEN_REFRESH_SUCCESS') {
-						console.error('Token refresh failed:', refreshError);
+					if (
+						refreshError instanceof Error &&
+						refreshError.message !== "TOKEN_REFRESH_SUCCESS"
+					) {
+						console.error("Token refresh failed:", refreshError);
 						try {
 							await signOut();
 						} catch (signOutError) {
@@ -154,7 +154,7 @@ class ApiClient {
 						throw refreshError;
 					}
 				}
-				
+
 				throw new AuthenticationError(
 					errorData.error ||
 						errorData.message ||
@@ -209,10 +209,14 @@ class ApiClient {
 					...options,
 					headers: await this.createHeaders(),
 				});
-				
+
 				return this.handleResponse<T>(response, attempt > 0);
 			} catch (error) {
-				if (error instanceof Error && error.message === 'TOKEN_REFRESH_SUCCESS' && attempt < maxRetries) {
+				if (
+					error instanceof Error &&
+					error.message === "TOKEN_REFRESH_SUCCESS" &&
+					attempt < maxRetries
+				) {
 					// Token was refreshed, retry the request
 					continue;
 				}
@@ -222,7 +226,7 @@ class ApiClient {
 			}
 		}
 		// This should never be reached, but TypeScript requires it
-		throw new Error('Request failed after all retry attempts');
+		throw new Error("Request failed after all retry attempts");
 	}
 
 	/**
@@ -238,10 +242,13 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(API_ENDPOINTS.brews.create), {
-					method: "POST",
-					body: JSON.stringify(brewData),
-				}),
+				this.makeRequestWithRetry<{ brew: Brew }>(
+					getApiUrl(API_ENDPOINTS.brews.create),
+					{
+						method: "POST",
+						body: JSON.stringify(brewData),
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -260,9 +267,12 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ brews: Brew[] }>(getApiUrl(API_ENDPOINTS.brews.getAll), {
-					method: "GET",
-				}),
+				this.makeRequestWithRetry<{ brews: Brew[] }>(
+					getApiUrl(API_ENDPOINTS.brews.getAll),
+					{
+						method: "GET",
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -285,9 +295,12 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "GET",
-				}),
+				this.makeRequestWithRetry<{ brew: Brew }>(
+					getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`),
+					{
+						method: "GET",
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -312,10 +325,13 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ brew: Brew }>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "PUT",
-					body: JSON.stringify(brewData),
-				}),
+				this.makeRequestWithRetry<{ brew: Brew }>(
+					getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`),
+					{
+						method: "PUT",
+						body: JSON.stringify(brewData),
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -335,9 +351,12 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<void>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`), {
-					method: "DELETE",
-				}),
+				this.makeRequestWithRetry<void>(
+					getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}`),
+					{
+						method: "DELETE",
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -362,10 +381,13 @@ class ApiClient {
 			await this.checkAuthentication();
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<Brew>(getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}/status`), {
-					method: "PATCH",
-					body: JSON.stringify({ is_active: isActive }),
-				}),
+				this.makeRequestWithRetry<Brew>(
+					getApiUrl(`${API_ENDPOINTS.brews.getAll}/${id}/status`),
+					{
+						method: "PATCH",
+						body: JSON.stringify({ is_active: isActive }),
+					}
+				),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
@@ -400,7 +422,10 @@ class ApiClient {
 			});
 
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ briefings: Briefing[]; total_count: number }>(getApiUrl(`/briefings?${queryParams}`), {
+				this.makeRequestWithRetry<{
+					briefings: Briefing[];
+					total_count: number;
+				}>(getApiUrl(`/briefing?${queryParams}`), {
 					method: "GET",
 				}),
 				this.createTimeoutPromise(timeoutMs),
@@ -409,31 +434,6 @@ class ApiClient {
 			return response;
 		} catch (error) {
 			return this.handleError(`fetching briefings for brew ${brewId}`, error);
-		}
-	}
-
-	/**
-	 * Get a specific briefing by ID
-	 * @param briefingId The ID of the briefing
-	 * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
-	 */
-	async getBriefing(
-		briefingId: string,
-		timeoutMs: number = 10000
-	): Promise<Briefing> {
-		try {
-			await this.checkAuthentication();
-
-			const response = await Promise.race([
-				this.makeRequestWithRetry<Briefing>(getApiUrl(`/briefings/${briefingId}`), {
-					method: "GET",
-				}),
-				this.createTimeoutPromise(timeoutMs),
-			]);
-
-			return response;
-		} catch (error) {
-			return this.handleError(`fetching briefing ${briefingId}`, error);
 		}
 	}
 
@@ -465,9 +465,7 @@ class ApiClient {
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return this.handleResponse<{ message: string; user: any }>(
-				response
-			);
+			return this.handleResponse<{ message: string; user: any }>(response);
 		} catch (error) {
 			return this.handleError("registering user", error);
 		}
@@ -532,9 +530,9 @@ class ApiClient {
 			comments?: string;
 		},
 		timeoutMs: number = 10000
-	): Promise<{ 
-		message: string; 
-		feedback_id: string | null; 
+	): Promise<{
+		message: string;
+		feedback_id: string | null;
 		action: "submitted" | "updated" | "removed";
 		briefing_id: string;
 		feedback_type: string;
@@ -544,23 +542,34 @@ class ApiClient {
 		try {
 			await this.checkAuthentication();
 
+			// Transform briefing_id to run_id for backend compatibility
+			const { briefing_id, ...restData } = feedbackData;
+			const backendPayload = {
+				...restData,
+				run_id: briefing_id,
+			};
+
 			const response = await Promise.race([
-				this.makeRequestWithRetry<{ 
-					message: string; 
-					feedback_id: string | null; 
+				this.makeRequestWithRetry<{
+					message: string;
+					feedback_id: string | null;
 					action: "submitted" | "updated" | "removed";
-					briefing_id: string;
+					run_id: string;
 					feedback_type: string;
 					rating: number;
 					article_position?: number;
 				}>(getApiUrl("/feedback"), {
 					method: "POST",
-					body: JSON.stringify(feedbackData),
+					body: JSON.stringify(backendPayload),
 				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			return response;
+			// Transform response back to frontend format
+			return {
+				...response,
+				briefing_id: response.run_id,
+			};
 		} catch (error) {
 			return this.handleError("submitting feedback", error);
 		}

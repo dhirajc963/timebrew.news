@@ -3,6 +3,7 @@ import uuid
 import boto3
 import os
 import json
+from datetime import datetime, timezone
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import logger
@@ -11,23 +12,31 @@ cognito = boto3.client("cognito-idp")
 
 
 def handler(event, context):
-    logger.info("Starting brew creation handler")
+    start_time = datetime.now(timezone.utc)
+    logger.log_request_start(event, context, "brews/create")
+    
     try:
         # Check for Authorization header
         auth_header = event.get("headers", {}).get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             logger.warn("Brew creation attempt without authorization token")
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            logger.log_request_end("brews/create", 401, duration_ms)
             return create_response(401, {"error": "Authorization token is required"})
 
         # Extract token
         token = auth_header.split(" ")[1]
 
         # Get user from Cognito
+        logger.info("Authenticating user with Cognito")
         try:
             user_response = cognito.get_user(AccessToken=token)
             cognito_id = user_response.get("Username")
+            logger.info("User authenticated successfully", cognito_id=cognito_id)
         except Exception as e:
-            logger.error(f"Cognito error during brew creation: {e}")
+            logger.error("Cognito error during brew creation", error=str(e))
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            logger.log_request_end("brews/create", 401, duration_ms)
             return create_response(401, {"error": "Invalid or expired token"})
 
         # Parse request body

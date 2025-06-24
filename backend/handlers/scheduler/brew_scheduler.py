@@ -29,35 +29,33 @@ def lambda_handler(event, context):
 
         cursor.execute(
             """
-            SELECT b.id, b.user_id, b.delivery_time, u.timezone, b.last_sent_date,
-                   u.email, u.first_name, u.last_name, b.name as brew_name,
-                   -- Calculate today's delivery datetime in UTC for reference
-                   (date_trunc('day', NOW() AT TIME ZONE u.timezone) + b.delivery_time) 
-                   AT TIME ZONE u.timezone AT TIME ZONE 'UTC' as delivery_datetime_utc
-            FROM time_brew.brews b 
-            JOIN time_brew.users u ON b.user_id = u.id 
-            WHERE b.is_active = true
-            AND (
-                -- Check if delivery time is within next 30 minutes
-                (date_trunc('day', NOW() AT TIME ZONE u.timezone) + b.delivery_time) 
-                AT TIME ZONE u.timezone AT TIME ZONE 'UTC'
-                BETWEEN NOW() 
-                AND NOW() + INTERVAL '30 minutes'
-            )
-            AND (
-                -- Haven't sent today in user's timezone  
-                b.last_sent_date IS NULL
-                OR (b.last_sent_date AT TIME ZONE 'UTC' AT TIME ZONE u.timezone)::date 
-                   < (NOW() AT TIME ZONE u.timezone)::date
-            )
-            AND NOT EXISTS (
-                -- Not currently processing (no briefing in progress in last 2 hours)
-                SELECT 1 FROM time_brew.briefings bf 
-                WHERE bf.brew_id = b.id 
-                AND bf.execution_status IN ('curated', 'edited')
-                AND bf.created_at > NOW() - INTERVAL '2 hours'
-            )
-            ORDER BY delivery_datetime_utc ASC
+        SELECT b.id, b.user_id, b.delivery_time, u.timezone, b.last_sent_date,
+            u.email, u.first_name, u.last_name, b.name as brew_name,
+            -- Calculate today's delivery datetime in UTC (simplified approach)
+            (CURRENT_DATE AT TIME ZONE u.timezone + b.delivery_time) AT TIME ZONE u.timezone as delivery_datetime_utc
+        FROM time_brew.brews b
+        JOIN time_brew.users u ON b.user_id = u.id
+        WHERE b.is_active = true
+        AND (
+            -- Check if delivery time is within next 30 minutes (simplified)
+            (CURRENT_DATE AT TIME ZONE u.timezone + b.delivery_time) AT TIME ZONE u.timezone
+            BETWEEN NOW()
+            AND NOW() + INTERVAL '30 minutes'
+        )
+        AND (
+            -- Haven't sent today in user's timezone
+            b.last_sent_date IS NULL
+            OR (b.last_sent_date AT TIME ZONE 'UTC' AT TIME ZONE u.timezone)::date
+            < (NOW() AT TIME ZONE u.timezone)::date
+        )
+        AND NOT EXISTS (
+            -- Not currently processing (no run in progress in last 2 hours)
+            SELECT 1 FROM time_brew.run_tracker rt
+            WHERE rt.brew_id = b.id
+            AND rt.current_stage IN ('curator', 'editor', 'dispatcher')
+            AND rt.created_at > NOW() - INTERVAL '2 hours'
+        )
+        ORDER BY delivery_datetime_utc asc;
         """
         )
 
@@ -100,6 +98,25 @@ def lambda_handler(event, context):
             logger.set_context(brew_id=brew_id, user_id=user_id, user_email=email)
 
             try:
+                # Create run_tracker entry
+                logger.info(
+                    "Creating run tracker entry", brew_id=brew_id, user_id=user_id
+                )
+                run_id = create_run_tracker_entry(
+                    brew_id, user_id, conn, cursor, logger
+                )
+
+                if not run_id:
+                    logger.error("Failed to create run tracker entry", brew_id=brew_id)
+                    failed_triggers.append(
+                        {
+                            "brew_id": brew_id,
+                            "user_email": email,
+                            "error": "Failed to create run tracker entry",
+                        }
+                    )
+                    continue
+
                 # Trigger Step Functions workflow
                 logger.info(
                     "Triggering AI pipeline",
@@ -107,16 +124,18 @@ def lambda_handler(event, context):
                     user_timezone=timezone_str,
                     delivery_time=str(delivery_time),
                     scheduled_delivery_utc=delivery_datetime_utc.isoformat(),
+                    run_id=run_id,
                 )
 
                 success, execution_arn = trigger_ai_pipeline(
-                    brew_id, "scheduler", logger
+                    brew_id, run_id, "scheduler", logger
                 )
 
                 if success:
                     triggered_brews.append(
                         {
                             "brew_id": brew_id,
+                            "run_id": run_id,
                             "user_name": user_name,
                             "user_email": email,
                             "brew_name": brew_name,
@@ -221,7 +240,40 @@ def lambda_handler(event, context):
         )
 
 
-def trigger_ai_pipeline(brew_id, triggered_by="scheduler", logger=None):
+def create_run_tracker_entry(brew_id, user_id, conn, cursor, logger):
+    """
+    Create a new run_tracker entry for the brew execution
+    Returns the run_id if successful, None otherwise
+    """
+    try:
+        # Insert new run_tracker entry
+        cursor.execute(
+            """
+            INSERT INTO time_brew.run_tracker (brew_id, user_id, current_stage)
+            VALUES (%s, %s, 'curator')
+            RETURNING run_id
+            """,
+            (brew_id, user_id),
+        )
+
+        result = cursor.fetchone()
+        if result:
+            run_id = str(result[0])
+            conn.commit()
+            logger.info("Run tracker entry created", run_id=run_id, brew_id=brew_id)
+            return run_id
+        else:
+            logger.error("Failed to create run tracker entry - no result returned")
+            conn.rollback()
+            return None
+
+    except Exception as e:
+        logger.error("Error creating run tracker entry", error=str(e), brew_id=brew_id)
+        conn.rollback()
+        return None
+
+
+def trigger_ai_pipeline(brew_id, run_id, triggered_by="scheduler", logger=None):
     """
     Trigger the Step Functions AI pipeline for a specific brew
     Returns (success: bool, execution_arn: str)
@@ -243,12 +295,13 @@ def trigger_ai_pipeline(brew_id, triggered_by="scheduler", logger=None):
         # Create execution input
         execution_input = {
             "brew_id": brew_id,
+            "run_id": run_id,
             "triggered_by": triggered_by,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Generate unique execution name
-        execution_name = f"brew-{brew_id}-{triggered_by}-{int(datetime.now(timezone.utc).timestamp())}"
+        execution_name = f"brew-{brew_id}-{run_id[:8]}-{triggered_by}-{int(datetime.now(timezone.utc).timestamp())}"
 
         # Start execution
         response = stepfunctions.start_execution(

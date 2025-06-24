@@ -7,6 +7,9 @@ from datetime import datetime, timezone
 import pytz
 import json
 import re
+import time
+import os
+import psycopg2
 from utils.db import get_db_connection
 from utils.response import create_response
 from utils.logger import Logger
@@ -99,52 +102,53 @@ def format_email_html(editor_draft, brew_name, current_time):
 def lambda_handler(event, context):
     """
     Email Dispatcher Lambda Function
-    Reads JSON editor draft, formats to HTML, and sends email
+    Reads JSON editor draft from editor_logs, formats to HTML, and sends email
     """
-    start_time = datetime.now(timezone.utc)
+    start_time = time.time()
     logger = Logger("email_dispatcher")
+    run_id = None
+    conn = None
 
     try:
         logger.info("Email dispatcher started", event=event)
-        # Extract briefing_id from event
-        briefing_id = event.get("briefing_id")
-        if not briefing_id:
-            logger.error("Missing briefing_id in event")
-            return create_response(400, {"error": "briefing_id is required"})
+        # Extract run_id from event
+        run_id = event.get("run_id")
+        if not run_id:
+            logger.error("Missing run_id in event")
+            return create_response(400, {"error": "run_id is required"})
 
-        logger.set_context(briefing_id=briefing_id)
+        logger.set_context(run_id=run_id)
 
         # Get database connection
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Retrieve briefing content and user data - now including editor_draft
+        # Retrieve run data and user/brew information
         cursor.execute(
             """
-            SELECT bf.id, bf.brew_id, bf.user_id, bf.execution_status, bf.editor_draft,
+            SELECT rt.run_id, rt.brew_id, rt.user_id, rt.current_stage,
                 b.name, b.topics, b.delivery_time, u.timezone,
                 u.email, u.first_name, u.last_name
-            FROM time_brew.briefings bf
-            JOIN time_brew.brews b ON bf.brew_id = b.id
-            JOIN time_brew.users u ON bf.user_id = u.id
-            WHERE bf.id = %s
+            FROM time_brew.run_tracker rt
+            JOIN time_brew.brews b ON rt.brew_id = b.id
+            JOIN time_brew.users u ON rt.user_id = u.id
+            WHERE rt.run_id = %s
         """,
-            (briefing_id,),
+            (run_id,),
         )
 
-        briefing_data = cursor.fetchone()
-        if not briefing_data:
-            logger.error("Briefing not found in database")
+        run_data = cursor.fetchone()
+        if not run_data:
+            logger.error("Run not found in database")
             cursor.close()
             conn.close()
-            return create_response(404, {"error": "Briefing not found"})
+            return create_response(404, {"error": "Run not found"})
 
         (
-            briefing_id,
+            run_id,
             brew_id,
             user_id,
-            execution_status,
-            editor_draft_raw,
+            stage,
             brew_name,
             topics,
             delivery_time,
@@ -152,36 +156,79 @@ def lambda_handler(event, context):
             email,
             first_name,
             last_name,
-        ) = briefing_data
+        ) = run_data
 
-        if execution_status != "edited":
-            logger.error(
-                f"Invalid briefing status: {execution_status}, expected edited"
-            )
+        if stage != "dispatcher":
+            logger.error(f"Invalid run stage: {stage}, expected dispatcher")
             cursor.close()
             conn.close()
             return create_response(
                 400,
-                {"error": f"Briefing status is {execution_status}, expected edited"},
+                {"error": f"Run stage is {stage}, expected dispatcher"},
             )
 
-        if not editor_draft_raw:
-            logger.error("Missing editor_draft content")
-            cursor.close()
-            conn.close()
-            return create_response(400, {"error": "Missing editor draft content"})
-
-        # Parse editor draft JSON
+        # Get editor draft from editor_logs
+        logger.info("Retrieving editor draft from editor logs")
         try:
-            if isinstance(editor_draft_raw, str):
-                editor_draft = json.loads(editor_draft_raw)
+            cursor.execute(
+                """
+                SELECT id, prompt_used, editorial_content, raw_llm_response, email_sent, 
+                       email_sent_time, runtime_ms, created_at
+                FROM time_brew.editor_logs 
+                WHERE run_id = %s
+                """,
+                (run_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                logger.error("Editor log not found")
+                cursor.close()
+                conn.close()
+                return create_response(404, {"error": "Editor log not found"})
+
+            editor_log = {
+                "id": str(row[0]),
+                "prompt_used": row[1],
+                "editorial_content": row[2],
+                "raw_llm_response": row[3],
+                "email_sent": row[4],
+                "email_sent_time": row[5],
+                "runtime_ms": row[6],
+                "created_at": row[7],
+            }
+
+            # Use editorial_content if available, fallback to raw_llm_response
+            editorial_content = editor_log.get("editorial_content")
+            raw_llm_response = editor_log.get("raw_llm_response")
+            
+            if editorial_content:
+                # editorial_content is already parsed JSON
+                editor_draft = editorial_content
+            elif raw_llm_response:
+                # Fallback to parsing raw_llm_response for backward compatibility
+                try:
+                    if isinstance(raw_llm_response, str):
+                        editor_draft = json.loads(raw_llm_response)
+                    else:
+                        editor_draft = raw_llm_response
+                except json.JSONDecodeError as e:
+                    logger.error("Failed to parse raw_llm_response", error=str(e))
+                    cursor.close()
+                    conn.close()
+                    return create_response(400, {"error": "Invalid editor draft content"})
             else:
-                editor_draft = editor_draft_raw
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in editor_draft: {str(e)}")
+                logger.error("Missing editor draft content in editor logs")
+                cursor.close()
+                conn.close()
+                return create_response(400, {"error": "Missing editor draft content"})
+
+        except Exception as e:
+            logger.error("Failed to retrieve editor log", error=str(e))
             cursor.close()
             conn.close()
-            return create_response(400, {"error": "Invalid editor draft JSON"})
+            return create_response(500, {"error": "Failed to retrieve editor draft"})
+
+        # editor_draft is already parsed from editorial_content or raw_llm_response above
 
         # Parse topics JSON if it exists
         if isinstance(topics, str):
@@ -286,41 +333,65 @@ def lambda_handler(event, context):
         sent_at = current_time
         sent_at_utc = sent_at.astimezone(pytz.UTC).replace(tzinfo=None)
 
-        # Update briefing with delivery status
-        cursor.execute(
-            """
-            UPDATE time_brew.briefings 
-            SET execution_status = %s,
-                sent_at = %s,
-                updated_at = %s
-            WHERE id = %s
-        """,
-            (
-                "dispatched" if delivery_status == "dispatched" else "failed",
-                sent_at_utc,
-                datetime.now(timezone.utc),
-                briefing_id,
-            ),
-        )
+        # Update run_tracker with delivery status
+        try:
+            if delivery_status == "dispatched":
+                cursor.execute(
+                    """
+                    UPDATE time_brew.run_tracker 
+                    SET current_stage = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE run_id = %s
+                    """,
+                    ("completed", run_id),
+                )
 
-        # Update brew's last_sent_date if email was sent successfully
-        if delivery_status == "dispatched":
-            cursor.execute(
-                """
-                UPDATE time_brew.brews 
-                SET last_sent_date = %s
-                WHERE id = %s
-            """,
-                (sent_at_utc, brew_id),
+                # Update brew's last_sent_date if email was sent successfully
+                cursor.execute(
+                    """
+                    UPDATE time_brew.brews 
+                    SET last_sent_date = %s
+                    WHERE id = %s
+                """,
+                    (sent_at_utc, brew_id),
+                )
+
+                # Update editor_logs with email sent status and time
+                cursor.execute(
+                    """
+                    UPDATE time_brew.editor_logs 
+                    SET email_sent = true, email_sent_time = %s
+                    WHERE run_id = %s
+                    """,
+                    (sent_at_utc, run_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE time_brew.run_tracker 
+                    SET current_stage = %s, failed_stage = %s, error_message = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE run_id = %s
+                    """,
+                    ("failed", "dispatcher", str(e), run_id),
+                )
+
+            conn.commit()
+            logger.info(
+                "Updated run tracker and brew data",
+                run_id=run_id,
+                stage="completed" if delivery_status == "dispatched" else "failed",
             )
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+        except Exception as update_error:
+            logger.error("Failed to update run tracker", error=str(update_error))
+            conn.rollback()
+            raise Exception(f"Failed to update run status: {str(update_error)}")
+        finally:
+            cursor.close()
+            conn.close()
 
         # Calculate processing time
-        end_time = datetime.now(timezone.utc)
-        processing_time = (end_time - start_time).total_seconds()
+        end_time = time.time()
+        processing_time = end_time - start_time
 
         logger.info(
             "Email dispatch completed",
@@ -333,7 +404,7 @@ def lambda_handler(event, context):
                 "statusCode": 200,
                 "body": {
                     "message": "Email sent successfully",
-                    "briefing_id": briefing_id,
+                    "run_id": run_id,
                     "user_name": user_name,
                     "email": email,
                     "subject_line": subject_line,
@@ -347,7 +418,7 @@ def lambda_handler(event, context):
                 "statusCode": 500,
                 "body": {
                     "message": "Failed to send email",
-                    "briefing_id": briefing_id,
+                    "run_id": run_id,
                     "error": error_message,
                     "processing_time_seconds": round(processing_time, 2),
                 },
@@ -355,8 +426,8 @@ def lambda_handler(event, context):
 
     except Exception as e:
         # Calculate processing time for failed request
-        end_time = datetime.now(timezone.utc)
-        processing_time = (end_time - start_time).total_seconds()
+        end_time = time.time()
+        processing_time = end_time - start_time
 
         logger.error(
             f"Error in email_dispatcher: {str(e)}",
@@ -364,25 +435,44 @@ def lambda_handler(event, context):
             processing_time_seconds=round(processing_time, 2),
         )
 
-        # Try to update briefing status to failed if we have briefing_id
+        # Try to update run_tracker status to failed if we have run_id
         try:
-            if "briefing_id" in locals():
-                logger.info("Updating briefing status to failed")
+            if run_id and "cursor" not in locals():
+                logger.info("Updating run tracker status to failed")
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    UPDATE time_brew.briefings 
-                    SET execution_status = 'failed', updated_at = %s
-                    WHERE id = %s
-                """,
-                    (datetime.now(timezone.utc), briefing_id),
+                    UPDATE time_brew.run_tracker 
+                    SET current_stage = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE run_id = %s
+                    """,
+                    ("failed", run_id),
                 )
                 conn.commit()
                 cursor.close()
                 conn.close()
+            elif run_id and "cursor" in locals():
+                # If we already have a cursor, use it
+                try:
+                    cursor.execute(
+                        """
+                        UPDATE time_brew.run_tracker 
+                        SET current_stage = %s, failed_stage = %s, error_message = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE run_id = %s
+                        """,
+                        ("failed", "dispatcher", str(e), run_id),
+                    )
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                finally:
+                    if cursor:
+                        cursor.close()
+                    if conn:
+                        conn.close()
         except Exception as db_error:
-            logger.error(f"Failed to update briefing status: {str(db_error)}")
+            logger.error(f"Failed to update run tracker status: {str(db_error)}")
 
         # Re-raise the exception to ensure Step Functions marks this as failed
         raise e

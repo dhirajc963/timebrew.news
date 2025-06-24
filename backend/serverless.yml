@@ -197,21 +197,6 @@ functions:
               - Authorization
               - X-Requested-With
 
-  getBriefing:
-    handler: handlers/briefings/get_by_id.lambda_handler
-    timeout: 29
-    memorySize: 256
-    events:
-      - http:
-          path: briefings/{id}
-          method: get
-          cors:
-            origin: "*"
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Requested-With
-
   # Feedback Functions
   submitFeedback:
     handler: handlers/feedback/submit.lambda_handler
@@ -279,7 +264,7 @@ resources:
                 "Parameters": {
                   "FunctionName": "${self:service}-${self:provider.stage}-newsEditor",
                   "Payload": {
-                    "briefing_id.$": "$.curatorResult.Payload.body.briefing_id"
+                    "run_id.$": "$.run_id"
                   }
                 },
                 "ResultPath": "$.editorResult",
@@ -298,7 +283,7 @@ resources:
                 "Parameters": {
                   "FunctionName": "${self:service}-${self:provider.stage}-emailDispatcher",
                   "Payload": {
-                    "briefing_id.$": "$.curatorResult.Payload.body.briefing_id"
+                    "run_id.$": "$.run_id"
                   }
                 },
                 "ResultPath": "$.dispatcherResult",
