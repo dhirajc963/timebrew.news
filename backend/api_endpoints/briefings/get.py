@@ -1,6 +1,6 @@
-from handlers.base import BaseHandler
-from middleware.auth import validate_ownership
-from db.queries import OptimizedQueries
+from shared.base import BaseHandler
+from shared.middleware.auth import validate_ownership
+from shared.db.queries import OptimizedQueries
 
 
 class BriefingsGetHandler(BaseHandler):

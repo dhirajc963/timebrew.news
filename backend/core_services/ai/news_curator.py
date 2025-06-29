@@ -5,12 +5,12 @@ import os
 import psycopg2
 from datetime import datetime, timedelta, timezone
 import pytz
-from utils.db import get_db_connection
-from utils.response import create_response
-# from utils.logger import logger  # Replaced with print statements
-from utils.ai_service import ai_service
-from utils.text_utils import format_list_with_quotes
-from utils.other_utils import format_time_ampm
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
+# from shared.utils.logger import logger  # Replaced with print statements
+from shared.utils.ai_service import ai_service
+from shared.utils.text_utils import format_list_with_quotes
+from shared.utils.other_utils import format_time_ampm
 
 
 def lambda_handler(event, context):

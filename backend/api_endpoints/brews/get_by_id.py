@@ -1,8 +1,8 @@
 import json
 import boto3
 import os
-from utils.db import get_db_connection
-from utils.response import create_response
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
 
 cognito = boto3.client("cognito-idp")
 

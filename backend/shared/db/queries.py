@@ -1,5 +1,5 @@
 """Optimized database queries - eliminates query duplication and improves performance."""
-from utils.db import get_db_connection
+from shared.utils.db import get_db_connection
 
 
 class OptimizedQueries:

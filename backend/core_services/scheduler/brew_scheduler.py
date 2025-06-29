@@ -2,8 +2,8 @@ import os
 import json
 import boto3
 from datetime import datetime, timezone
-from utils.db import get_db_connection
-from utils.response import create_response
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
 
 
 def lambda_handler(event, context):

@@ -10,10 +10,10 @@ import re
 import time
 import os
 import psycopg2
-from utils.db import get_db_connection
-from utils.response import create_response
-# from utils.logger import Logger  # Replaced with print statements
-from utils.text_utils import format_list_simple
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
+# from shared.utils.logger import Logger  # Replaced with print statements
+from shared.utils.text_utils import format_list_simple
 
 
 def format_email_html(editor_draft, brew_name, current_time):

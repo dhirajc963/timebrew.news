@@ -1,5 +1,5 @@
-from handlers.base import BaseHandler
-from db.queries import OptimizedQueries
+from shared.base import BaseHandler
+from shared.db.queries import OptimizedQueries
 
 
 class BrewsGetHandler(BaseHandler):

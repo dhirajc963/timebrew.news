@@ -102,8 +102,8 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 									{briefing.editor_draft?.subject &&
 									briefing.editor_draft.subject.length > 50
 										? `${briefing.editor_draft.subject.substring(0, 50)}...`
-										: (briefing.editor_draft?.subject ||
-										  `Briefing #${briefing.id}`)}
+										: briefing.editor_draft?.subject ||
+										  `Briefing #${briefing.id}`}
 								</CardTitle>
 							</div>
 							{/* Desktop badge in normal flow */}
@@ -140,8 +140,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 									<ChevronDown className="w-4 h-4" />
 									<span className="hidden sm:inline">Expand</span>
 								</>
-							)
-							}
+							)}
 						</Button>
 					</div>
 				</CardHeader>
@@ -186,10 +185,11 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 																			{article.headline}
 																		</CardTitle>
 																		{article.story_content && (
-																			<p className="text-xs sm:text-sm text-muted-foreground line-clamp-3">
+																			<p className="text-xs sm:text-sm text-muted-foreground">
+																				{/* #story_content */}
 																				{article.story_content}
-																			</p>)
-																		}
+																			</p>
+																		)}
 																	</div>
 																	<div className="flex flex-col gap-2">
 																		{article.original_url &&
@@ -220,60 +220,82 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 															<CardContent className="pt-0 pb-2 px-3 sm:px-4">
 																{/* Article Feedback Section */}
 																<div className="border-t pt-2 sm:pt-3">
-														<div className="flex items-center gap-2 min-h-[28px]">
-															{(() => {
-																const articleFeedback = userFeedback?.article_feedback?.find(
-																	f => f.article_position === articleIndex
-																);
-																const isLiked = articleFeedback?.type === 'like';
-																const isDisliked = articleFeedback?.type === 'dislike';
-																
-																return (
-																	<>
-																		<Button
-																			variant={isLiked ? "default" : "ghost"}
-																			size="sm"
-																			onClick={() =>
-																				onArticleFeedback(
-																					articleIndex,
-																					5
-																				)
-																			}
-																			disabled={articleFeedbackLoading}
-																			className={`p-1 h-7 w-7 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 touch-manipulation ${isLiked ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md' : 'text-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm dark:hover:bg-primary/20'} ${articleFeedbackLoading ? 'opacity-70 cursor-wait' : ''}`}
-																		>
-																			{articleFeedbackLoading ? (
-																				<span className="animate-pulse"><ThumbsUp className="w-3 h-3" /></span>
-																			) : (
-																				<ThumbsUp className="w-3 h-3" />
-																			)}
-																		</Button>
-																		<Button
-																			variant={isDisliked ? "default" : "ghost"}
-																			size="sm"
-																			onClick={() =>
-																				onArticleFeedback(
-																					articleIndex,
-																					1
-																				)
-																			}
-																			disabled={articleFeedbackLoading}
-																			className={`p-1 h-7 w-7 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 touch-manipulation ${isDisliked ? 'bg-destructive text-white hover:bg-destructive/90 hover:shadow-md' : 'text-destructive hover:bg-destructive/10 hover:text-destructive hover:shadow-sm dark:hover:bg-destructive/20'} ${articleFeedbackLoading ? 'opacity-70 cursor-wait' : ''}`}
-																		>
-																			{articleFeedbackLoading ? (
-																				<span className="animate-pulse"><ThumbsDown className="w-3 h-3" /></span>
-																			) : (
-																				<ThumbsDown className="w-3 h-3" />
-																			)}
-																		</Button>
-																	</>
-																);
-															})()}
-														</div>
-													</div>
-													</CardContent>
-											</Card>
-									</motion.div>
+																	<div className="flex items-center gap-2 min-h-[28px]">
+																		{(() => {
+																			const articleFeedback =
+																				userFeedback?.article_feedback?.find(
+																					(f) =>
+																						f.article_position === articleIndex
+																				);
+																			const isLiked =
+																				articleFeedback?.type === "like";
+																			const isDisliked =
+																				articleFeedback?.type === "dislike";
+
+																			return (
+																				<>
+																					<Button
+																						variant={
+																							isLiked ? "default" : "ghost"
+																						}
+																						size="sm"
+																						onClick={() =>
+																							onArticleFeedback(articleIndex, 5)
+																						}
+																						disabled={articleFeedbackLoading}
+																						className={`p-1 h-7 w-7 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 touch-manipulation ${
+																							isLiked
+																								? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md"
+																								: "text-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm dark:hover:bg-primary/20"
+																						} ${
+																							articleFeedbackLoading
+																								? "opacity-70 cursor-wait"
+																								: ""
+																						}`}
+																					>
+																						{articleFeedbackLoading ? (
+																							<span className="animate-pulse">
+																								<ThumbsUp className="w-3 h-3" />
+																							</span>
+																						) : (
+																							<ThumbsUp className="w-3 h-3" />
+																						)}
+																					</Button>
+																					<Button
+																						variant={
+																							isDisliked ? "default" : "ghost"
+																						}
+																						size="sm"
+																						onClick={() =>
+																							onArticleFeedback(articleIndex, 1)
+																						}
+																						disabled={articleFeedbackLoading}
+																						className={`p-1 h-7 w-7 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 touch-manipulation ${
+																							isDisliked
+																								? "bg-destructive text-white hover:bg-destructive/90 hover:shadow-md"
+																								: "text-destructive hover:bg-destructive/10 hover:text-destructive hover:shadow-sm dark:hover:bg-destructive/20"
+																						} ${
+																							articleFeedbackLoading
+																								? "opacity-70 cursor-wait"
+																								: ""
+																						}`}
+																					>
+																						{articleFeedbackLoading ? (
+																							<span className="animate-pulse">
+																								<ThumbsDown className="w-3 h-3" />
+																							</span>
+																						) : (
+																							<ThumbsDown className="w-3 h-3" />
+																						)}
+																					</Button>
+																				</>
+																			);
+																		})()}
+																	</div>
+																</div>
+															</CardContent>
+														</Card>
+													</motion.div>
 												)
 											)}
 										</div>
@@ -288,54 +310,68 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 							</div>
 
 							<div className="flex items-center justify-center gap-2 sm:gap-3 mt-2 sm:mt-4">
-				{(() => {
-					const isLiked = userFeedback?.overall_feedback?.type === 'like';
-					const isDisliked = userFeedback?.overall_feedback?.type === 'dislike';
-					
-					return (
-						<>
-							<Button
-								variant={isLiked ? "default" : "ghost"}
-								size="sm"
-								onClick={() => onFeedback(5)}
-								disabled={feedbackLoading}
-								className={`flex items-center gap-1.5 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation ${isLiked ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md' : 'text-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm dark:hover:bg-primary/20'} ${feedbackLoading ? 'opacity-70 cursor-wait' : ''}`}
-							>
-								{feedbackLoading ? (
-									<span className="animate-pulse flex items-center gap-1.5">
-										<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Loved it</span>
-									</span>
-								) : (
-									<>
-										<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Loved it</span>
-									</>
-								)}
-							</Button>
-							<Button
-								variant={isDisliked ? "default" : "ghost"}
-								size="sm"
-								onClick={() => onFeedback(1)}
-								disabled={feedbackLoading}
-								className={`flex items-center gap-1.5 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation ${isDisliked ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md' : 'text-destructive hover:bg-destructive/10 hover:text-destructive hover:shadow-sm dark:hover:bg-destructive/20'} ${feedbackLoading ? 'opacity-70 cursor-wait' : ''}`}
-							>
-								{feedbackLoading ? (
-									<span className="animate-pulse flex items-center gap-1.5">
-										<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Not helpful</span>
-									</span>
-								) : (
-									<>
-										<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
-										<span className="hidden sm:inline">Not helpful</span>
-									</>
-								)}
-							</Button>
-						</>
-					);
-				})()}
-			</div>
+								{(() => {
+									const isLiked =
+										userFeedback?.overall_feedback?.type === "like";
+									const isDisliked =
+										userFeedback?.overall_feedback?.type === "dislike";
+
+									return (
+										<>
+											<Button
+												variant={isLiked ? "default" : "ghost"}
+												size="sm"
+												onClick={() => onFeedback(5)}
+												disabled={feedbackLoading}
+												className={`flex items-center gap-1.5 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation ${
+													isLiked
+														? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md"
+														: "text-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm dark:hover:bg-primary/20"
+												} ${feedbackLoading ? "opacity-70 cursor-wait" : ""}`}
+											>
+												{feedbackLoading ? (
+													<span className="animate-pulse flex items-center gap-1.5">
+														<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
+														<span className="hidden sm:inline">Loved it</span>
+													</span>
+												) : (
+													<>
+														<ThumbsUp className="w-4 h-4 sm:w-3 sm:h-3" />
+														<span className="hidden sm:inline">Loved it</span>
+													</>
+												)}
+											</Button>
+											<Button
+												variant={isDisliked ? "default" : "ghost"}
+												size="sm"
+												onClick={() => onFeedback(1)}
+												disabled={feedbackLoading}
+												className={`flex items-center gap-1.5 hover:scale-105 transition-[background-color,color,transform,shadow] duration-200 text-xs sm:text-sm px-3 py-2 sm:px-2 sm:py-1 min-h-[36px] sm:min-h-[32px] touch-manipulation ${
+													isDisliked
+														? "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md"
+														: "text-destructive hover:bg-destructive/10 hover:text-destructive hover:shadow-sm dark:hover:bg-destructive/20"
+												} ${feedbackLoading ? "opacity-70 cursor-wait" : ""}`}
+											>
+												{feedbackLoading ? (
+													<span className="animate-pulse flex items-center gap-1.5">
+														<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
+														<span className="hidden sm:inline">
+															Not helpful
+														</span>
+													</span>
+												) : (
+													<>
+														<ThumbsDown className="w-4 h-4 sm:w-3 sm:h-3" />
+														<span className="hidden sm:inline">
+															Not helpful
+														</span>
+													</>
+												)}
+											</Button>
+										</>
+									);
+								})()}
+							</div>
 						</div>
 					</CardContent>
 				)}

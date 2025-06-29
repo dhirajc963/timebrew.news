@@ -1,8 +1,8 @@
 import json
 from datetime import datetime, timezone
-from utils.db import test_db_connection
-from utils.response import create_response
-# from utils.logger import logger
+from shared.utils.db import test_db_connection
+from shared.utils.response import create_response
+# from shared.utils.logger import logger
 
 
 def handler(event, context):

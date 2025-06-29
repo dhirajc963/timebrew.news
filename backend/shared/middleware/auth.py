@@ -1,7 +1,7 @@
 """Optimized authentication middleware - eliminates duplication across 8+ handlers."""
 import boto3
-from utils.db import get_db_connection
-from utils.response import create_response
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
 
 
 def authenticate_user(event):

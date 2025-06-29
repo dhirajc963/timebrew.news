@@ -1,8 +1,8 @@
 """Base handler class - eliminates common patterns across all handlers."""
 import json
 from datetime import datetime, timezone
-from utils.response import create_response
-from middleware.auth import authenticate_user, validate_ownership
+from shared.utils.response import create_response
+from shared.middleware.auth import authenticate_user, validate_ownership
 
 
 class BaseHandler:

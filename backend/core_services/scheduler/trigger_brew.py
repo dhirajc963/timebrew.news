@@ -3,9 +3,9 @@ import os
 import boto3
 from datetime import datetime, timezone
 import psycopg2
-from utils.response import create_response
-from utils.db import get_db_connection
-# from utils.logger import Logger
+from shared.utils.response import create_response
+from shared.utils.db import get_db_connection
+# from shared.utils.logger import Logger
 
 
 def lambda_handler(event, context):

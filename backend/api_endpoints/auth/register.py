@@ -3,9 +3,9 @@ import boto3
 import os
 import uuid
 import json
-from utils.db import get_db_connection
-from utils.response import create_response
-# from utils.logger import logger  # Replaced with print statements
+from shared.utils.db import get_db_connection
+from shared.utils.response import create_response
+# from shared.utils.logger import logger  # Replaced with print statements
 
 cognito = boto3.client("cognito-idp")
 

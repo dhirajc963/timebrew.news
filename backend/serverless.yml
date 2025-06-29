@@ -69,7 +69,7 @@ plugins:
 functions:
   # Health check function
   health:
-    handler: handlers/utils/health.handler
+    handler: api_endpoints/utils/health.handler
     events:
       - http:
           path: health
@@ -83,7 +83,7 @@ functions:
 
   # Auth functions
   register:
-    handler: handlers/auth/register.handler
+    handler: api_endpoints/auth/register.handler
     events:
       - http:
           path: auth/register
@@ -100,7 +100,7 @@ functions:
 
   # Brew functions
   getBrews:
-    handler: handlers/brews/get.handler
+    handler: api_endpoints/brews/get.handler
     events:
       - http:
           path: brews
@@ -113,7 +113,7 @@ functions:
               - X-Requested-With
 
   getBrew:
-    handler: handlers/brews/get_by_id.handler
+    handler: api_endpoints/brews/get_by_id.handler
     events:
       - http:
           path: brews/{id}
@@ -126,7 +126,7 @@ functions:
               - X-Requested-With
 
   createBrew:
-    handler: handlers/brews/create.handler
+    handler: api_endpoints/brews/create.handler
     events:
       - http:
           path: brews
@@ -140,23 +140,23 @@ functions:
 
   # AI Pipeline Functions
   newsCurator:
-    handler: handlers/ai/news_curator.lambda_handler
+    handler: core_services/ai/news_curator.lambda_handler
     timeout: 600
     memorySize: 512
 
   newsEditor:
-    handler: handlers/ai/news_editor.lambda_handler
+    handler: core_services/ai/news_editor.lambda_handler
     timeout: 600
     memorySize: 512
 
   emailDispatcher:
-    handler: handlers/ai/email_dispatcher.lambda_handler
+    handler: core_services/ai/email_dispatcher.lambda_handler
     timeout: 600
     memorySize: 256
 
   # Scheduler Functions
   brewScheduler:
-    handler: handlers/scheduler/brew_scheduler.lambda_handler
+    handler: core_services/scheduler/brew_scheduler.lambda_handler
     timeout: 600
     memorySize: 256
     environment:
@@ -165,7 +165,7 @@ functions:
       - schedule: rate(15 minutes)
 
   triggerBrew:
-    handler: handlers/scheduler/trigger_brew.lambda_handler
+    handler: core_services/scheduler/trigger_brew.lambda_handler
     timeout: 29
     memorySize: 256
     environment:
@@ -183,7 +183,7 @@ functions:
 
   # Briefings Functions
   getBriefings:
-    handler: handlers/briefings/get.lambda_handler
+    handler: api_endpoints/briefings/get.lambda_handler
     timeout: 29
     memorySize: 256
     events:
@@ -197,9 +197,24 @@ functions:
               - Authorization
               - X-Requested-With
 
+  getBriefing:
+    handler: api_endpoints/briefings/get_by_id.lambda_handler
+    timeout: 29
+    memorySize: 256
+    events:
+      - http:
+          path: briefings/{id}
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+
   # Feedback Functions
   submitFeedback:
-    handler: handlers/feedback/submit.lambda_handler
+    handler: api_endpoints/feedback/submit.lambda_handler
     timeout: 29
     memorySize: 256
     events:
@@ -214,7 +229,7 @@ functions:
               - X-Requested-With
 
   getFeedbackStatus:
-    handler: handlers/feedback/get_status.lambda_handler
+    handler: api_endpoints/feedback/get_status.lambda_handler
     timeout: 29
     memorySize: 256
     events:

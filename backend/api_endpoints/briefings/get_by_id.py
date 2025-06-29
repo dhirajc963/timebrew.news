@@ -1,5 +1,5 @@
-from handlers.base import BaseHandler
-from db.queries import OptimizedQueries
+from shared.base import BaseHandler
+from shared.db.queries import OptimizedQueries
 
 
 class BriefingByIdHandler(BaseHandler):
@@ -64,7 +64,7 @@ class BriefingByIdHandler(BaseHandler):
             
             if include_articles:
                 # This could be optimized further by adding to the main query
-                from utils.db import get_db_connection
+                from shared.utils.db import get_db_connection
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute("SELECT raw_articles FROM time_brew.curator_logs WHERE run_id = %s", (run_id,))
