@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytz
 from utils.db import get_db_connection
 from utils.response import create_response
-from utils.logger import logger
+# from utils.logger import logger  # Replaced with print statements
 from utils.ai_service import ai_service
 from utils.text_utils import format_list_with_quotes
 from utils.other_utils import format_time_ampm
@@ -19,7 +19,7 @@ def lambda_handler(event, context):
     Collects articles from AI and stores them in the new curator_logs table
     """
     start_time = time.time()  # Use time.time() for precise millisecond calculation
-    logger.log_request_start(event, context, "ai/news_curator")
+    print(f"[NEWS_CURATOR] Request started: {event.get('brew_id', 'unknown')}")
 
     run_id = None
     conn = None
@@ -30,17 +30,17 @@ def lambda_handler(event, context):
         run_id = event.get("run_id")
 
         if not brew_id:
-            logger.error("News collection failed: missing brew_id in event")
+            print(f"[NEWS_CURATOR] ERROR: News collection failed: missing brew_id in event")
             return create_response(400, {"error": "brew_id is required"})
 
         if not run_id:
-            logger.error("News collection failed: missing run_id in event")
+            print(f"[NEWS_CURATOR] ERROR: News collection failed: missing run_id in event")
             return create_response(400, {"error": "run_id is required"})
 
-        logger.set_context(brew_id=brew_id, run_id=run_id)
+        print(f"[NEWS_CURATOR] Context set: brew_id={brew_id}, run_id={run_id}")
 
         # Get database connection
-        logger.info("Connecting to database for brew data retrieval")
+        print(f"[NEWS_CURATOR] Connecting to database for brew data retrieval")
         db_start_time = datetime.now(timezone.utc)
 
         try:
@@ -49,13 +49,13 @@ def lambda_handler(event, context):
             db_connect_duration = (
                 datetime.now(timezone.utc) - db_start_time
             ).total_seconds() * 1000
-            logger.log_db_operation("connect", "brews", db_connect_duration)
+            print(f"[NEWS_CURATOR] DB connection time: {db_connect_duration}ms")
         except Exception as e:
-            logger.error("Failed to connect to database", error=e)
+            print(f"[NEWS_CURATOR] ERROR: Failed to connect to database: {str(e)}")
             return create_response(500, {"error": "Database connection failed"})
 
         # Retrieve brew and user data
-        logger.info("Retrieving brew and user data")
+        print(f"[NEWS_CURATOR] Retrieving brew and user data")
         query_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
@@ -74,10 +74,10 @@ def lambda_handler(event, context):
         query_duration = (
             datetime.now(timezone.utc) - query_start_time
         ).total_seconds() * 1000
-        logger.log_db_operation("select", "brews", query_duration, table_join="users")
+        print(f"[NEWS_CURATOR] Brew query time: {query_duration}ms")
 
         if not brew_data:
-            logger.warn("Active brew not found for provided brew_id")
+            print(f"[NEWS_CURATOR] WARNING: Active brew not found for provided brew_id")
             cursor.close()
             conn.close()
             return create_response(404, {"error": "Active brew not found"})
@@ -95,10 +95,10 @@ def lambda_handler(event, context):
             last_name,
         ) = brew_data
 
-        logger.set_context(user_id=user_id, user_email=email, run_id=run_id)
+        print(f"[NEWS_CURATOR] Context updated: user_id={user_id}, email={email}, run_id={run_id}")
 
         # Validate that run_tracker exists and is in correct stage
-        logger.info("Validating run tracker state")
+        print(f"[NEWS_CURATOR] Validating run tracker state")
         try:
             cursor.execute(
                 """
@@ -109,29 +109,23 @@ def lambda_handler(event, context):
             )
             result = cursor.fetchone()
             if not result:
-                logger.error("Run tracker not found", run_id=run_id, brew_id=brew_id)
+                print(f"[NEWS_CURATOR] ERROR: Run tracker not found: run_id={run_id}, brew_id={brew_id}")
                 cursor.close()
                 conn.close()
                 return create_response(400, {"error": "Invalid run_id or brew_id"})
 
             current_stage = result[0]
             if current_stage != "curator":
-                logger.error(
-                    "Invalid run tracker stage",
-                    current_stage=current_stage,
-                    expected="curator",
-                )
+                print(f"[NEWS_CURATOR] ERROR: Invalid run tracker stage: current={current_stage}, expected=curator")
                 cursor.close()
                 conn.close()
                 return create_response(
                     400, {"error": f"Invalid stage: {current_stage}, expected: curator"}
                 )
 
-            logger.info(
-                "Run tracker validation successful", current_stage=current_stage
-            )
+            print(f"[NEWS_CURATOR] Run tracker validation successful: stage={current_stage}")
         except Exception as e:
-            logger.error("Failed to validate run tracker", error=e)
+            print(f"[NEWS_CURATOR] ERROR: Failed to validate run tracker: {str(e)}")
             cursor.close()
             conn.close()
             return create_response(500, {"error": "Failed to validate run tracker"})
@@ -154,11 +148,8 @@ def lambda_handler(event, context):
         else:
             topics_list = topics
 
-        logger.info(
-            "Brew configuration loaded",
-            brew_name=brew_name,
-            user_timezone=brew_timezone,
-            topics_count=len(topics_list),
+        print(
+            f"[NEWS_CURATOR] Brew configuration loaded: brew_name={brew_name}, user_timezone={brew_timezone}, topics_count={len(topics_list)}"
         )
 
         # Calculate temporal context - database dates are UTC, convert to user timezone
@@ -172,7 +163,7 @@ def lambda_handler(event, context):
             temporal_context = "past 3 days"
 
         # Get previous articles for context (avoid duplicates)
-        logger.info("Retrieving previous articles for context")
+        print(f"[NEWS_CURATOR] Retrieving previous articles for context")
         prev_articles_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
@@ -190,13 +181,7 @@ def lambda_handler(event, context):
         prev_articles_duration = (
             datetime.now(timezone.utc) - prev_articles_start_time
         ).total_seconds() * 1000
-        logger.log_db_operation(
-            "select",
-            "run_tracker",
-            prev_articles_duration,
-            table_join="curator_logs",
-            limit=5,
-        )
+        print(f"[NEWS_CURATOR] Previous articles query time: {prev_articles_duration}ms")
 
         # Process previous articles and build NO-GO LIST in one pass
         previous_articles = []
@@ -230,7 +215,7 @@ def lambda_handler(event, context):
                     no_go_items.append(f'"{headline} ({url})"')
 
         # Get user feedback for personalization
-        logger.info("Retrieving user feedback for personalization")
+        print(f"[NEWS_CURATOR] Retrieving user feedback for personalization")
         feedback_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
@@ -247,7 +232,7 @@ def lambda_handler(event, context):
         feedback_duration = (
             datetime.now(timezone.utc) - feedback_start_time
         ).total_seconds() * 1000
-        logger.log_db_operation("select", "user_feedback", feedback_duration, limit=10)
+        print(f"[NEWS_CURATOR] Feedback query time: {feedback_duration}ms")
 
         user_feedback = []
         for row in cursor.fetchall():
@@ -333,7 +318,7 @@ BEGIN JSON:"""
         provider = curator_config["provider"]
         model = curator_config["model"]
 
-        logger.info(f"Preparing {provider.title()} API call for article curation")
+        print(f"[NEWS_CURATOR] Preparing {provider.title()} API call for article curation")
         api_start_time = datetime.now(timezone.utc)
 
         try:
@@ -350,37 +335,23 @@ BEGIN JSON:"""
                 datetime.now(timezone.utc) - api_start_time
             ).total_seconds() * 1000
 
-            logger.log_external_api_call(
-                provider.title(),
-                "/chat/completions",
-                "POST",
-                200,
-                api_duration,
-                model=model,
-                prompt_tokens=len(prompt.split()),
-            )
+            print(f"[NEWS_CURATOR] {provider.title()} API call completed in {api_duration}ms")
         except Exception as e:
             api_duration = (
                 datetime.now(timezone.utc) - api_start_time
             ).total_seconds() * 1000
-            logger.error(
-                f"{provider.title()} API request failed",
-                error=str(e),
-                api_duration=api_duration,
-            )
+            print(f"[NEWS_CURATOR] ERROR: {provider.title()} API request failed: {str(e)}, duration: {api_duration}ms")
             raise Exception(f"{provider.title()} API error: {str(e)}")
 
-        logger.info(
-            "Received response from AI curator",
-            response_length=len(content),
-            content_preview=content[:200] + "..." if len(content) > 200 else content,
+        print(
+            f"[NEWS_CURATOR] Received response from AI curator: length={len(content)}, preview={content[:200] + '...' if len(content) > 200 else content}"
         )
 
         # Calculate runtime for curator operation
         curator_runtime_ms = int((time.time() - start_time) * 1000)
 
         # Log raw LLM response immediately to ensure we have it even if parsing fails
-        logger.info("Logging raw LLM response to curator logs")
+        print(f"[NEWS_CURATOR] Logging raw LLM response to curator logs")
         try:
             cursor.execute(
                 """
@@ -405,40 +376,35 @@ BEGIN JSON:"""
             )
             log_id = str(cursor.fetchone()[0])
             conn.commit()
-            logger.info(
-                "Raw LLM response successfully logged to curator logs",
-                run_id=run_id,
-                log_id=log_id,
-                runtime_ms=curator_runtime_ms,
+            print(
+                f"[NEWS_CURATOR] Raw LLM response successfully logged to curator logs: run_id={run_id}, log_id={log_id}, runtime_ms={curator_runtime_ms}"
             )
         except Exception as log_error:
-            logger.error(
-                "Failed to log raw LLM response to curator logs", error=str(log_error)
+            print(
+                f"[NEWS_CURATOR] ERROR: Failed to log raw LLM response to curator logs: {str(log_error)}"
             )
             raise Exception(
                 f"Critical failure: Unable to log raw LLM response to database: {str(log_error)}"
             )
 
         # Parse AI response
-        logger.info("Parsing articles from AI response")
+        print(f"[NEWS_CURATOR] Parsing articles from AI response")
         try:
             response_data = ai_service.parse_json_from_response(content)
         except ValueError as e:
-            logger.error("Failed to parse JSON from AI response", error=e)
+            print(f"[NEWS_CURATOR] ERROR: Failed to parse JSON from AI response: {str(e)}")
             raise Exception(str(e))
 
         # Extract articles and curator notes
         articles = response_data.get("articles", [])
         curator_notes = response_data.get("curator_notes", "")
 
-        logger.info(
-            "Article curation completed",
-            total_articles=len(articles),
-            curator_notes_provided=bool(curator_notes.strip()),
+        print(
+            f"[NEWS_CURATOR] Article curation completed: total_articles={len(articles)}, curator_notes_provided={bool(curator_notes.strip())}"
         )
 
         # Update curator log with final parsed articles
-        logger.info("Updating curator log with parsed articles")
+        print(f"[NEWS_CURATOR] Updating curator log with parsed articles")
         final_runtime_ms = int((time.time() - start_time) * 1000)
 
         try:
@@ -470,15 +436,12 @@ BEGIN JSON:"""
             # Commit transaction
             conn.commit()
 
-            logger.info(
-                "Curator log updated successfully",
-                run_id=run_id,
-                articles_stored=len(articles),
-                final_runtime_ms=final_runtime_ms,
+            print(
+                f"[NEWS_CURATOR] Curator log updated successfully: run_id={run_id}, articles_stored={len(articles)}, final_runtime_ms={final_runtime_ms}"
             )
 
         except Exception as update_error:
-            logger.error("Failed to update curator log", error=str(update_error))
+            print(f"[NEWS_CURATOR] ERROR: Failed to update curator log: {str(update_error)}")
             raise Exception(
                 f"Critical failure: Unable to update curator log: {str(update_error)}"
             )
@@ -490,17 +453,11 @@ BEGIN JSON:"""
         end_time = time.time()
         processing_time = end_time - start_time
 
-        logger.info(
-            "News collection completed successfully",
-            run_id=run_id,
-            processing_time_seconds=round(processing_time, 2),
-            articles_collected=len(articles),
-            curator_notes=curator_notes,
-            temporal_context=temporal_context,
-            topics=topics_list,
+        print(
+            f"[NEWS_CURATOR] News collection completed successfully: run_id={run_id}, processing_time_seconds={round(processing_time, 2)}, articles_collected={len(articles)}, curator_notes={curator_notes}, temporal_context={temporal_context}, topics={topics_list}"
         )
 
-        logger.log_request_end("ai/news_curator", 200, processing_time * 1000)
+        print(f"[NEWS_CURATOR] Request completed: ai/news_curator, status=200, duration={processing_time * 1000}ms")
 
         return {
             "statusCode": 200,
@@ -518,7 +475,7 @@ BEGIN JSON:"""
         }
 
     except Exception as e:
-        logger.error("News collection failed: unexpected error", error=e)
+        print(f"[NEWS_CURATOR] ERROR: News collection failed: unexpected error: {str(e)}")
 
         # Update run tracker to failed state if we have a run_id
         if run_id:
@@ -540,10 +497,10 @@ BEGIN JSON:"""
                 error_conn.commit()
                 error_cursor.close()
                 error_conn.close()
-                logger.info("Run tracker updated to failed state", run_id=run_id)
+                print(f"[NEWS_CURATOR] Run tracker updated to failed state: run_id={run_id}")
             except Exception as stage_error:
-                logger.error(
-                    "Failed to update run tracker to failed state", error=stage_error
+                print(
+                    f"[NEWS_CURATOR] ERROR: Failed to update run tracker to failed state: {str(stage_error)}"
                 )
 
         # Cleanup database connection on error
@@ -551,13 +508,13 @@ BEGIN JSON:"""
             if conn:
                 conn.rollback()
                 conn.close()
-                logger.info("Database connection rolled back and closed due to error")
+                print(f"[NEWS_CURATOR] Database connection rolled back and closed due to error")
         except Exception as cleanup_error:
-            logger.error("Failed to cleanup database connection", error=cleanup_error)
+            print(f"[NEWS_CURATOR] ERROR: Failed to cleanup database connection: {str(cleanup_error)}")
 
         # Calculate processing time for failed request
         end_time = time.time()
         processing_time = end_time - start_time
-        logger.log_request_end("ai/news_curator", 500, processing_time * 1000)
+        print(f"[NEWS_CURATOR] Request failed: ai/news_curator, status=500, duration={processing_time * 1000}ms")
 
         raise e

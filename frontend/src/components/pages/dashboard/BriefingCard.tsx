@@ -223,7 +223,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 														<div className="flex items-center gap-2 min-h-[28px]">
 															{(() => {
 																const articleFeedback = userFeedback?.article_feedback?.find(
-																	f => f.article_position === articleIndex + 1
+																	f => f.article_position === articleIndex
 																);
 																const isLiked = articleFeedback?.type === 'like';
 																const isDisliked = articleFeedback?.type === 'dislike';
@@ -235,7 +235,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 																			size="sm"
 																			onClick={() =>
 																				onArticleFeedback(
-																					articleIndex + 1,
+																					articleIndex,
 																					5
 																				)
 																			}
@@ -253,7 +253,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({
 																			size="sm"
 																			onClick={() =>
 																				onArticleFeedback(
-																					articleIndex + 1,
+																					articleIndex,
 																					1
 																				)
 																			}

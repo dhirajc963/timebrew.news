@@ -41,18 +41,19 @@ export interface EditorDraft {
 
 export interface Briefing {
 	id: string;
+	editorial_id: string;
 	brew_id: string;
 	user_id: string;
 	editor_draft: EditorDraft;
 	sent_at: string | null;
 	article_count: number;
-	delivery_status: "sent" | "pending";
+	delivery_status: "sent" | "pending" | "failed" | "bounced";
 	execution_status: "sent" | "processing";
 	created_at: string;
 }
 
 export interface UserFeedback {
-	briefing_id: string;
+	editorial_id: string;
 	overall_feedback?: {
 		type: "like" | "dislike";
 	};
@@ -425,7 +426,7 @@ class ApiClient {
 				this.makeRequestWithRetry<{
 					briefings: Briefing[];
 					total_count: number;
-				}>(getApiUrl(`/briefing?${queryParams}`), {
+				}>(getApiUrl(`/briefings?${queryParams}`), {
 					method: "GET",
 				}),
 				this.createTimeoutPromise(timeoutMs),
@@ -472,18 +473,16 @@ class ApiClient {
 	}
 
 	/**
-	 * Get feedback status for a briefing
-	 * @param briefingId The briefing ID
-	 * @param userId The user ID
+	 * Get feedback status for an editorial
+	 * @param editorialId The editorial ID
 	 * @param timeoutMs Optional timeout in milliseconds (defaults to 10000ms)
 	 */
 	async getFeedbackStatus(
-		briefingId: string,
-		userId: string,
+		editorialId: string,
 		timeoutMs: number = 10000
 	): Promise<{
-		briefing_id: string;
-		briefing_feedback: "like" | "dislike" | null;
+		editorial_id: string;
+		overall_feedback: "like" | "dislike" | null;
 		articles: Array<{
 			position: number;
 			feedback: "like" | "dislike" | null;
@@ -496,15 +495,15 @@ class ApiClient {
 
 			const response = await Promise.race([
 				this.makeRequestWithRetry<{
-					briefing_id: string;
-					briefing_feedback: "like" | "dislike" | null;
+					editorial_id: string;
+					overall_feedback: "like" | "dislike" | null;
 					articles: Array<{
 						position: number;
 						feedback: "like" | "dislike" | null;
 						title?: string;
 						source?: string;
 					}>;
-				}>(getApiUrl(`/feedback/status/${briefingId}?user_id=${userId}`), {
+				}>(getApiUrl(`/feedback/status/${editorialId}`), {
 					method: "GET",
 				}),
 				this.createTimeoutPromise(timeoutMs),
@@ -523,10 +522,15 @@ class ApiClient {
 	 */
 	async submitFeedback(
 		feedbackData: {
-			briefing_id: string;
+			editorial_id: string;
 			feedback_type: "overall" | "article";
-			rating: number;
+			like: boolean;
 			article_position?: number;
+			article_data?: {
+				headline: string;
+				source: string;
+				original_url: string;
+			};
 			comments?: string;
 		},
 		timeoutMs: number = 10000
@@ -534,42 +538,31 @@ class ApiClient {
 		message: string;
 		feedback_id: string | null;
 		action: "submitted" | "updated" | "removed";
-		briefing_id: string;
+		editorial_id: string;
 		feedback_type: string;
-		rating: number;
+		like: boolean;
 		article_position?: number;
 	}> {
 		try {
 			await this.checkAuthentication();
-
-			// Transform briefing_id to run_id for backend compatibility
-			const { briefing_id, ...restData } = feedbackData;
-			const backendPayload = {
-				...restData,
-				run_id: briefing_id,
-			};
 
 			const response = await Promise.race([
 				this.makeRequestWithRetry<{
 					message: string;
 					feedback_id: string | null;
 					action: "submitted" | "updated" | "removed";
-					run_id: string;
+					editorial_id: string;
 					feedback_type: string;
-					rating: number;
+					like: boolean;
 					article_position?: number;
 				}>(getApiUrl("/feedback"), {
 					method: "POST",
-					body: JSON.stringify(backendPayload),
+					body: JSON.stringify(feedbackData),
 				}),
 				this.createTimeoutPromise(timeoutMs),
 			]);
 
-			// Transform response back to frontend format
-			return {
-				...response,
-				briefing_id: response.run_id,
-			};
+			return response;
 		} catch (error) {
 			return this.handleError("submitting feedback", error);
 		}

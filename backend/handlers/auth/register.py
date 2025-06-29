@@ -2,9 +2,10 @@ import json
 import boto3
 import os
 import uuid
+import json
 from utils.db import get_db_connection
 from utils.response import create_response
-from utils.logger import logger
+# from utils.logger import logger  # Replaced with print statements
 
 cognito = boto3.client("cognito-idp")
 
@@ -32,11 +33,11 @@ def generate_secure_temp_password():
 
 
 def handler(event, context):
-    logger.info("Starting user registration handler")
+    print(f"[REGISTER] Starting user registration handler")
     try:
         # Parse request body
         if not event.get("body"):
-            logger.warn("Registration attempt without request body")
+            print(f"[REGISTER] WARNING: Registration attempt without request body")
             return create_response(400, {"error": "Request body is required"})
 
         body = json.loads(event["body"])
@@ -45,7 +46,7 @@ def handler(event, context):
         required_fields = ["email", "firstName", "lastName", "country", "interests"]
         for field in required_fields:
             if not body.get(field):
-                logger.warn(f"Registration attempt missing required field: {field}")
+                print(f"[REGISTER] WARNING: Registration attempt missing required field: {field}")
                 return create_response(400, {"error": f"{field} is required"})
 
         email = body["email"].lower().strip()
@@ -57,7 +58,7 @@ def handler(event, context):
 
         # Validate interests is an array
         if not isinstance(interests, list) or len(interests) == 0:
-            logger.warn(f"Registration attempt with invalid interests for {email}")
+            print(f"[REGISTER] WARNING: Registration attempt with invalid interests for {email}")
             return create_response(400, {"error": "At least one interest is required"})
 
         # Create user in Cognito using sign_up (this sends verification email automatically)
@@ -82,21 +83,21 @@ def handler(event, context):
             cognito_id = cognito_response["UserSub"]
 
             # Verification email is automatically sent by Cognito!
-            logger.info(f"User created in Cognito: {cognito_id}, verification email sent to: {email}")
+            print(f"[REGISTER] User created in Cognito: {cognito_id}, verification email sent to: {email}")
 
         except cognito.exceptions.UsernameExistsException:
-            logger.warn(f"Registration attempt for existing user: {email}")
+            print(f"[REGISTER] WARNING: Registration attempt for existing user: {email}")
             return create_response(
                 400, {"error": "User with this email already exists"}
             )
         except cognito.exceptions.InvalidPasswordException:
             # This shouldn't happen with our generated password, but just in case
-            logger.error(f"Invalid password generated for user registration: {email}")
+            print(f"[REGISTER] ERROR: Invalid password generated for user registration: {email}")
             return create_response(
                 400, {"error": "Password does not meet requirements"}
             )
         except Exception as e:
-            logger.error(f"Cognito error during registration for {email}: {e}")
+            print(f"[REGISTER] ERROR: Cognito error during registration for {email}: {e}")
             return create_response(500, {"error": "Failed to create user account"})
 
         # Store user profile in database
@@ -124,22 +125,22 @@ def handler(event, context):
 
             conn.commit()
             conn.close()
-            logger.info(f"User profile created in database for {email} with ID: {user_id}")
+            print(f"[REGISTER] User profile created in database for {email} with ID: {user_id}")
 
         except Exception as e:
-            logger.error(f"Database error during registration for {email}: {e}")
+            print(f"[REGISTER] ERROR: Database error during registration for {email}: {e}")
             # Rollback: Delete user from Cognito if database insert failed
             try:
                 cognito.admin_delete_user(
                     UserPoolId=os.environ["USER_POOL_ID"], Username=email
                 )
-                logger.info(f"Rolled back Cognito user creation for {email}")
+                print(f"[REGISTER] Rolled back Cognito user creation for {email}")
             except Exception as rollback_error:
-                logger.error(f"Failed to rollback Cognito user for {email}: {rollback_error}")
+                print(f"[REGISTER] ERROR: Failed to rollback Cognito user for {email}: {rollback_error}")
             return create_response(500, {"error": "Failed to create user profile"})
 
         # Return success response
-        logger.info(f"User registration completed successfully for {email}")
+        print(f"[REGISTER] User registration completed successfully for {email}")
         return create_response(
             201,
             {
@@ -160,8 +161,8 @@ def handler(event, context):
         )
 
     except json.JSONDecodeError:
-        logger.error("Invalid JSON in registration request body")
+        print(f"[REGISTER] ERROR: Invalid JSON in registration request body")
         return create_response(400, {"error": "Invalid JSON in request body"})
     except Exception as e:
-        logger.error(f"Unexpected error in registration handler: {e}")
+        print(f"[REGISTER] ERROR: Unexpected error in registration handler: {e}")
         return create_response(500, {"error": "Internal server error"})

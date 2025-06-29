@@ -9,7 +9,7 @@
 SERVICE_NAME="timebrew-backend"
 STAGE="${1:-dev}"  # Default to 'dev' if no stage provided
 REGION="us-east-1"
-SINCE="15m"  # Get logs from last 5 minutes
+SINCE="5m"  # Get logs from last 5 minutes
 LOGS_DIR="./logs"  # Directory to save log files
 
 # Lambda functions from serverless.yml

@@ -194,15 +194,14 @@ const BrewDetails: React.FC = () => {
 			for (const briefing of response.briefings) {
 				try {
 					const feedbackResponse = await apiClient.getFeedbackStatus(
-						briefing.id,
-						user.id
+						briefing.editorial_id
 					);
 					// Transform the response to match UserFeedback interface
 					const userFeedbackData: UserFeedback = {
-						briefing_id: feedbackResponse.briefing_id,
-						overall_feedback: feedbackResponse.briefing_feedback
+						editorial_id: feedbackResponse.editorial_id,
+						overall_feedback: feedbackResponse.overall_feedback
 							? {
-									type: feedbackResponse.briefing_feedback,
+									type: feedbackResponse.overall_feedback,
 							  }
 							: undefined,
 						article_feedback: feedbackResponse.articles
@@ -216,7 +215,7 @@ const BrewDetails: React.FC = () => {
 					};
 					setUserFeedback((prev) => ({
 						...prev,
-						[briefing.id]: userFeedbackData,
+						[briefing.editorial_id]: userFeedbackData,
 					}));
 				} catch (err) {
 					// Silently handle feedback fetch errors
@@ -253,13 +252,16 @@ const BrewDetails: React.FC = () => {
 		});
 	};
 
-	const handleFeedback = async (briefingId: string, rating: number) => {
-		setFeedbackLoading((prev) => new Set(prev).add(briefingId));
+	const handleFeedback = async (editorialId: string, rating: number) => {
+		setFeedbackLoading((prev) => new Set(prev).add(editorialId));
 		try {
+			// Convert rating to boolean like (4-5 stars = like, 1-3 stars = dislike)
+			const like = rating >= 4;
+			
 			const response = await apiClient.submitFeedback({
-				briefing_id: briefingId,
+				editorial_id: editorialId,
 				feedback_type: "overall",
-				rating: rating,
+				like: like,
 			});
 
 			// Update local feedback state based on response
@@ -267,18 +269,18 @@ const BrewDetails: React.FC = () => {
 				// Remove overall feedback
 				setUserFeedback((prev) => ({
 					...prev,
-					[briefingId]: {
-						...prev[briefingId],
+					[editorialId]: {
+						...prev[editorialId],
 						overall_feedback: undefined,
 					},
 				}));
 			} else {
 				// Update or add overall feedback
-				const feedbackType = rating >= 4 ? "like" : "dislike";
+				const feedbackType = like ? "like" : "dislike";
 				setUserFeedback((prev) => ({
 					...prev,
-					[briefingId]: {
-						...prev[briefingId],
+					[editorialId]: {
+						...prev[editorialId],
 						overall_feedback: { type: feedbackType },
 					},
 				}));
@@ -288,28 +290,43 @@ const BrewDetails: React.FC = () => {
 		} finally {
 			setFeedbackLoading((prev) => {
 				const newSet = new Set(prev);
-				newSet.delete(briefingId);
+				newSet.delete(editorialId);
 				return newSet;
 			});
 		}
 	};
 
 	const handleArticleFeedback = async (
-		briefingId: string,
+		briefing: Briefing,
 		articlePosition: number,
 		rating: number
 	) => {
 		setArticleFeedbackLoading(true);
 		try {
+			// Convert rating to boolean like (4-5 stars = like, 1-3 stars = dislike)
+			const like = rating >= 4;
+			
+			// Get article data from briefing (0-based indexing)
+			const article = briefing.editor_draft.articles[articlePosition];
+			if (!article) {
+				console.error(`Article at position ${articlePosition} not found`);
+				return;
+			}
+			
 			const response = await apiClient.submitFeedback({
-				briefing_id: briefingId,
+				editorial_id: briefing.editorial_id,
 				feedback_type: "article",
-				rating: rating,
+				like: like,
 				article_position: articlePosition,
+				article_data: {
+					headline: article.headline,
+					source: article.source,
+					original_url: article.original_url,
+				},
 			});
 
 			// Update local feedback state based on response
-			const currentFeedback = userFeedback[briefingId] || {
+			const currentFeedback = userFeedback[briefing.editorial_id] || {
 				article_feedback: [],
 			};
 			let updatedArticleFeedback = [
@@ -323,7 +340,7 @@ const BrewDetails: React.FC = () => {
 				);
 			} else {
 				// Update or add article feedback
-				const feedbackType = rating >= 4 ? "like" : "dislike";
+				const feedbackType = like ? "like" : "dislike";
 				const existingIndex = updatedArticleFeedback.findIndex(
 					(f) => f.article_position === articlePosition
 				);
@@ -337,15 +354,15 @@ const BrewDetails: React.FC = () => {
 					updatedArticleFeedback.push({
 						article_position: articlePosition,
 						type: feedbackType,
-						article_title: "", // Will be populated by backend
-						article_source: "", // Will be populated by backend
+						article_title: article.headline,
+						article_source: article.source,
 					});
 				}
 			}
 
 			setUserFeedback((prev) => ({
 				...prev,
-				[briefingId]: {
+				[briefing.editorial_id]: {
 					...currentFeedback,
 					article_feedback: updatedArticleFeedback,
 				},
@@ -542,17 +559,17 @@ const BrewDetails: React.FC = () => {
 										onToggleExpansion={() =>
 											toggleBriefingExpansion(briefing.id)
 										}
-										onFeedback={(rating) => handleFeedback(briefing.id, rating)}
-										feedbackLoading={feedbackLoading.has(briefing.id)}
+										onFeedback={(rating) => handleFeedback(briefing.editorial_id, rating)}
+										feedbackLoading={feedbackLoading.has(briefing.editorial_id)}
 										onArticleFeedback={(articlePosition, rating) =>
-											handleArticleFeedback(
-												briefing.id,
-												articlePosition,
-												rating
-											)
-										}
+							handleArticleFeedback(
+								briefing,
+								articlePosition,
+								rating
+							)
+						}
 										articleFeedbackLoading={articleFeedbackLoading}
-										userFeedback={userFeedback[briefing.id]}
+										userFeedback={userFeedback[briefing.editorial_id]}
 									/>
 								))
 							)}

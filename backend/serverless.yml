@@ -141,23 +141,23 @@ functions:
   # AI Pipeline Functions
   newsCurator:
     handler: handlers/ai/news_curator.lambda_handler
-    timeout: 300
+    timeout: 600
     memorySize: 512
 
   newsEditor:
     handler: handlers/ai/news_editor.lambda_handler
-    timeout: 300
+    timeout: 600
     memorySize: 512
 
   emailDispatcher:
     handler: handlers/ai/email_dispatcher.lambda_handler
-    timeout: 120
+    timeout: 600
     memorySize: 256
 
   # Scheduler Functions
   brewScheduler:
     handler: handlers/scheduler/brew_scheduler.lambda_handler
-    timeout: 300
+    timeout: 600
     memorySize: 256
     environment:
       AI_PIPELINE_STATE_MACHINE_ARN: !Ref AIPipelineStateMachine
@@ -250,6 +250,14 @@ resources:
                 },
                 "ResultPath": "$.curatorResult",
                 "Next": "NewsEditor",
+                "Retry": [
+                  {
+                    "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                  }
+                ],
                 "Catch": [
                   {
                     "ErrorEquals": ["States.ALL"],
@@ -269,6 +277,14 @@ resources:
                 },
                 "ResultPath": "$.editorResult",
                 "Next": "EmailDispatcher",
+                "Retry": [
+                  {
+                    "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                  }
+                ],
                 "Catch": [
                   {
                     "ErrorEquals": ["States.ALL"],
@@ -288,6 +304,14 @@ resources:
                 },
                 "ResultPath": "$.dispatcherResult",
                 "Next": "Success",
+                "Retry": [
+                  {
+                    "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2.0
+                  }
+                ],
                 "Catch": [
                   {
                     "ErrorEquals": ["States.ALL"],

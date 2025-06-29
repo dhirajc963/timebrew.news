@@ -31,6 +31,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { cn, formatTime12Hour } from "@/lib/utils";
 import { apiClient, Brew } from "@/lib/apiClient";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 
@@ -476,12 +477,8 @@ const BrewCard: React.FC<BrewCardProps> = ({ brew, index }) => {
 							<div className="flex items-center mt-0.5">
 								<Clock className="w-3.5 h-3.5 mr-1 text-primary" />
 								<span className="text-sm">
-									{brew.delivery_time.split(":")[0]}:
-									{brew.delivery_time.split(":")[1]}
-									{parseInt(brew.delivery_time.split(":")[0]) >= 12
-										? " PM"
-										: " AM"}
-								</span>
+								{formatTime12Hour(brew.delivery_time)}
+							</span>
 							</div>
 						</div>
 
@@ -564,12 +561,8 @@ const BrewCompactRow: React.FC<BrewCardProps> = ({ brew, index }) => {
 							<div className="flex items-center gap-1">
 								<Clock className="w-3 h-3 text-muted-foreground" />
 								<span className="text-xs">
-									{brew.delivery_time.split(":")[0]}:
-									{brew.delivery_time.split(":")[1]}
-									{parseInt(brew.delivery_time.split(":")[0]) >= 12
-										? " PM"
-										: " AM"}
-								</span>
+							{formatTime12Hour(brew.delivery_time)}
+						</span>
 							</div>
 
 							<div className="flex items-center gap-1">

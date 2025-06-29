@@ -5,7 +5,7 @@ import requests
 import openai
 import time
 from typing import Dict, List, Optional, Any
-from utils.logger import logger
+# from utils.logger import logger
 
 
 class AIServiceError(Exception):
@@ -46,12 +46,12 @@ class AIService:
         if provider not in self.providers:
             raise AIServiceError(f"Unsupported AI provider: {provider}. Supported: {list(self.providers.keys())}")
         
-        logger.info(f"Making AI API call to {provider}", provider=provider)
+        print(f"[AI_SERVICE] Making AI API call to {provider}")
         
         try:
             return self.providers[provider](**kwargs)
         except Exception as e:
-            logger.error(f"AI API call failed for {provider}", provider=provider, error=str(e))
+            print(f"[AI_SERVICE] AI API call failed for {provider} - error: {str(e)}")
             raise AIServiceError(f"Failed to call {provider}: {str(e)}")
 
     def _call_perplexity(self,
@@ -91,14 +91,7 @@ class AIService:
             "max_tokens": max_tokens,
         }
 
-        logger.info(
-            "Calling Perplexity AI",
-            model=model,
-            temperature=temperature,
-            prompt_length=len(prompt),
-            timeout=timeout,
-            max_retries=max_retries
-        )
+        print(f"[AI_SERVICE] Calling Perplexity AI - model: {model}, temperature: {temperature}, prompt_length: {len(prompt)}, timeout: {timeout}, max_retries: {max_retries}")
 
         last_exception = None
         
@@ -107,7 +100,7 @@ class AIService:
                 if attempt > 0:
                     # Exponential backoff: 2^attempt seconds (2, 4, 8 seconds)
                     delay = 2 ** attempt
-                    logger.info(f"Retrying Perplexity API call (attempt {attempt + 1}/{max_retries + 1}) after {delay}s delay")
+                    print(f"[AI_SERVICE] Retrying Perplexity API call (attempt {attempt + 1}/{max_retries + 1}) after {delay}s delay")
                     time.sleep(delay)
                 
                 response = requests.post(
@@ -125,12 +118,7 @@ class AIService:
                 response_data = response.json()
                 content = response_data["choices"][0]["message"]["content"]
                 
-                logger.info(
-                    "Perplexity AI response received",
-                    response_length=len(content),
-                    status_code=response.status_code,
-                    attempt=attempt + 1
-                )
+                print(f"[AI_SERVICE] Perplexity AI response received - response_length: {len(content)}, status_code: {response.status_code}, attempt: {attempt + 1}")
 
                 return {
                     "content": content,
@@ -144,25 +132,13 @@ class AIService:
                     requests.exceptions.ConnectionError,
                     requests.exceptions.ReadTimeout) as e:
                 last_exception = e
-                logger.warning(
-                    f"Perplexity API timeout/connection error on attempt {attempt + 1}/{max_retries + 1}",
-                    error=str(e),
-                    attempt=attempt + 1
-                )
+                print(f"[AI_SERVICE] WARNING: Perplexity API timeout/connection error on attempt {attempt + 1}/{max_retries + 1} - error: {str(e)}, attempt: {attempt + 1}")
                 if attempt == max_retries:
-                    logger.error(
-                        "Perplexity API failed after all retry attempts",
-                        error=str(e),
-                        total_attempts=max_retries + 1
-                    )
+                    print(f"[AI_SERVICE] ERROR: Perplexity API failed after all retry attempts - error: {str(e)}, total_attempts: {max_retries + 1}")
                     raise AIServiceError(f"Failed to call perplexity: {str(e)}")
             except Exception as e:
                 # For non-timeout errors, don't retry
-                logger.error(
-                    "Perplexity API non-retryable error",
-                    error=str(e),
-                    attempt=attempt + 1
-                )
+                print(f"[AI_SERVICE] ERROR: Perplexity API non-retryable error - error: {str(e)}, attempt: {attempt + 1}")
                 raise AIServiceError(f"Perplexity AI API error: {str(e)}")
         
         # This should never be reached due to the exception handling above
@@ -191,12 +167,7 @@ class AIService:
 
         client = openai.OpenAI(api_key=api_key)
 
-        logger.info(
-            "Calling OpenAI",
-            model=model,
-            temperature=temperature,
-            messages_count=len(messages)
-        )
+        print(f"[AI_SERVICE] Calling OpenAI - model: {model}, temperature: {temperature}, messages_count: {len(messages)}")
 
         response = client.chat.completions.create(
             model=model,
@@ -207,11 +178,7 @@ class AIService:
 
         content = response.choices[0].message.content
         
-        logger.info(
-            "OpenAI response received",
-            response_length=len(content),
-            model=model
-        )
+        print(f"[AI_SERVICE] OpenAI response received - response_length: {len(content)}, model: {model}")
 
         return {
             "content": content,
@@ -255,12 +222,7 @@ class AIService:
             "max_tokens": max_tokens,
         }
 
-        logger.info(
-            "Calling DeepSeek",
-            model=model,
-            temperature=temperature,
-            prompt_length=len(prompt)
-        )
+        print(f"[AI_SERVICE] Calling DeepSeek - model: {model}, temperature: {temperature}, prompt_length: {len(prompt)}")
 
         # Note: Replace with actual DeepSeek API endpoint when available
         response = requests.post(
@@ -278,11 +240,7 @@ class AIService:
         response_data = response.json()
         content = response_data["choices"][0]["message"]["content"]
         
-        logger.info(
-            "DeepSeek response received",
-            response_length=len(content),
-            status_code=response.status_code
-        )
+        print(f"[AI_SERVICE] DeepSeek response received - response_length: {len(content)}, status_code: {response.status_code}")
 
         return {
             "content": content,
@@ -301,7 +259,7 @@ class AIService:
             handler_func: Function that handles API calls for this provider
         """
         self.providers[name] = handler_func
-        logger.info(f"Added new AI provider: {name}")
+        print(f"[AI_SERVICE] Added new AI provider: {name}")
 
     def get_available_providers(self) -> List[str]:
         """
@@ -325,7 +283,7 @@ class AIService:
         Raises:
             ValueError: If JSON parsing fails.
         """
-        logger.info("Attempting to parse JSON from AI response")
+        print("[AI_SERVICE] Attempting to parse JSON from AI response")
         try:
             # Remove <think> blocks
             content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
@@ -350,23 +308,19 @@ class AIService:
             if start_idx != -1 and end_idx != 0:
                 json_str = content_clean[start_idx:end_idx]
                 response_data = json.loads(json_str)
-                logger.info("Successfully extracted and parsed JSON from AI response")
+                print("[AI_SERVICE] Successfully extracted and parsed JSON from AI response")
                 return response_data
             else:
                 # Try parsing the whole string directly if no braces found
                 response_data = json.loads(content_clean)
-                logger.info("Successfully parsed entire content as JSON")
+                print("[AI_SERVICE] Successfully parsed entire content as JSON")
                 return response_data
 
         except json.JSONDecodeError as e:
-            logger.error(
-                "Failed to parse JSON from AI response",
-                error=str(e),
-                content_preview=content[:500],
-            )
+            print(f"[AI_SERVICE] ERROR: Failed to parse JSON from AI response - error: {str(e)}, content_preview: {content[:500]}")
             raise ValueError(f"Failed to parse JSON from AI response: {str(e)}")
         except Exception as e:
-            logger.error("An unexpected error occurred during JSON parsing", error=str(e))
+            print(f"[AI_SERVICE] ERROR: An unexpected error occurred during JSON parsing - error: {str(e)}")
             raise
 
 

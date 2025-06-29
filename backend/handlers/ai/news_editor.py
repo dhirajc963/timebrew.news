@@ -10,7 +10,7 @@ from utils.response import create_response
 from utils.text_utils import format_list_simple
 from utils.ai_service import ai_service
 from utils.other_utils import format_time_ampm
-from utils.logger import logger
+# from utils.logger import logger
 
 
 def lambda_handler(event, context):
@@ -20,7 +20,7 @@ def lambda_handler(event, context):
     Uses the new run_tracker and editor_logs schema
     """
     start_time = time.time()  # Use time.time() for precise millisecond calculation
-    logger.log_request_start(event, context, "ai/news_editor")
+    print(f"[NEWS_EDITOR] Request started - event: {event}, context: {context}, endpoint: ai/news_editor")
 
     conn = None
     run_id = None
@@ -29,11 +29,11 @@ def lambda_handler(event, context):
         # Extract run_id from event
         run_id = event.get("run_id")
         if not run_id:
-            logger.error("News editor failed: missing run_id in event")
+            print("[NEWS_EDITOR] ERROR: News editor failed: missing run_id in event")
             return create_response(400, {"error": "run_id is required"})
 
         # Get database connection
-        logger.info("Connecting to database for briefing data retrieval")
+        print("[NEWS_EDITOR] Connecting to database for briefing data retrieval")
         db_start_time = datetime.now(timezone.utc)
 
         try:
@@ -42,13 +42,13 @@ def lambda_handler(event, context):
             db_connect_duration = (
                 datetime.now(timezone.utc) - db_start_time
             ).total_seconds() * 1000
-            logger.log_db_operation("connect", "briefings", db_connect_duration)
+            print(f"[NEWS_EDITOR] DB operation: connect to briefings - duration: {db_connect_duration}ms")
         except Exception as e:
-            logger.error("Failed to connect to database", error=e)
+            print(f"[NEWS_EDITOR] ERROR: Failed to connect to database - error: {e}")
             return create_response(500, {"error": "Database connection failed"})
 
         # Retrieve run tracker and associated data
-        logger.info("Retrieving run tracker and associated data")
+        print("[NEWS_EDITOR] Retrieving run tracker and associated data")
         query_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
@@ -68,12 +68,10 @@ def lambda_handler(event, context):
         query_duration = (
             datetime.now(timezone.utc) - query_start_time
         ).total_seconds() * 1000
-        logger.log_db_operation(
-            "select", "run_tracker", query_duration, table_join="brews,users"
-        )
+        print(f"[NEWS_EDITOR] DB operation: select from run_tracker - duration: {query_duration}ms, table_join: brews,users")
 
         if not run_data:
-            logger.warn("Run not found for provided run_id")
+            print("[NEWS_EDITOR] WARNING: Run not found for provided run_id")
             cursor.close()
             conn.close()
             return create_response(404, {"error": "Run not found"})
@@ -93,27 +91,20 @@ def lambda_handler(event, context):
         ) = run_data
 
         if stage != "editor":
-            logger.warn(
-                "Invalid run stage",
-                run_id=run_id,
-                current_stage=stage,
-                expected_stage="editor",
-            )
+            print(f"[NEWS_EDITOR] WARNING: Invalid run stage - run_id: {run_id}, current_stage: {stage}, expected_stage: editor")
             return create_response(
                 400,
                 {"error": f"Run stage is {stage}, expected editor"},
             )
 
         # Set context with user and run information
-        logger.set_context(
-            user_id=user_id, user_email=email, run_id=run_id, brew_id=brew_id
-        )
+        print(f"[NEWS_EDITOR] Setting context - user_id: {user_id}, user_email: {email}, run_id: {run_id}, brew_id: {brew_id}")
 
         user_name = f"{first_name} {last_name}"
         delivery_time = format_time_ampm(str(delivery_time))
 
         # Retrieve raw articles and curator notes from curator_logs
-        logger.info("Retrieving articles from curator logs")
+        print("[NEWS_EDITOR] Retrieving articles from curator logs")
         try:
             cursor.execute(
                 """
@@ -127,7 +118,7 @@ def lambda_handler(event, context):
             )
             row = cursor.fetchone()
             if not row:
-                logger.error("No curator log found for run_id", run_id=run_id)
+                print(f"[NEWS_EDITOR] ERROR: No curator log found for run_id - run_id: {run_id}")
                 return create_response(
                     404,
                     {"error": f"No curator log found for run_id {run_id}"},
@@ -152,18 +143,14 @@ def lambda_handler(event, context):
             raw_articles = curator_log["raw_articles"]
             curator_notes = curator_log["curator_notes"]
 
-            logger.info(
-                "Curator log retrieved successfully",
-                run_id=run_id,
-                articles_count=len(raw_articles) if raw_articles else 0,
-            )
+            print(f"[NEWS_EDITOR] Curator log retrieved successfully - run_id: {run_id}, articles_count: {len(raw_articles) if raw_articles else 0}")
 
         except Exception as curator_error:
-            logger.error("Failed to retrieve curator log", error=str(curator_error))
+            print(f"[NEWS_EDITOR] ERROR: Failed to retrieve curator log - error: {str(curator_error)}")
             return create_response(500, {"error": "Failed to retrieve curator data"})
 
         # Fetch past editorial drafts for this brew to maintain consistency
-        logger.info("Fetching past editorial drafts for context")
+        print("[NEWS_EDITOR] Fetching past editorial drafts for context")
         past_drafts_start_time = datetime.now(timezone.utc)
 
         cursor.execute(
@@ -181,14 +168,7 @@ def lambda_handler(event, context):
         past_drafts_duration = (
             datetime.now(timezone.utc) - past_drafts_start_time
         ).total_seconds() * 1000
-        logger.log_db_operation(
-            "select",
-            "run_tracker",
-            past_drafts_duration,
-            table_join="editor_logs",
-            brew_id=brew_id,
-            limit=1,
-        )
+        print(f"[NEWS_EDITOR] DB operation: select from run_tracker - duration: {past_drafts_duration}ms, table_join: editor_logs, brew_id: {brew_id}, limit: 1")
 
         # Fetch and format past editorial draft for context
         past_context_str = ""
@@ -312,7 +292,7 @@ BEGIN JSON:"""
         model = editor_config["model"]
 
         # Call AI API using the configured service
-        logger.info(f"Preparing {provider.title()} API call for content creation")
+        print(f"[NEWS_EDITOR] Preparing {provider.title()} API call for content creation")
         api_start_time = datetime.now(timezone.utc)
 
         try:
@@ -334,29 +314,15 @@ BEGIN JSON:"""
                 datetime.now(timezone.utc) - api_start_time
             ).total_seconds() * 1000
 
-            logger.log_external_api_call(
-                provider.title(),
-                "/chat/completions",
-                "POST",
-                200,
-                api_duration,
-                model=model,
-                prompt_tokens=len(prompt.split()),
-            )
+            print(f"[NEWS_EDITOR] External API call: {provider.title()} /chat/completions POST 200 - duration: {api_duration}ms, model: {model}, prompt_tokens: {len(prompt.split())}")
 
-            logger.info(
-                "Received response from AI editor",
-                response_length=len(ai_response),
-                content_preview=(
-                    ai_response[:200] + "..." if len(ai_response) > 200 else ai_response
-                ),
-            )
+            print(f"[NEWS_EDITOR] Received response from AI editor - response_length: {len(ai_response)}, content_preview: {ai_response[:200] + '...' if len(ai_response) > 200 else ai_response}")
 
             # Calculate runtime for editor operation
             editor_runtime_ms = int((time.time() - start_time) * 1000)
 
             # Store raw AI response immediately in editor_logs
-            logger.info("Storing raw AI response in editor logs")
+            print("[NEWS_EDITOR] Storing raw AI response in editor logs")
             try:
                 cursor.execute(
                     """
@@ -369,17 +335,9 @@ BEGIN JSON:"""
                 )
                 log_id = str(cursor.fetchone()[0])
                 conn.commit()
-                logger.info(
-                    "Raw AI response stored in editor logs",
-                    run_id=run_id,
-                    log_id=log_id,
-                    runtime_ms=editor_runtime_ms,
-                )
+                print(f"[NEWS_EDITOR] Raw AI response stored in editor logs - run_id: {run_id}, log_id: {log_id}, runtime_ms: {editor_runtime_ms}")
             except Exception as log_error:
-                logger.error(
-                    "Failed to store raw AI response in editor logs",
-                    error=str(log_error),
-                )
+                print(f"[NEWS_EDITOR] ERROR: Failed to store raw AI response in editor logs - error: {str(log_error)}")
                 raise Exception(
                     f"Critical failure: Unable to store raw AI response: {str(log_error)}"
                 )
@@ -390,11 +348,7 @@ BEGIN JSON:"""
             api_duration = (
                 datetime.now(timezone.utc) - api_start_time
             ).total_seconds() * 1000
-            logger.error(
-                f"{provider.title()} API request failed",
-                error=str(e),
-                api_duration=api_duration,
-            )
+            print(f"[NEWS_EDITOR] ERROR: {provider.title()} API request failed - error: {str(e)}, api_duration: {api_duration}ms")
             raise Exception(f"{provider.title()} API error: {str(e)}")
 
         # Parse the JSON response
@@ -418,15 +372,11 @@ BEGIN JSON:"""
                         raise Exception(f"Article {i+1} missing required key: {key}")
 
         except (ValueError, Exception) as e:
-            logger.error(
-                "Failed to parse or validate AI response",
-                error=e,
-                content_preview=ai_response[:500],
-            )
+            print(f"[NEWS_EDITOR] ERROR: Failed to parse or validate AI response - error: {e}, content_preview: {ai_response[:500]}")
             raise Exception(f"Failed to process AI response: {str(e)}")
 
         # Update editor_logs with the parsed draft and update run_tracker stage
-        logger.info("Updating editor logs with structured content")
+        print("[NEWS_EDITOR] Updating editor logs with structured content")
         final_update_start_time = time.time()
 
         try:
@@ -451,18 +401,10 @@ BEGIN JSON:"""
             )
 
             final_update_duration = int((time.time() - final_update_start_time) * 1000)
-            logger.log_db_operation(
-                "update",
-                "editor_logs, run_tracker",
-                final_update_duration,
-                run_id=run_id,
-                status="dispatcher",
-            )
+            print(f"[NEWS_EDITOR] DB operation: update editor_logs, run_tracker - duration: {final_update_duration}ms, run_id: {run_id}, status: dispatcher")
 
         except Exception as update_error:
-            logger.error(
-                "Failed to update editor logs and run tracker", error=str(update_error)
-            )
+            print(f"[NEWS_EDITOR] ERROR: Failed to update editor logs and run tracker - error: {str(update_error)}")
             raise Exception(
                 f"Critical failure: Unable to update editor completion: {str(update_error)}"
             )
@@ -471,27 +413,19 @@ BEGIN JSON:"""
         commit_start_time = time.time()
         conn.commit()
         commit_duration = int((time.time() - commit_start_time) * 1000)
-        logger.log_db_operation(
-            "commit", "editor_logs, run_tracker", commit_duration, records_affected=2
-        )
+        print(f"[NEWS_EDITOR] DB operation: commit editor_logs, run_tracker - duration: {commit_duration}ms, records_affected: 2")
 
         cursor.close()
         conn.close()
-        logger.info("Database connections closed successfully")
+        print("[NEWS_EDITOR] Database connections closed successfully")
 
         # Calculate processing time
         end_time = time.time()
         processing_time = end_time - start_time
 
-        logger.info(
-            "Content creation completed successfully",
-            run_id=run_id,
-            processing_time_seconds=round(processing_time, 2),
-            articles_created=len(editor_draft["articles"]),
-            brew_name=brew_name,
-        )
+        print(f"[NEWS_EDITOR] Content creation completed successfully - run_id: {run_id}, processing_time_seconds: {round(processing_time, 2)}, articles_created: {len(editor_draft['articles'])}, brew_name: {brew_name}")
 
-        logger.log_request_end("ai/news_editor", 200, processing_time * 1000)
+        print(f"[NEWS_EDITOR] Request ended - endpoint: ai/news_editor, status: 200, duration: {processing_time * 1000}ms")
 
         return {
             "statusCode": 200,
@@ -513,7 +447,7 @@ BEGIN JSON:"""
         }
 
     except Exception as e:
-        logger.error("News editor failed: unexpected error", error=e)
+        print(f"[NEWS_EDITOR] ERROR: News editor failed: unexpected error - error: {e}")
 
         # Update run_tracker to failed state if run_id exists
         try:
@@ -535,25 +469,23 @@ BEGIN JSON:"""
                 error_conn.commit()
                 error_cursor.close()
                 error_conn.close()
-                logger.info("Updated run tracker to failed state", run_id=run_id)
+                print(f"[NEWS_EDITOR] Updated run tracker to failed state - run_id: {run_id}")
         except Exception as tracker_error:
-            logger.error(
-                "Failed to update run tracker to failed state", error=tracker_error
-            )
+            print(f"[NEWS_EDITOR] ERROR: Failed to update run tracker to failed state - error: {tracker_error}")
 
         # Cleanup database connection on error
         try:
             if "conn" in locals():
                 conn.rollback()
                 conn.close()
-                logger.info("Database connection rolled back and closed due to error")
+                print("[NEWS_EDITOR] Database connection rolled back and closed due to error")
         except Exception as cleanup_error:
-            logger.error("Failed to cleanup database connection", error=cleanup_error)
+            print(f"[NEWS_EDITOR] ERROR: Failed to cleanup database connection - error: {cleanup_error}")
 
         # Calculate processing time for error response
         end_time = time.time()
         processing_time = end_time - start_time
-        logger.log_request_end("ai/news_editor", 500, processing_time * 1000)
+        print(f"[NEWS_EDITOR] Request ended - endpoint: ai/news_editor, status: 500, duration: {processing_time * 1000}ms")
 
         # Re-raise the exception to ensure Step Functions marks this as failed
         raise e

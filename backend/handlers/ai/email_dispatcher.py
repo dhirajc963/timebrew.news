@@ -12,7 +12,7 @@ import os
 import psycopg2
 from utils.db import get_db_connection
 from utils.response import create_response
-from utils.logger import Logger
+# from utils.logger import Logger  # Replaced with print statements
 from utils.text_utils import format_list_simple
 
 
@@ -105,19 +105,19 @@ def lambda_handler(event, context):
     Reads JSON editor draft from editor_logs, formats to HTML, and sends email
     """
     start_time = time.time()
-    logger = Logger("email_dispatcher")
+    # logger = Logger("email_dispatcher")  # Replaced with print statements
     run_id = None
     conn = None
 
     try:
-        logger.info("Email dispatcher started", event=event)
+        print(f"[EMAIL_DISPATCHER] Email dispatcher started: {event}")
         # Extract run_id from event
         run_id = event.get("run_id")
         if not run_id:
-            logger.error("Missing run_id in event")
+            print(f"[EMAIL_DISPATCHER] ERROR: Missing run_id in event")
             return create_response(400, {"error": "run_id is required"})
 
-        logger.set_context(run_id=run_id)
+        print(f"[EMAIL_DISPATCHER] Context set: run_id={run_id}")
 
         # Get database connection
         conn = get_db_connection()
@@ -139,7 +139,7 @@ def lambda_handler(event, context):
 
         run_data = cursor.fetchone()
         if not run_data:
-            logger.error("Run not found in database")
+            print(f"[EMAIL_DISPATCHER] ERROR: Run not found in database")
             cursor.close()
             conn.close()
             return create_response(404, {"error": "Run not found"})
@@ -159,7 +159,7 @@ def lambda_handler(event, context):
         ) = run_data
 
         if stage != "dispatcher":
-            logger.error(f"Invalid run stage: {stage}, expected dispatcher")
+            print(f"[EMAIL_DISPATCHER] ERROR: Invalid run stage: {stage}, expected dispatcher")
             cursor.close()
             conn.close()
             return create_response(
@@ -168,7 +168,7 @@ def lambda_handler(event, context):
             )
 
         # Get editor draft from editor_logs
-        logger.info("Retrieving editor draft from editor logs")
+        print(f"[EMAIL_DISPATCHER] Retrieving editor draft from editor logs")
         try:
             cursor.execute(
                 """
@@ -181,7 +181,7 @@ def lambda_handler(event, context):
             )
             row = cursor.fetchone()
             if not row:
-                logger.error("Editor log not found")
+                print(f"[EMAIL_DISPATCHER] ERROR: Editor log not found")
                 cursor.close()
                 conn.close()
                 return create_response(404, {"error": "Editor log not found"})
@@ -212,18 +212,18 @@ def lambda_handler(event, context):
                     else:
                         editor_draft = raw_llm_response
                 except json.JSONDecodeError as e:
-                    logger.error("Failed to parse raw_llm_response", error=str(e))
+                    print(f"[EMAIL_DISPATCHER] ERROR: Failed to parse raw_llm_response: {str(e)}")
                     cursor.close()
                     conn.close()
                     return create_response(400, {"error": "Invalid editor draft content"})
             else:
-                logger.error("Missing editor draft content in editor logs")
+                print(f"[EMAIL_DISPATCHER] ERROR: Missing editor draft content in editor logs")
                 cursor.close()
                 conn.close()
                 return create_response(400, {"error": "Missing editor draft content"})
 
         except Exception as e:
-            logger.error("Failed to retrieve editor log", error=str(e))
+            print(f"[EMAIL_DISPATCHER] ERROR: Failed to retrieve editor log: {str(e)}")
             cursor.close()
             conn.close()
             return create_response(500, {"error": "Failed to retrieve editor draft"})
@@ -254,12 +254,8 @@ def lambda_handler(event, context):
         user_tz = pytz.timezone(brew_timezone)
         current_time = datetime.now(user_tz)
 
-        logger.set_context(user_email=email, user_name=user_name)
-        logger.info(
-            "Retrieved briefing data successfully",
-            brew_name=brew_name,
-            articles_count=len(editor_draft.get("articles", [])),
-        )
+        print(f"[EMAIL_DISPATCHER] Context updated: user_email={email}, user_name={user_name}")
+        print(f"[EMAIL_DISPATCHER] Retrieved briefing data successfully: brew_name={brew_name}, articles_count={len(editor_draft.get('articles', []))}")
 
         # Generate HTML content and extract subject from JSON
         try:
@@ -267,7 +263,7 @@ def lambda_handler(event, context):
             subject_line = editor_draft.get("subject")
 
         except Exception as e:
-            logger.error(f"Error formatting email content: {str(e)}")
+            print(f"[EMAIL_DISPATCHER] ERROR: Error formatting email content: {str(e)}")
             cursor.close()
             conn.close()
             return create_response(500, {"error": "Failed to format email content"})
@@ -279,12 +275,7 @@ def lambda_handler(event, context):
         smtp_password = os.environ.get("SMTP_PASSWORD")
 
         if not all([smtp_server, smtp_username, smtp_password]):
-            logger.error(
-                "SMTP configuration incomplete",
-                has_server=bool(smtp_server),
-                has_username=bool(smtp_username),
-                has_password=bool(smtp_password),
-            )
+            print(f"[EMAIL_DISPATCHER] ERROR: SMTP configuration incomplete: has_server={bool(smtp_server)}, has_username={bool(smtp_username)}, has_password={bool(smtp_password)}")
             raise Exception("SMTP configuration incomplete")
 
         FROM_ADDRESS = ("News Briefings", "no-reply@inspireinbox.com")
@@ -300,13 +291,7 @@ def lambda_handler(event, context):
         msg.attach(html_part)
 
         # Send email
-        logger.info(
-            "Attempting to send email",
-            smtp_server=smtp_server,
-            smtp_port=smtp_port,
-            recipient=email,
-            subject_line=subject_line[:50],
-        )
+        print(f"[EMAIL_DISPATCHER] Attempting to send email: smtp_server={smtp_server}, smtp_port={smtp_port}, recipient={email}, subject_line={subject_line[:50]}")
 
         try:
             with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -316,15 +301,10 @@ def lambda_handler(event, context):
 
             delivery_status = "dispatched"
             error_message = None
-            logger.info("Email sent successfully")
+            print(f"[EMAIL_DISPATCHER] Email sent successfully")
 
         except Exception as e:
-            logger.error(
-                f"SMTP Error: {str(e)}",
-                smtp_server=smtp_server,
-                smtp_port=smtp_port,
-                error_type=type(e).__name__,
-            )
+            print(f"[EMAIL_DISPATCHER] ERROR: SMTP Error: {str(e)}, smtp_server={smtp_server}, smtp_port={smtp_port}, error_type={type(e).__name__}")
             delivery_status = "failed"
             error_message = str(e)
             raise e
@@ -375,14 +355,10 @@ def lambda_handler(event, context):
                 )
 
             conn.commit()
-            logger.info(
-                "Updated run tracker and brew data",
-                run_id=run_id,
-                stage="completed" if delivery_status == "dispatched" else "failed",
-            )
+            print(f"[EMAIL_DISPATCHER] Updated run tracker and brew data: run_id={run_id}, stage={'completed' if delivery_status == 'dispatched' else 'failed'}")
 
         except Exception as update_error:
-            logger.error("Failed to update run tracker", error=str(update_error))
+            print(f"[EMAIL_DISPATCHER] ERROR: Failed to update run tracker: {str(update_error)}")
             conn.rollback()
             raise Exception(f"Failed to update run status: {str(update_error)}")
         finally:
@@ -393,11 +369,7 @@ def lambda_handler(event, context):
         end_time = time.time()
         processing_time = end_time - start_time
 
-        logger.info(
-            "Email dispatch completed",
-            delivery_status=delivery_status,
-            processing_time_seconds=round(processing_time, 2),
-        )
+        print(f"[EMAIL_DISPATCHER] Email dispatch completed: delivery_status={delivery_status}, processing_time_seconds={round(processing_time, 2)}")
 
         if delivery_status == "dispatched":
             return {
@@ -429,16 +401,12 @@ def lambda_handler(event, context):
         end_time = time.time()
         processing_time = end_time - start_time
 
-        logger.error(
-            f"Error in email_dispatcher: {str(e)}",
-            error_type=type(e).__name__,
-            processing_time_seconds=round(processing_time, 2),
-        )
+        print(f"[EMAIL_DISPATCHER] ERROR: Error in email_dispatcher: {str(e)}, error_type={type(e).__name__}, processing_time_seconds={round(processing_time, 2)}")
 
         # Try to update run_tracker status to failed if we have run_id
         try:
             if run_id and "cursor" not in locals():
-                logger.info("Updating run tracker status to failed")
+                print(f"[EMAIL_DISPATCHER] Updating run tracker status to failed")
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute(
@@ -472,7 +440,7 @@ def lambda_handler(event, context):
                     if conn:
                         conn.close()
         except Exception as db_error:
-            logger.error(f"Failed to update run tracker status: {str(db_error)}")
+            print(f"[EMAIL_DISPATCHER] ERROR: Failed to update run tracker status: {str(db_error)}")
 
         # Re-raise the exception to ensure Step Functions marks this as failed
         raise e

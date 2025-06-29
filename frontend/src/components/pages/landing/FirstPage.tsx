@@ -20,8 +20,70 @@ import { ShinyButton } from "@/components/magicui/shiny-button";
 import { WordRotate } from "@/components/magicui/word-rotate";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 
+// Constants
+const MOCKUP_STATES = [
+	{
+		title: "Choose Your Brew",
+		content: "Tech News • 7:00 AM • 5 articles",
+		type: "setup",
+	},
+	{
+		title: "AI Processing Magic",
+		content: "Curating your perfect digest...",
+		type: "processing",
+	},
+	{
+		title: "Your Brew is Ready!",
+		content: "5 tech stories, 8-min read  ☕",
+		type: "ready",
+	},
+];
+
+const STEPS = [
+	{
+		icon: Plus,
+		title: "Pick Your Brews",
+		desc: "Choose topics, time & article count",
+		color: "from-blue-500 to-cyan-500",
+	},
+	{
+		icon: Zap,
+		title: "AI Brews & Delivers",
+		desc: "Smart curation powered by Perplexity",
+		color: "from-purple-500 to-pink-500",
+	},
+	{
+		icon: Sparkles,
+		title: "Sip & Improve",
+		desc: "Rate content to perfect your brew",
+		color: "from-orange-500 to-red-500",
+	},
+];
+
+const TRUST_BADGES = [
+	{ icon: Zap, text: "Powered by AI", color: "text-primary" },
+	{ icon: Sparkles, text: "Smart Curation", color: "text-purple-500" },
+];
+
+// Simple Typing Animation Component
+const TypedText = ({ text, className = "", duration = 100 }) => {
+	const [displayedText, setDisplayedText] = useState("");
+	const [currentIndex, setCurrentIndex] = useState(0);
+
+	useEffect(() => {
+		if (currentIndex < text.length) {
+			const timeout = setTimeout(() => {
+				setDisplayedText(text.slice(0, currentIndex + 1));
+				setCurrentIndex(currentIndex + 1);
+			}, duration);
+			return () => clearTimeout(timeout);
+		}
+	}, [currentIndex, text, duration]);
+
+	return <span className={className}>{displayedText}</span>;
+};
+
 const FirstPage = () => {
-	const [isVisible, setIsVisible] = useState(false);
 	const [currentMockup, setCurrentMockup] = useState(0);
 	const [isMobile, setIsMobile] = useState(false);
 	const controls = useAnimation();
@@ -29,19 +91,13 @@ const FirstPage = () => {
 	const inView = useInView(ref);
 
 	useEffect(() => {
-		const checkMobile = () => {
-			setIsMobile(window.innerWidth < 768);
-		};
-
-		checkMobile();
-		window.addEventListener("resize", checkMobile);
-
-		setIsVisible(true);
-
-		// Animated mockup rotation
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
 		const interval = setInterval(() => {
 			setCurrentMockup((prev) => (prev + 1) % 3);
 		}, 4000);
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
 
 		return () => {
 			clearInterval(interval);
@@ -50,56 +106,15 @@ const FirstPage = () => {
 	}, []);
 
 	useEffect(() => {
-		if (inView) {
-			controls.start("visible");
-		}
+		if (inView) controls.start("visible");
 	}, [controls, inView]);
-
-	const mockupStates = [
-		{
-			title: "Choose Your Brew",
-			content: "Tech News • 7:00 AM • 5 articles",
-			type: "setup",
-		},
-		{
-			title: "AI Processing Magic",
-			content: "Curating your perfect digest...",
-			type: "processing",
-		},
-		{
-			title: "Your Brew is Ready!",
-			content: "5 tech stories, 8-min read  ☕",
-			type: "ready",
-		},
-	];
-
-	const steps = [
-		{
-			icon: Plus,
-			title: "Pick Your Brews",
-			desc: "Choose topics, time & article count",
-			color: "from-blue-500 to-cyan-500",
-		},
-		{
-			icon: Zap,
-			title: "AI Brews & Delivers",
-			desc: "Smart curation powered by Perplexity",
-			color: "from-purple-500 to-pink-500",
-		},
-		{
-			icon: Sparkles,
-			title: "Sip & Improve",
-			desc: "Rate content to perfect your brew",
-			color: "from-orange-500 to-red-500",
-		},
-	];
 
 	return (
 		<>
-			{/* Hero Section - Smart mobile layout */}
+			{/* Hero Section */}
 			<section className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-0">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 w-full">
-					{/* Mobile Layout - Centered and properly sized */}
+					{/* Mobile Layout */}
 					<div className="md:hidden flex flex-col items-center text-center max-w-md mx-auto">
 						{/* Beta Badge */}
 						<motion.div
@@ -114,7 +129,7 @@ const FirstPage = () => {
 							</AnimatedGradientText>
 						</motion.div>
 
-						{/* Main Headline - Properly sized for mobile */}
+						{/* Main Headline */}
 						<motion.div
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -131,21 +146,17 @@ const FirstPage = () => {
 								<span className="text-gradient-green">on Your Time.</span>
 							</h1>
 
-							<p className="text-lg text-muted-foreground leading-relaxed px-4 mb-3">
-								Choose up to 3 daily brews, set the perfect time, pick 3-8
-								stories each.
-							</p>
-							<TypingAnimation
-								className="text-base text-muted-foreground px-3"
-								duration={50}
-							>
-								{
-									"We'll pour the perfect digest—no info-overload, just what you'll actually read."
-								}
-							</TypingAnimation>
+							<div className="text-lg text-muted-foreground leading-relaxed px-4 mb-3">
+								<span>Choose up to 3 daily brews, set the perfect time.. </span>
+								<TypedText
+									text="we'll pour the perfect digest—no info-overload, just what you'll actually read."
+									className="text-lg text-muted-foreground font-normal"
+									duration={50}
+								/>
+							</div>
 						</motion.div>
 
-						{/* CTA Buttons - Proper sizing, not full width */}
+						{/* CTA Buttons */}
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -160,7 +171,7 @@ const FirstPage = () => {
 							<motion.button
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="border-2 border-primary text-primary px-8 py-3 rounded-full font-semibold text-base hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2 w-full"
+								className="border-2 border-primary text-primary text-base px-8 py-3 rounded-full font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2 w-full"
 							>
 								<Eye className="w-4 h-4" />
 								<span>View Sample</span>
@@ -174,17 +185,18 @@ const FirstPage = () => {
 							transition={{ delay: 0.9, duration: 0.6 }}
 							className="flex items-center justify-center gap-6 mb-8"
 						>
-							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-								<Zap className="w-4 h-4 text-primary" />
-								<span>Powered by AI</span>
-							</div>
-							<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-								<Sparkles className="w-4 h-4 text-purple-500" />
-								<span>Smart Curation</span>
-							</div>
+							{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => (
+								<div
+									key={idx}
+									className="flex items-center space-x-2 text-sm text-muted-foreground"
+								>
+									<Icon className={`w-4 h-4 ${color}`} />
+									<span>{text}</span>
+								</div>
+							))}
 						</motion.div>
 
-						{/* Mobile mockup - Better sized */}
+						{/* Mobile mockup */}
 						<motion.div
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -216,7 +228,7 @@ const FirstPage = () => {
 												animate={{ opacity: 1, y: 0 }}
 												className="text-lg font-semibold"
 											>
-												{mockupStates[currentMockup].title}
+												{MOCKUP_STATES[currentMockup].title}
 											</motion.h3>
 
 											<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-4 rounded-xl border border-accent/20">
@@ -226,7 +238,7 @@ const FirstPage = () => {
 													animate={{ opacity: 1 }}
 													className="text-sm"
 												>
-													{mockupStates[currentMockup].content}
+													{MOCKUP_STATES[currentMockup].content}
 												</motion.p>
 											</div>
 										</div>
@@ -236,13 +248,13 @@ const FirstPage = () => {
 						</motion.div>
 					</div>
 
-					{/* Desktop Layout - Keep as is */}
+					{/* Desktop Layout */}
 					<div className="hidden md:grid grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
 						{/* Left Content */}
 						<motion.div
 							initial={{ opacity: 0, y: 50 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.8, ease: "easeOut" }}
+							transition={{ duration: 0.8 }}
 							className="space-y-6 lg:space-y-8 md:col-span-1 lg:col-span-8"
 						>
 							{/* Beta Badge */}
@@ -250,7 +262,7 @@ const FirstPage = () => {
 								initial={{ opacity: 0, scale: 0.8 }}
 								animate={{ opacity: 1, scale: 1 }}
 								transition={{ delay: 0.2, duration: 0.5 }}
-								className="inline-flex  mb-4"
+								className="inline-flex mb-4"
 							>
 								<AnimatedGradientText className="inline-flex items-center space-x-2 px-4 py-2 rounded-full border border-primary/50 bg-primary/20 backdrop-blur-sm text-primary">
 									<Sparkles className="w-4 h-4" />
@@ -279,20 +291,16 @@ const FirstPage = () => {
 									initial={{ opacity: 0, y: 20 }}
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ delay: 0.5, duration: 0.6 }}
-									className="text-lg lg:text-xl xl:text-2xl text-muted-foreground leading-relaxed space-y-4"
+									className="text-lg lg:text-xl xl:text-2xl text-muted-foreground leading-relaxed"
 								>
-									<p>
-										Choose up to 3 daily brews, set the perfect time, pick 3-8
-										stories each.
-									</p>
-									<TypingAnimation
-										className="text-lg lg:text-xl text-muted-foreground"
+									<span>
+										Choose up to 3 daily brews, set the perfect time..{" "}
+									</span>
+									<TypedText
+										text="we'll pour the perfect digest—no info-overload, just what you'll actually read."
+										className="text-lg lg:text-lg text-muted-foreground font-normal"
 										duration={50}
-									>
-										{
-											"We'll pour the perfect digest—no info-overload, just what you'll actually read."
-										}
-									</TypingAnimation>
+									/>
 								</motion.div>
 							</div>
 
@@ -325,14 +333,15 @@ const FirstPage = () => {
 								transition={{ delay: 0.9, duration: 0.6 }}
 								className="flex items-center gap-6 pt-4"
 							>
-								<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-									<Zap className="w-4 h-4 text-primary" />
-									<span>Powered by AI</span>
-								</div>
-								<div className="flex items-center space-x-2 text-sm text-muted-foreground">
-									<Sparkles className="w-4 h-4 text-purple-500" />
-									<span>Smart Curation</span>
-								</div>
+								{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => (
+									<div
+										key={idx}
+										className="flex items-center space-x-2 text-sm text-muted-foreground"
+									>
+										<Icon className={`w-4 h-4 ${color}`} />
+										<span>{text}</span>
+									</div>
+								))}
 							</motion.div>
 						</motion.div>
 
@@ -340,7 +349,7 @@ const FirstPage = () => {
 						<motion.div
 							initial={{ opacity: 0, x: 50, rotateY: -15 }}
 							animate={{ opacity: 1, x: 0, rotateY: 0 }}
-							transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+							transition={{ delay: 0.4, duration: 1 }}
 							className="relative md:col-span-1 lg:col-span-4"
 						>
 							<div className="relative group">
@@ -370,7 +379,7 @@ const FirstPage = () => {
 												animate={{ opacity: 1, y: 0 }}
 												className="text-xl font-semibold text-card-foreground"
 											>
-												{mockupStates[currentMockup].title}
+												{MOCKUP_STATES[currentMockup].title}
 											</motion.h3>
 
 											<div className="bg-gradient-to-r from-accent/10 to-primary/10 p-6 rounded-xl border border-accent/20">
@@ -380,7 +389,7 @@ const FirstPage = () => {
 													animate={{ opacity: 1 }}
 													className="text-base text-card-foreground"
 												>
-													{mockupStates[currentMockup].content}
+													{MOCKUP_STATES[currentMockup].content}
 												</motion.p>
 											</div>
 
@@ -448,7 +457,7 @@ const FirstPage = () => {
 				</motion.div>
 			</section>
 
-			{/* How It Works Section - Better mobile spacing */}
+			{/* How It Works Section */}
 			<section
 				ref={ref}
 				id="how-it-works"
@@ -483,7 +492,7 @@ const FirstPage = () => {
 
 					{/* Steps */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 lg:gap-12">
-						{steps.map((step, idx) => (
+						{STEPS.map((step, idx) => (
 							<motion.div
 								key={idx}
 								initial={{ opacity: 0, y: 50 }}
@@ -521,7 +530,7 @@ const FirstPage = () => {
 										{step.desc}
 									</p>
 
-									{idx < steps.length - 1 && (
+									{idx < STEPS.length - 1 && (
 										<div className="hidden lg:block absolute top-1/2 -right-12 w-12 h-0.5 bg-gradient-to-r from-primary to-accent opacity-30" />
 									)}
 								</div>
