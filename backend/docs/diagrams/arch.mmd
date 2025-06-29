@@ -1,0 +1,110 @@
+graph TB
+    %% Styling
+    classDef lambda fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white
+    classDef api fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white
+    classDef stepfunctions fill:#FF4B6D,stroke:#232F3E,stroke-width:2px,color:white
+    classDef eventbridge fill:#FF4B6D,stroke:#232F3E,stroke-width:2px,color:white
+    classDef database fill:#3F48CC,stroke:#232F3E,stroke-width:2px,color:white
+    classDef external fill:#146EB4,stroke:#232F3E,stroke-width:2px,color:white
+    classDef user fill:#232F3E,stroke:#FF9900,stroke-width:3px,color:white
+
+    %% Users and Frontend
+    User[👤 User<br/>Bolt.new Frontend]:::user
+    
+    %% API Gateway Layer
+    subgraph "🌐 API Gateway - REST API Triggers"
+        API1[🔐 POST /auth/register]:::api
+        API2[📰 GET /brews]:::api
+        API3[📰 POST /brews]:::api
+        API4[📋 GET /briefings]:::api
+        API5[💬 POST /feedback]:::api
+        API6[🔄 POST /trigger-brew]:::api
+        API7[❤️ GET /health]:::api
+    end
+
+    %% Lambda Functions - API Endpoints
+    subgraph "⚡ Lambda Functions - API Endpoints"
+        L1[🔐 register.py]:::lambda
+        L2[📰 get.py]:::lambda
+        L3[📰 create.py]:::lambda
+        L4[📋 get.py]:::lambda
+        L5[💬 submit.py]:::lambda
+        L6[🔄 trigger_brew.py]:::lambda
+        L7[❤️ health.py]:::lambda
+    end
+
+    %% EventBridge Scheduler
+    EB[⏰ EventBridge<br/>rate(15 minutes)]:::eventbridge
+
+    %% Lambda Functions - Core Services
+    subgraph "🤖 Lambda Functions - AI Pipeline"
+        L8[📊 brew_scheduler.py]:::lambda
+        L9[🔍 news_curator.py]:::lambda
+        L10[✍️ news_editor.py]:::lambda
+        L11[📧 email_dispatcher.py]:::lambda
+    end
+
+    %% Step Functions
+    SF[🔄 Step Functions<br/>AI Pipeline Orchestrator]:::stepfunctions
+
+    %% External Services
+    subgraph "🌍 External Services"
+        AI1[🧠 OpenAI API<br/>GPT-4]:::external
+        AI2[🧠 Perplexity API<br/>News Search]:::external
+        SMTP[📮 SMTP Server<br/>Email Delivery]:::external
+        COGNITO[🔐 AWS Cognito<br/>Authentication]:::external
+    end
+
+    %% Database
+    DB[(🗄️ PostgreSQL RDS<br/>• Users & Brews<br/>• Run Tracker<br/>• Content Logs)]:::database
+
+    %% Connections - API Layer
+    User --> API1
+    User --> API2
+    User --> API3
+    User --> API4
+    User --> API5
+    User --> API6
+    User --> API7
+
+    API1 --> L1
+    API2 --> L2
+    API3 --> L3
+    API4 --> L4
+    API5 --> L5
+    API6 --> L6
+    API7 --> L7
+
+    %% Lambda to Services
+    L1 --> COGNITO
+    L1 --> DB
+    L2 --> DB
+    L3 --> DB
+    L4 --> DB
+    L5 --> DB
+    L6 --> SF
+    L7 --> DB
+
+    %% Scheduler Flow
+    EB --> L8
+    L8 --> DB
+    L8 --> SF
+
+    %% Step Functions Orchestration
+    SF --> L9
+    SF --> L10
+    SF --> L11
+
+    %% AI Pipeline Connections
+    L9 --> AI2
+    L9 --> AI1
+    L9 --> DB
+    L10 --> AI1
+    L10 --> DB
+    L11 --> SMTP
+    L11 --> DB
+
+    %% Data Flow Labels
+    L9 -.->|"📰 Curated Articles"| L10
+    L10 -.->|"✍️ Formatted Content"| L11
+    L11 -.->|"📧 Email Delivered"| User
