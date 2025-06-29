@@ -1,0 +1,199 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#1a252f">
+    TimeBrew: AI-Powered News Briefing Platform
+  </text>
+  <text x="600" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">
+    Serverless Architecture Built with AWS Lambda
+  </text>
+  
+  <!-- User/Frontend -->
+  <rect x="50" y="100" width="140" height="80" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+  <text x="120" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1976d2">Frontend</text>
+  <text x="120" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1976d2">(Bolt.new)</text>
+  <text x="120" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1976d2">User Dashboard</text>
+  
+  <!-- API Gateway -->
+  <rect x="250" y="90" width="120" height="100" rx="8" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+  <text x="310" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f57c00">API Gateway</text>
+  <text x="310" y="135" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#f57c00">REST API</text>
+  <text x="310" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#f57c00">CORS Enabled</text>
+  <text x="310" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#f57c00">HTTP Triggers</text>
+  
+  <!-- API Lambda Functions -->
+  <g id="api-functions">
+    <!-- Auth -->
+    <rect x="420" y="80" width="100" height="40" rx="6" fill="#ff9800" stroke="#e65100" stroke-width="1"/>
+    <text x="470" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Register</text>
+    <text x="470" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">API Trigger</text>
+    
+    <!-- Brews -->
+    <rect x="420" y="130" width="100" height="40" rx="6" fill="#ff9800" stroke="#e65100" stroke-width="1"/>
+    <text x="470" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Brews CRUD</text>
+    <text x="470" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">API Trigger</text>
+    
+    <!-- Briefings -->
+    <rect x="420" y="180" width="100" height="40" rx="6" fill="#ff9800" stroke="#e65100" stroke-width="1"/>
+    <text x="470" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Briefings</text>
+    <text x="470" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">API Trigger</text>
+    
+    <!-- Feedback -->
+    <rect x="420" y="230" width="100" height="40" rx="6" fill="#ff9800" stroke="#e65100" stroke-width="1"/>
+    <text x="470" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Feedback</text>
+    <text x="470" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">API Trigger</text>
+  </g>
+  
+  <!-- EventBridge Scheduler -->
+  <rect x="50" y="320" width="140" height="60" rx="8" fill="#e8f5e8" stroke="#4caf50" stroke-width="2"/>
+  <text x="120" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#4caf50">EventBridge</text>
+  <text x="120" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4caf50">Cron: rate(15 min)</text>
+  <text x="120" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4caf50">Auto Scheduling</text>
+  
+  <!-- Scheduler Lambda -->
+  <rect x="250" y="310" width="120" height="80" rx="8" fill="#4caf50" stroke="#2e7d32" stroke-width="2"/>
+  <text x="310" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">λ Brew Scheduler</text>
+  <text x="310" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">EventBridge Trigger</text>
+  <text x="310" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Finds due brews</text>
+  <text x="310" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">Triggers pipeline</text>
+  
+  <!-- Manual Trigger -->
+  <rect x="420" y="310" width="100" height="80" rx="6" fill="#9c27b0" stroke="#6a1b9a" stroke-width="1"/>
+  <text x="470" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Manual Trigger</text>
+  <text x="470" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">API Trigger</text>
+  <text x="470" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">On-demand</text>
+  <text x="470" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">brew generation</text>
+  
+  <!-- Step Functions -->
+  <rect x="600" y="240" width="160" height="200" rx="8" fill="#f3e5f5" stroke="#9c27b0" stroke-width="3"/>
+  <text x="680" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#9c27b0">AWS Step Functions</text>
+  <text x="680" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#9c27b0">AI Pipeline Orchestration</text>
+  
+  <!-- AI Pipeline Lambdas -->
+  <rect x="620" y="290" width="120" height="40" rx="6" fill="#2196f3" stroke="#0d47a1" stroke-width="1"/>
+  <text x="680" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ News Curator</text>
+  <text x="680" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">AI Article Search</text>
+  
+  <path d="M 680 330 L 680 345" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <rect x="620" y="350" width="120" height="40" rx="6" fill="#2196f3" stroke="#0d47a1" stroke-width="1"/>
+  <text x="680" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ News Editor</text>
+  <text x="680" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">AI Content Writing</text>
+  
+  <path d="M 680 390 L 680 405" stroke="#9c27b0" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <rect x="620" y="410" width="120" height="40" rx="6" fill="#2196f3" stroke="#0d47a1" stroke-width="1"/>
+  <text x="680" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">λ Email Dispatcher</text>
+  <text x="680" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">SMTP Delivery</text>
+  
+  <!-- External Services -->
+  <g id="external-services">
+    <!-- Database -->
+    <rect x="850" y="80" width="120" height="80" rx="8" fill="#ffebee" stroke="#f44336" stroke-width="2"/>
+    <text x="910" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#f44336">PostgreSQL</text>
+    <text x="910" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#f44336">External Service</text>
+    <text x="910" y="135" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#f44336">Users, Brews,</text>
+    <text x="910" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#f44336">Logs, Tracking</text>
+    
+    <!-- Cognito -->
+    <rect x="850" y="180" width="120" height="60" rx="8" fill="#e1f5fe" stroke="#0277bd" stroke-width="2"/>
+    <text x="910" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#0277bd">AWS Cognito</text>
+    <text x="910" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#0277bd">User Authentication</text>
+    <text x="910" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#0277bd">JWT Tokens</text>
+    
+    <!-- AI APIs -->
+    <rect x="850" y="260" width="120" height="80" rx="8" fill="#f1f8e9" stroke="#689f38" stroke-width="2"/>
+    <text x="910" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#689f38">AI Services</text>
+    <text x="910" y="295" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#689f38">OpenAI API</text>
+    <text x="910" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#689f38">Perplexity API</text>
+    <text x="910" y="325" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#689f38">Configurable Models</text>
+    
+    <!-- SQS -->
+    <rect x="850" y="360" width="120" height="60" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="2"/>
+    <text x="910" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#c2185b">Amazon SQS</text>
+    <text x="910" y="395" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#c2185b">Email Queue</text>
+    <text x="910" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#c2185b">SMTP Processing</text>
+  </g>
+  
+  <!-- Data Flow Arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+  </defs>
+  
+  <!-- Frontend to API Gateway -->
+  <path d="M 190 140 L 250 140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- API Gateway to Lambda Functions -->
+  <path d="M 370 140 L 420 140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 370 150 L 420 150" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 370 160 L 420 200" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 370 170 L 420 250" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- EventBridge to Scheduler -->
+  <path d="M 190 350 L 250 350" stroke="#4caf50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Scheduler and Manual Trigger to Step Functions -->
+  <path d="M 370 350 L 600 340" stroke="#9c27b0" stroke-width="3" marker-end="url(#arrowhead)"/>
+  <path d="M 520 350 L 600 340" stroke="#9c27b0" stroke-width="3" marker-end="url(#arrowhead)"/>
+  
+  <!-- Lambda Functions to External Services -->
+  <path d="M 520 150 L 850 120" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <path d="M 520 200 L 850 120" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <path d="M 740 320 L 850 300" stroke="#689f38" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 740 430 L 850 390" stroke="#c2185b" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Key Features Box -->
+  <rect x="50" y="500" width="300" height="180" rx="8" fill="#fff" stroke="#ddd" stroke-width="1"/>
+  <text x="200" y="525" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Key Serverless Features</text>
+  
+  <text x="70" y="550" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#2196f3">🚀 Multiple Lambda Triggers:</text>
+  <text x="80" y="565" font-family="Arial, sans-serif" font-size="11" fill="#666">• API Gateway (11 RESTful endpoints)</text>
+  <text x="80" y="580" font-family="Arial, sans-serif" font-size="11" fill="#666">• EventBridge (15-min cron scheduler)</text>
+  <text x="80" y="595" font-family="Arial, sans-serif" font-size="11" fill="#666">• Step Functions (AI pipeline orchestration)</text>
+  <text x="80" y="610" font-family="Arial, sans-serif" font-size="11" fill="#666">• SQS (email queue processing)</text>
+  
+  <text x="70" y="630" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#9c27b0">⚡ Advanced Patterns:</text>
+  <text x="80" y="645" font-family="Arial, sans-serif" font-size="11" fill="#666">• Event-driven architecture</text>
+  <text x="80" y="660" font-family="Arial, sans-serif" font-size="11" fill="#666">• Stateless design with shared utilities</text>
+  <text x="80" y="675" font-family="Arial, sans-serif" font-size="11" fill="#666">• Error handling & retry logic</text>
+  
+  <!-- Architecture Benefits Box -->
+  <rect x="400" y="500" width="300" height="180" rx="8" fill="#fff" stroke="#ddd" stroke-width="1"/>
+  <text x="550" y="525" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Serverless Benefits</text>
+  
+  <text x="420" y="550" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#4caf50">💰 Cost Optimization:</text>
+  <text x="430" y="565" font-family="Arial, sans-serif" font-size="11" fill="#666">• Pay only for execution time</text>
+  <text x="430" y="580" font-family="Arial, sans-serif" font-size="11" fill="#666">• Automatic scaling (0 to 1000+ users)</text>
+  
+  <text x="420" y="605" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#f57c00">🔧 Developer Experience:</text>
+  <text x="430" y="620" font-family="Arial, sans-serif" font-size="11" fill="#666">• No server management</text>
+  <text x="430" y="635" font-family="Arial, sans-serif" font-size="11" fill="#666">• Focus on business logic</text>
+  <text x="430" y="650" font-family="Arial, sans-serif" font-size="11" fill="#666">• Rapid iteration & deployment</text>
+  <text x="430" y="665" font-family="Arial, sans-serif" font-size="11" fill="#666">• Built-in monitoring & logging</text>
+  
+  <!-- Real-world Impact Box -->
+  <rect x="750" y="500" width="350" height="180" rx="8" fill="#fff" stroke="#ddd" stroke-width="1"/>
+  <text x="925" y="525" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Real-World Business Impact</text>
+  
+  <text x="770" y="550" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#e91e63">🎯 Problem Solved:</text>
+  <text x="780" y="565" font-family="Arial, sans-serif" font-size="11" fill="#666">• Information overload in news consumption</text>
+  <text x="780" y="580" font-family="Arial, sans-serif" font-size="11" fill="#666">• One-size-fits-all newsletters (Morning Brew)</text>
+  
+  <text x="770" y="605" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#3f51b5">🚀 Innovation:</text>
+  <text x="780" y="620" font-family="Arial, sans-serif" font-size="11" fill="#666">• AI-powered personalization at scale</text>
+  <text x="780" y="635" font-family="Arial, sans-serif" font-size="11" fill="#666">• Timezone-aware intelligent scheduling</text>
+  <text x="780" y="650" font-family="Arial, sans-serif" font-size="11" fill="#666">• Modular AI model experimentation</text>
+  <text x="780" y="665" font-family="Arial, sans-serif" font-size="11" fill="#666">• Future: reasoning models, agent teams</text>
+  
+  <!-- Footer -->
+  <text x="600" y="750" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-style="italic" fill="#666">
+    "Serverless architecture enables rapid AI experimentation and personalized news at scale"
+  </text>
+  <text x="600" y="770" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#999">
+    Built for AWS Lambda Hackathon - Showcasing Multiple Triggers & Advanced Serverless Patterns
+  </text>
+</svg>
