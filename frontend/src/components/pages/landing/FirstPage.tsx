@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom"; // Add this import
 import {
 	ChevronDown,
 	Coffee,
@@ -12,15 +13,192 @@ import {
 	TrendingUp,
 	Clock,
 	Eye,
+	X,
+	ExternalLink,
 } from "lucide-react";
-import { motion, useAnimation, useInView } from "framer-motion";
+import {
+	motion,
+	useAnimation,
+	useInView,
+	AnimatePresence,
+} from "framer-motion";
 import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShinyButton } from "@/components/magicui/shiny-button";
 import { WordRotate } from "@/components/magicui/word-rotate";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 
-// Constants
+// Sample Email Data
+const SAMPLE_EMAIL_DATA = {
+	brew_name: "Tech & AI Daily",
+	date: "Monday, January 15",
+	intro:
+		"Good morning! Here's your personalized digest with the most important tech stories you'll actually want to read. Grab your coffee ☕ and let's dive in.",
+	articles: [
+		{
+			headline:
+				"OpenAI Announces GPT-5 with Breakthrough Reasoning Capabilities",
+			story_content:
+				"The AI race just got more interesting. OpenAI's latest model doesn't just generate text—it actually thinks through problems step by step, showing its work like a diligent student. Early tests show it can solve complex math problems and write code that actually works on the first try. This isn't just a bigger model; it's a fundamentally different approach to AI reasoning.",
+			source: "TechCrunch",
+			published_time: "2 hours ago",
+			original_url: "#",
+		},
+		{
+			headline: "Tesla's Full Self-Driving Finally Lives Up to Its Name",
+			story_content:
+				"After years of 'coming soon,' Tesla's FSD just achieved a 99.8% success rate in real-world testing across major cities. The breakthrough? A new neural network that learns from edge cases in real-time. This could be the moment autonomous driving goes from lab experiment to mainstream reality. Wall Street is certainly betting on it.",
+			source: "The Verge",
+			published_time: "4 hours ago",
+			original_url: "#",
+		},
+		{
+			headline:
+				"YC-Backed Startup Raises $50M to 'Uber-ify' Enterprise Software",
+			story_content:
+				"FlowTech just closed a massive Series B to transform how companies buy software. Instead of lengthy sales cycles, they're creating a marketplace where businesses can 'test drive' enterprise tools instantly. Think of it as the App Store, but for Fortune 500 companies. Early customers report 70% faster software adoption.",
+			source: "TechCrunch",
+			published_time: "6 hours ago",
+			original_url: "#",
+		},
+		{
+			headline: "Apple's Secret AR Glasses Project Gets Major Breakthrough",
+			story_content:
+				"According to leaked internal documents, Apple solved the biggest problem with AR glasses: battery life. Their new micro-LED technology can power glasses for 12 hours while weighing less than regular sunglasses. Industry insiders say we could see a public demo as early as WWDC 2025. The iPhone moment for AR might be closer than we think.",
+			source: "Bloomberg",
+			published_time: "8 hours ago",
+			original_url: "#",
+		},
+	],
+	outro:
+		"That's a wrap for today! Found a story particularly interesting? Hit reply and let me know—your feedback helps me curate better content for tomorrow. Have a productive day! 🚀",
+};
+
+// Sample Email Modal Component - Using Theme Colors
+const SampleEmailModal = ({ isOpen, onClose }) => {
+	if (!isOpen) return null;
+
+	return (
+		<AnimatePresence>
+			<motion.div
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				exit={{ opacity: 0 }}
+				className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+				onClick={onClose}
+			>
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95, y: 20 }}
+					animate={{ opacity: 1, scale: 1, y: 0 }}
+					exit={{ opacity: 0, scale: 0.95, y: 20 }}
+					transition={{ duration: 0.3 }}
+					className="bg-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden mt-20 border border-border"
+					onClick={(e) => e.stopPropagation()}
+				>
+					{/* Modal Header */}
+					<div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+						<div>
+							<h3 className="text-lg font-semibold text-card-foreground">
+								Sample TimeBrew Digest
+							</h3>
+							<p className="text-sm text-muted-foreground">
+								See what your personalized briefing looks like
+							</p>
+						</div>
+						<button
+							onClick={onClose}
+							className="p-2 hover:bg-accent rounded-full transition-colors"
+						>
+							<X className="w-5 h-5 text-muted-foreground" />
+						</button>
+					</div>
+
+					{/* Email Content */}
+					<div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+						<div className="p-6">
+							{/* Email Preview Container */}
+							<div className="rounded-lg py-6 font-sans text-foreground">
+								{/* Email Header */}
+								<div className="text-center pb-6 border-b border-border mb-6">
+									<h1 className="text-xl font-semibold text-foreground">
+										Your {SAMPLE_EMAIL_DATA.brew_name} •{" "}
+										{SAMPLE_EMAIL_DATA.date}
+									</h1>
+								</div>
+
+								{/* Personal Greeting */}
+								<div className="mb-6">
+									<p className="text-base leading-relaxed text-foreground">
+										{SAMPLE_EMAIL_DATA.intro}
+									</p>
+								</div>
+
+								{/* Articles */}
+								<div className="space-y-6">
+									{SAMPLE_EMAIL_DATA.articles.map((article, idx) => (
+										<div
+											key={idx}
+											className="bg-card rounded-lg p-5 border border-border shadow-sm"
+										>
+											{/* Source and Time */}
+											<div className="text-sm text-muted-foreground font-medium mb-2">
+												{article.source} • {article.published_time}
+											</div>
+
+											{/* Headline */}
+											<h3 className="text-lg font-semibold text-card-foreground mb-3 leading-tight">
+												{article.headline}
+											</h3>
+
+											{/* Story Content */}
+											<p className="text-base leading-relaxed text-card-foreground mb-4">
+												{article.story_content}
+											</p>
+
+											{/* Read More Link */}
+											<a
+												href={article.original_url}
+												className="inline-flex items-center gap-1 text-primary font-medium text-sm hover:text-primary/80 transition-colors"
+											>
+												Read the full story
+												<ExternalLink className="w-3 h-3" />
+											</a>
+										</div>
+									))}
+								</div>
+
+								{/* Sign-off */}
+								<div className="mt-8 pt-6 border-t border-border">
+									<p className="text-base leading-relaxed text-foreground mb-2">
+										{SAMPLE_EMAIL_DATA.outro}
+									</p>
+									<p className="text-sm text-muted-foreground">
+										Your TimeBrew Team
+									</p>
+								</div>
+							</div>
+
+							{/* CTA at bottom of modal */}
+							<div className="mt-6 text-center">
+								<Link to="/signup">
+									<ShinyButton className="text-base px-6 py-3 mx-auto [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+										<Coffee className="w-4 h-4" />
+										<span>Create My Own Brew</span>
+									</ShinyButton>
+								</Link>
+								<p className="text-xs text-muted-foreground mt-2">
+									Free forever • No credit card required
+								</p>
+							</div>
+						</div>
+					</div>
+				</motion.div>
+			</motion.div>
+		</AnimatePresence>
+	);
+};
+
+// Constants (existing)
 const MOCKUP_STATES = [
 	{
 		title: "Choose Your Brew",
@@ -43,7 +221,7 @@ const STEPS = [
 	{
 		icon: Plus,
 		title: "Pick Your Brews",
-		desc: "Choose up to 3 topics (AI, fintech, health), set delivery time, and customize length. Takes 2 minutes to set up.",
+		desc: "Choose your topics (AI, fintech, health), set delivery time, and customize length. Takes 2 minutes to set up.",
 		benefit: "Perfect personalization in seconds",
 		color: "from-blue-500 to-cyan-500",
 	},
@@ -84,7 +262,7 @@ const TRUST_BADGES = [
 	},
 ];
 
-// Simple Typing Animation Component
+// Simple Typing Animation Component (existing)
 type TypedTextProps = {
 	text: string;
 	className?: string;
@@ -115,6 +293,7 @@ const TypedText = ({
 const FirstPage = () => {
 	const [currentMockup, setCurrentMockup] = useState(0);
 	const [isMobile, setIsMobile] = useState(false);
+	const [showSampleModal, setShowSampleModal] = useState(false);
 	const controls = useAnimation();
 	const ref = useRef(null);
 	const inView = useInView(ref);
@@ -140,6 +319,12 @@ const FirstPage = () => {
 
 	return (
 		<>
+			{/* Sample Email Modal */}
+			<SampleEmailModal
+				isOpen={showSampleModal}
+				onClose={() => setShowSampleModal(false)}
+			/>
+
 			{/* Hero Section */}
 			<section className="min-h-screen flex items-center justify-center relative overflow-hidden py-16 md:py-0 pt-23 md:pt-0">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 w-full">
@@ -192,14 +377,17 @@ const FirstPage = () => {
 							transition={{ delay: 0.7, duration: 0.6 }}
 							className="flex flex-col gap-3 w-full max-w-xs mb-6"
 						>
-							<ShinyButton className="text-base px-8 py-3 flex items-center justify-center gap-2 w-full [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
-								<Coffee className="w-4 h-4" />
-								<span>Brew My First Digest</span>
-							</ShinyButton>
+							<Link to="/signup">
+								<ShinyButton className="text-base px-8 py-3 flex items-center justify-center gap-2 w-full [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+									<Coffee className="w-4 h-4" />
+									<span>Brew My First Digest</span>
+								</ShinyButton>
+							</Link>
 
 							<motion.button
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
+								onClick={() => setShowSampleModal(true)}
 								className="border-2 border-primary text-primary text-base px-8 py-3 rounded-full font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2 w-full"
 							>
 								<Eye className="w-4 h-4" />
@@ -353,16 +541,21 @@ const FirstPage = () => {
 								transition={{ delay: 0.7, duration: 0.6 }}
 								className="flex flex-col sm:flex-row gap-6"
 							>
-								<motion.button
-									whileHover={{ scale: 1.05 }}
-									whileTap={{ scale: 0.95 }}
-									className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-3"
-								>
-									<Coffee className="w-5 h-5" />
-									<span>Brew My First Digest</span>
-								</motion.button>
+								<Link to="/signup">
+									<motion.button
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+										className="group border-2 border-primary text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center space-x-3"
+									>
+										<Coffee className="w-5 h-5" />
+										<span>Brew My First Digest</span>
+									</motion.button>
+								</Link>
 
-								<ShinyButton className="group text-lg px-8 py-4 flex items-center justify-center space-x-3 [&>span]:!flex [&>span]:!items-center [&>span]:!gap-3">
+								<ShinyButton
+									className="group text-lg px-8 py-4 flex items-center justify-center space-x-3 [&>span]:!flex [&>span]:!items-center [&>span]:!gap-3"
+									onClick={() => setShowSampleModal(true)}
+								>
 									<Eye className="w-5 h-5" />
 									<span>View Sample</span>
 								</ShinyButton>
@@ -607,10 +800,12 @@ const FirstPage = () => {
 						transition={{ duration: 0.6, delay: 0.8 }}
 						className="text-center mt-16"
 					>
-						<ShinyButton className="text-lg px-8 py-4 flex items-center justify-center gap-2 mx-auto [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
-							<Coffee className="w-5 h-5" />
-							<span>Create Your First Brew</span>
-						</ShinyButton>
+						<Link to="/signup">
+							<ShinyButton className="text-lg px-8 py-4 flex items-center justify-center gap-2 mx-auto [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+								<Coffee className="w-5 h-5" />
+								<span>Create Your First Brew</span>
+							</ShinyButton>
+						</Link>
 					</motion.div>
 				</div>
 			</section>
