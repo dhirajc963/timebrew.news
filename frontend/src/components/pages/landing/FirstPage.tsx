@@ -43,19 +43,22 @@ const STEPS = [
 	{
 		icon: Plus,
 		title: "Pick Your Brews",
-		desc: "Choose topics, time & article count",
+		desc: "Choose up to 3 topics (AI, fintech, health), set delivery time, and customize length. Takes 2 minutes to set up.",
+		benefit: "Perfect personalization in seconds",
 		color: "from-blue-500 to-cyan-500",
 	},
 	{
 		icon: Zap,
 		title: "AI Brews & Delivers",
-		desc: "Smart curation powered by Perplexity",
+		desc: "Our AI scans 500+ sources, finds relevant stories, and writes them in Morning Brew style - delivered to your inbox.",
+		benefit: "Quality content, zero effort",
 		color: "from-purple-500 to-pink-500",
 	},
 	{
 		icon: Sparkles,
 		title: "Sip & Improve",
-		desc: "Rate content to perfect your brew",
+		desc: "Rate articles with thumbs up/down. The AI learns your taste and gets better every day.",
+		benefit: "Gets smarter with every brew",
 		color: "from-orange-500 to-red-500",
 	},
 ];
@@ -63,10 +66,36 @@ const STEPS = [
 const TRUST_BADGES = [
 	{ icon: Zap, text: "Powered by AI", color: "text-primary" },
 	{ icon: Sparkles, text: "Smart Curation", color: "text-purple-500" },
+	{
+		icon: () => (
+			<svg
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="currentColor"
+				className="text-yellow-500"
+			>
+				<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+			</svg>
+		),
+		text: "Built with Bolt.new",
+		color: "text-yellow-500",
+		link: "https://bolt.new",
+	},
 ];
 
 // Simple Typing Animation Component
-const TypedText = ({ text, className = "", duration = 100 }) => {
+type TypedTextProps = {
+	text: string;
+	className?: string;
+	duration?: number;
+};
+
+const TypedText = ({
+	text,
+	className = "",
+	duration = 100,
+}: TypedTextProps) => {
 	const [displayedText, setDisplayedText] = useState("");
 	const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -183,17 +212,30 @@ const FirstPage = () => {
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: 0.9, duration: 0.6 }}
-							className="flex items-center justify-center gap-6 mb-8"
+							className="flex items-center gap-6 pt-4"
 						>
-							{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => (
-								<div
-									key={idx}
-									className="flex items-center space-x-2 text-sm text-muted-foreground"
-								>
-									<Icon className={`w-4 h-4 ${color}`} />
-									<span>{text}</span>
-								</div>
-							))}
+							{TRUST_BADGES.map(({ icon: Icon, text, color, link }, idx) => {
+								const content = (
+									<div className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+										<Icon className={`w-4 h-4 ${color}`} />
+										<span>{text}</span>
+									</div>
+								);
+
+								return link ? (
+									<a
+										key={idx}
+										href={link}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="cursor-pointer"
+									>
+										{content}
+									</a>
+								) : (
+									<div key={idx}>{content}</div>
+								);
+							})}
 						</motion.div>
 
 						{/* Mobile mockup */}
@@ -326,22 +368,35 @@ const FirstPage = () => {
 								</ShinyButton>
 							</motion.div>
 
-							{/* Trust Badges */}
+							{/* Trust Badges - Desktop */}
 							<motion.div
 								initial={{ opacity: 0, y: 20 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.9, duration: 0.6 }}
 								className="flex items-center gap-6 pt-4"
 							>
-								{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => (
-									<div
-										key={idx}
-										className="flex items-center space-x-2 text-sm text-muted-foreground"
-									>
-										<Icon className={`w-4 h-4 ${color}`} />
-										<span>{text}</span>
-									</div>
-								))}
+								{TRUST_BADGES.map(({ icon: Icon, text, color, link }, idx) => {
+									const content = (
+										<div className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+											<Icon className={`w-4 h-4 ${color}`} />
+											<span>{text}</span>
+										</div>
+									);
+
+									return link ? (
+										<a
+											key={idx}
+											href={link}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="cursor-pointer"
+										>
+											{content}
+										</a>
+									) : (
+										<div key={idx}>{content}</div>
+									);
+								})}
 							</motion.div>
 						</motion.div>
 
@@ -464,7 +519,7 @@ const FirstPage = () => {
 				className="py-20 md:py-24 lg:py-32 relative overflow-hidden"
 			>
 				<div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 relative z-10">
-					{/* Header */}
+					{/* Updated Header */}
 					<div className="text-center mb-12 md:mb-16 lg:mb-20">
 						<motion.h2
 							initial={{ opacity: 0, y: 30 }}
@@ -484,13 +539,14 @@ const FirstPage = () => {
 								visible: { opacity: 1, y: 0 },
 							}}
 							transition={{ duration: 0.6, delay: 0.2 }}
-							className="text-lg md:text-xl lg:text-2xl text-muted-foreground"
+							className="text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto"
 						>
-							Three simple steps to your perfect news experience
+							From setup to your perfect daily digest in under 5 minutes. Join
+							2,800+ professionals who've transformed their news consumption.
 						</motion.p>
 					</div>
 
-					{/* Steps */}
+					{/* Updated Steps */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 lg:gap-12">
 						{STEPS.map((step, idx) => (
 							<motion.div
@@ -526,9 +582,14 @@ const FirstPage = () => {
 									<h3 className="text-2xl font-semibold text-card-foreground mb-4">
 										{step.title}
 									</h3>
-									<p className="text-muted-foreground text-lg leading-relaxed">
+									<p className="text-muted-foreground text-lg leading-relaxed mb-4">
 										{step.desc}
 									</p>
+
+									{/* Updated: Added benefit badge */}
+									<div className="text-sm text-primary font-medium bg-primary/10 px-3 py-2 rounded-full inline-block">
+										{step.benefit}
+									</div>
 
 									{idx < STEPS.length - 1 && (
 										<div className="hidden lg:block absolute top-1/2 -right-12 w-12 h-0.5 bg-gradient-to-r from-primary to-accent opacity-30" />
@@ -537,6 +598,20 @@ const FirstPage = () => {
 							</motion.div>
 						))}
 					</div>
+
+					{/* New: Final CTA */}
+					<motion.div
+						initial={{ opacity: 0, y: 30 }}
+						animate={controls}
+						variants={{ visible: { opacity: 1, y: 0 } }}
+						transition={{ duration: 0.6, delay: 0.8 }}
+						className="text-center mt-16"
+					>
+						<ShinyButton className="text-lg px-8 py-4 flex items-center justify-center gap-2 mx-auto [&>span]:!flex [&>span]:!items-center [&>span]:!justify-center [&>span]:!gap-2">
+							<Coffee className="w-5 h-5" />
+							<span>Create Your First Brew</span>
+						</ShinyButton>
+					</motion.div>
 				</div>
 			</section>
 		</>

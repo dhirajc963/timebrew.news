@@ -244,7 +244,10 @@ const SecondPage: React.FC = () => {
 	return (
 		<>
 			{/* Enhanced Feature Highlights */}
-			<section id="features" className="py-32 md:py-32 pt-23 md:pt-32 relative overflow-hidden">
+			<section
+				id="features"
+				className="py-32 md:py-32 pt-23 md:pt-32 relative overflow-hidden"
+			>
 				<div className="max-w-7xl mx-auto px-10 relative z-10">
 					<BlurIn>
 						<div className="text-center mb-20">
@@ -351,7 +354,10 @@ const SecondPage: React.FC = () => {
 			</section>
 
 			{/* Enhanced Benefits Section */}
-			<section ref={ref} className="py-32 md:py-32 pt-23 md:pt-32 relative overflow-hidden">
+			<section
+				ref={ref}
+				className="py-32 md:py-32 pt-23 md:pt-32 relative overflow-hidden"
+			>
 				<div className="max-w-7xl mx-auto px-10">
 					<div className="grid lg:grid-cols-2 gap-16 items-center">
 						{/* Left Content */}

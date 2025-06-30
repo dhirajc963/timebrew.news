@@ -9,8 +9,8 @@ const LandingPage = () => {
 		<Background variant="hero" showDotPattern={true} showFloatingDots={true}>
 			<div className="min-h-screen">
 				<FirstPage />
-				<SecondPage />
-				<ThirdPage />
+				{/* <SecondPage /> */}
+				{/* <ThirdPage /> */}
 			</div>
 		</Background>
 	);
