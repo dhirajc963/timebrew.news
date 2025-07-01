@@ -75,7 +75,12 @@ const SAMPLE_EMAIL_DATA = {
 };
 
 // Sample Email Modal Component - Using Theme Colors
-const SampleEmailModal = ({ isOpen, onClose }) => {
+type SampleEmailModalProps = {
+	isOpen: boolean;
+	onClose: () => void;
+};
+
+const SampleEmailModal = ({ isOpen, onClose }: SampleEmailModalProps) => {
 	if (!isOpen) return null;
 
 	return (
@@ -386,7 +391,7 @@ const FirstPage = () => {
 							transition={{ delay: 0.9, duration: 0.6 }}
 							className="flex items-center gap-6 pt-4"
 						>
-							{TRUST_BADGES.map(({ icon: Icon, text, color, link }, idx) => {
+							{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => {
 								const content = (
 									<div className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
 										<Icon className={`w-4 h-4 ${color}`} />
@@ -394,19 +399,7 @@ const FirstPage = () => {
 									</div>
 								);
 
-								return link ? (
-									<a
-										key={idx}
-										href={link}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="cursor-pointer"
-									>
-										{content}
-									</a>
-								) : (
-									<div key={idx}>{content}</div>
-								);
+								return <div key={idx}>{content}</div>;
 							})}
 						</motion.div>
 
@@ -552,7 +545,7 @@ const FirstPage = () => {
 								transition={{ delay: 0.9, duration: 0.6 }}
 								className="flex items-center gap-6 pt-4"
 							>
-								{TRUST_BADGES.map(({ icon: Icon, text, color, link }, idx) => {
+								{TRUST_BADGES.map(({ icon: Icon, text, color }, idx) => {
 									const content = (
 										<div className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
 											<Icon className={`w-4 h-4 ${color}`} />
@@ -560,19 +553,7 @@ const FirstPage = () => {
 										</div>
 									);
 
-									return link ? (
-										<a
-											key={idx}
-											href={link}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="cursor-pointer"
-										>
-											{content}
-										</a>
-									) : (
-										<div key={idx}>{content}</div>
-									);
+									return <div key={idx}>{content}</div>;
 								})}
 							</motion.div>
 						</motion.div>
