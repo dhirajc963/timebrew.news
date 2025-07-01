@@ -119,27 +119,6 @@ const Footer = () => {
 						<p className="text-sm">
 							&copy; {new Date().getFullYear()} TimeBrew. All rights reserved.
 						</p>
-
-						{/* Bolt.new Badge */}
-						<a
-							href="https://bolt.new"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="flex items-center space-x-2 text-sm hover:text-foreground transition-colors group"
-						>
-							<span>Built with</span>
-							<div className="flex items-center space-x-1 px-2 py-1 rounded-md bg-black text-white group-hover:bg-gray-800 transition-colors">
-								<svg
-									width="12"
-									height="12"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-								>
-									<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-								</svg>
-								<span className="font-medium">Bolt.new</span>
-							</div>
-						</a>
 					</div>
 
 					<div className="flex items-center gap-4">

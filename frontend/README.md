@@ -34,8 +34,6 @@ TimeBrew combines the engaging voice of Morning Brew with intelligent personaliz
 
 ![Landing Page Preview](docs/screenshots/landing.png)
 
-**Built with Bolt.new magic:**
-
 - **Animated gradient backgrounds** that capture attention
 - **Meteor animations** for visual interest
 - **Responsive hero section** with clear value proposition
@@ -44,8 +42,6 @@ TimeBrew combines the engaging voice of Morning Brew with intelligent personaliz
 ### **Authentication Flow - Seamless Onboarding**
 
 ![Auth Flow](docs/screenshots/auth-flow.png)
-
-**Bolt.new generated:**
 
 - **AWS Cognito integration** with OTP verification
 - **Error handling** with user-friendly messages
@@ -197,10 +193,6 @@ Next briefing is even more personalized
 
 ## 💡 Innovation Highlights
 
-### **AI-Human Collaboration**
-
-Bolt.new didn't just generate code - it understood the **user experience vision**:
-
 - **Intuitive navigation** that guides users naturally
 - **Visual hierarchy** that emphasizes key actions
 - **Emotional design** that makes news consumption enjoyable
@@ -318,10 +310,6 @@ While automatically handling:
 2. Sign up with your email
 3. Create your first personalized news brew
 4. Experience AI-powered news curation
-
-### **Built With Bolt.new Badge**
-
-This application proudly displays the "Built with Bolt.new" badge, showcasing how AI-powered development can create production-ready applications that solve real problems.
 
 ---
 
